@@ -75,7 +75,7 @@ export default function RecipientDetailScreen() {
   };
 
   const handleGenerateGifts = () => {
-    router.push(`/recipients/${id}/generate`);
+    router.push(`/recipients/${id}/ideas`);
   };
 
   if (isLoading) {
