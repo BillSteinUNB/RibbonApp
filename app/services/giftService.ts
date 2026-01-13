@@ -1,7 +1,7 @@
 import { aiService } from './aiService';
 import { giftParser } from './giftParser';
 import { getPromptForOccasion } from '../prompts';
-import AppError from '../types/errors';
+import { AppError } from '../types/errors';
 import { errorLogger } from './errorLogger';
 import type { GiftIdea, Recipient } from '../types/recipient';
 import { useRecipientStore } from '../store/recipientStore';
@@ -76,7 +76,7 @@ class GiftService {
     startTime: number
   ): {
     gifts: GiftIdea[];
-    duration?: number;
+    duration: number;
     method: 'fallback';
   } {
     const gifts = giftParser.getFallbackGifts(recipient.id, count);
@@ -126,9 +126,10 @@ class GiftService {
       useGiftStore.getState().markAsPurchased(giftId);
 
       // Add to recipient's gift history
-      useRecipientStore.getState().addGiftToHistory(recipientId, 
-        useGiftStore.getState().allGifts.find(g => g.id === giftId) || {} as any
-      );
+      const gift = useGiftStore.getState().allGifts.find(g => g.id === giftId);
+      if (gift) {
+        useRecipientStore.getState().addGiftToHistory(recipientId, gift);
+      }
     } catch (error) {
       errorLogger.log(error, { context: 'markAsPurchased', giftId, recipientId });
       throw new AppError('Failed to mark gift as purchased');

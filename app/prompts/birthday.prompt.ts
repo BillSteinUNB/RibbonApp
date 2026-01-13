@@ -72,3 +72,4 @@ Return a JSON array of gift ideas with this exact structure (no markdown, no ext
     "tags": ["relevant", "keywords", "for", "filtering"]
   }
 ]`;
+}

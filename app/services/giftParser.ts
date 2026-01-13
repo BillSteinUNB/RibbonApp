@@ -129,9 +129,11 @@ class GiftParser {
       return { valid: true };
     } catch (error) {
       if (error instanceof z.ZodError) {
+        // @ts-ignore
+        const errorMessage = error.errors?.[0]?.message || 'Invalid gift idea format';
         return {
           valid: false,
-          error: error.errors[0]?.message || 'Invalid gift idea format',
+          error: errorMessage,
         };
       }
       return {

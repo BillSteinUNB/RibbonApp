@@ -6,8 +6,9 @@
  */
 
 // ===== STORES =====
-export { useAuthStore, selectUser, selectIsAuthenticated, selectTrialUsesRemaining, selectIsPremium } from './store/authStore';
-export type { User, UserProfile, UserPreferences } from './store/authStore';
+export { useAuthStore, selectUser, selectIsAuthenticated, selectTrialUsesRemaining, selectIsPremium, selectUserPreferences } from './store/authStore';
+export type { User, UserProfile } from './store/authStore';
+export type { UserPreferences } from './types/settings';
 
 export { useRecipientStore, selectRecipients, selectActiveRecipient, selectRecipientById } from './store/recipientStore';
 export type { Recipient, GiftIdea } from './store/recipientStore';

@@ -151,7 +151,7 @@ function generateContextSpecificGuidelines(occasionName: string): string {
 - Make gifts that demonstrate understanding of their impact and support`,
   };
   
-  return guidelines[lowerName] || '- Focus on items that appropriately celebrate this milestone
+  return guidelines[lowerName] || `- Focus on items that appropriately celebrate this milestone
 - Consider items that acknowledge significance of ${occasionName}
 - Include gifts that create lasting memories of this special occasion
 - Make suggestions personal and meaningful to ${occasionName.toLowerCase()}`;

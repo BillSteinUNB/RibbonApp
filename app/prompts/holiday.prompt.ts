@@ -45,7 +45,7 @@ export function generateHolidayPrompt(recipient: Recipient, requestCount: number
 - Consider religious or cultural aspects if appropriate for relationship
 - Gifts that can be enjoyed during holiday celebrations
 - Warm, cozy gifts that evoke holiday nostalgia
-- Include gifts that represent thegetherness and generosity
+- Include gifts that represent the togetherness and generosity
 
 **GENERAL REQUIREMENTS:**
 1. Suggest ${requestCount} unique gift ideas within the budget
@@ -73,3 +73,4 @@ Return a JSON array of gift ideas with this exact structure (no markdown, no ext
     "tags": ["relevant", "keywords", "for", "filtering"]
   }
 ]`;
+}

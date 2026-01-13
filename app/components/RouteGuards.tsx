@@ -1,6 +1,6 @@
 import React, { useEffect } from 'react';
 import { useRouter, useSegments } from 'expo-router';
-import { useAuth } from '../contexts/AuthContext';
+import { useAuthStore, selectIsAuthenticated } from '../store/authStore';
 
 /**
  * Protected Route Guard
@@ -11,7 +11,8 @@ interface ProtectedRouteProps {
 }
 
 export function ProtectedRoute({ children }: ProtectedRouteProps) {
-  const { isAuthenticated, isLoading } = useAuth();
+  const isAuthenticated = useAuthStore(selectIsAuthenticated);
+  const isLoading = useAuthStore(state => state.isLoading);
   const router = useRouter();
   const segments = useSegments();
 
@@ -44,7 +45,8 @@ interface GuestRouteProps {
 }
 
 export function GuestRoute({ children }: GuestRouteProps) {
-  const { isAuthenticated, isLoading } = useAuth();
+  const isAuthenticated = useAuthStore(selectIsAuthenticated);
+  const isLoading = useAuthStore(state => state.isLoading);
   const router = useRouter();
   const segments = useSegments();
 

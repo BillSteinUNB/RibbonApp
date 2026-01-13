@@ -53,8 +53,8 @@ export default function SignInScreen() {
     setErrors({});
 
     try {
-      authService.initialize();
-      const user = await authService.signIn(formData);
+      // authService.initialize() is not needed with Supabase
+      const { user } = await authService.signIn(formData.email, formData.password);
       
       // Load trial data for the user
       // await trialService.loadUsageData(user.id);

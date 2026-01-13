@@ -42,7 +42,7 @@ export default function ForgotPasswordScreen() {
     setError('');
 
     try {
-      authService.initialize();
+      // authService.initialize() is not needed with Supabase
       await authService.resetPassword(email);
       
       Alert.alert(

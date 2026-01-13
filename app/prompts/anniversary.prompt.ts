@@ -39,23 +39,23 @@ export function generateAnniversaryPrompt(recipient: Recipient, requestCount: nu
 **Additional Notes:** ${recipient.notes || 'None'}
 
 **SPECIAL ${occasionType.toUpperCase()} CONSIDERATIONS:**
-${isWedding ? '- Wedding gifts that celebrate the start of a new life together
+${isWedding ? `- Wedding gifts that celebrate the start of a new life together
 - Consider gifts for the couple to use in their home or experiences
 - Include thoughtful gifts for both partners or couple sharing
 - Look for items that celebrate their unique love story and bond
 - Consider personalized wedding gifts (names, dates, special meaning)
 - Include gifts for different wedding roles: for the couple, for friends, for family
 - Emphasis on romance and making memories together
-- Consider gifts that honor their cultural or personal preferences' : '- Gifts celebrating the love and a journey together over the years
-- Include gifts that cherish theget memories and celebrate your bond
+- Consider gifts that honor their cultural or personal preferences` : `- Gifts celebrating the love and a journey together over the years
+- Include gifts that cherish the memories and celebrate your bond
 - Prefer gifts that can be shared or experienced together
 - Include romantic, thoughtful gifts that show deep understanding
 - Consider milestone anniversaries (1st, 5th, 10th, 25th, 50th)
 - Include personalized items and anniversary-specific mementos
-- Look for creative ways to celebrate their love story'
-- Focus on emotional significance of the relationship'}
-${isWedding ? 'Wedding gifts should be memorable and set them up for their new chapter
-- Include traditional gifts mixed with modern, thoughtful choices' : 'Anniversary gifts should be romantic and nostalgic'}
+- Look for creative ways to celebrate their love story
+- Focus on emotional significance of the relationship`}
+${isWedding ? 'Wedding gifts should be memorable and set them up for their new chapter' : 'Anniversary gifts should be romantic and nostalgic'}
+- Include traditional gifts mixed with modern, thoughtful choices
 
 **GENERAL REQUIREMENTS:**
 1. Suggest ${requestCount} unique gift ideas within the budget
@@ -67,9 +67,7 @@ ${isWedding ? 'Wedding gifts should be memorable and set them up for their new c
 7. Consider gifts that create new memories together
 8. Include personalized or customized gift options where appropriate
 9. For high-budget weddings, suggest memorable luxury gifts
-10. ${isWedding ? 'Suggest gifts appropriate for their wedding party/celebration'
-- 'Pay attention to the their cultural or religious traditions'
-- 'Make them feel special and deeply appreciated by you'}
+10. ${isWedding ? 'Suggest gifts appropriate for their wedding party/celebration' : 'Make them feel special and deeply appreciated by you'}
 
 **RESPONSE FORMAT:**
 Return a JSON array of gift ideas with this exact structure (no markdown, no extra text):
@@ -77,7 +75,7 @@ Return a JSON array of gift ideas with this exact structure (no markdown, no ext
   {
     "name": "Gift Name",
     "description": "Detailed 2-3 sentence description",
-    "reasoning": "Why this gift celebrates the get ${occasionType.toLowerCase()} and your relationship",
+    "reasoning": "Why this gift celebrates the ${occasionType.toLowerCase()} and your relationship",
     "price": "Price range or specific price",
     "category": "Category (e.g., Romantic, Experience, Home, Fashion, Jewelry, etc.)",
     "url": null,
@@ -85,3 +83,4 @@ Return a JSON array of gift ideas with this exact structure (no markdown, no ext
     "tags": ["relevant", "keywords", "for", "filtering"]
   }
 ]`;
+}

@@ -1,0 +1,273 @@
+import React from 'react';
+import { View, Text, ScrollView, TouchableOpacity, StyleSheet, Switch, Alert } from 'react-native';
+import { useRouter } from 'expo-router';
+import { User, Bell, Shield, CircleHelp as HelpCircle, LogOut, ChevronRight, CreditCard } from 'lucide-react-native';
+import { useAuthStore, selectUser, selectUserPreferences } from '../store/authStore';
+import { subscriptionService } from '../services/subscriptionService';
+
+export default function SettingsScreen() {
+  const router = useRouter();
+  const { user, logout, updateUserPreferences } = useAuthStore();
+  const preferences = user?.profile?.preferences;
+
+  const handleLogout = async () => {
+    Alert.alert(
+      'Sign Out',
+      'Are you sure you want to sign out?',
+      [
+        { text: 'Cancel', style: 'cancel' },
+        { 
+          text: 'Sign Out', 
+          style: 'destructive',
+          onPress: () => {
+            logout();
+            router.replace('/(auth)/sign-in');
+          }
+        }
+      ]
+    );
+  };
+
+  const toggleNotification = (key: any) => {
+    // @ts-ignore
+    if (!preferences?.notifications) return;
+    updateUserPreferences({
+      notifications: {
+        // @ts-ignore
+        ...preferences.notifications,
+        // @ts-ignore
+        [key]: !preferences.notifications[key]
+      }
+    });
+  };
+
+  if (!user) {
+    return (
+      <View style={styles.centerContainer}>
+        <Text>Please sign in to view settings</Text>
+      </View>
+    );
+  }
+
+  return (
+    <ScrollView style={styles.container}>
+      <View style={styles.header}>
+        <View style={styles.avatar}>
+          <Text style={styles.avatarText}>
+            {user.email?.charAt(0).toUpperCase() || 'U'}
+          </Text>
+        </View>
+        <Text style={styles.name}>{user.profile?.name || 'User'}</Text>
+        <Text style={styles.email}>{user.email}</Text>
+        {user.isPremium ? (
+          <View style={styles.premiumBadge}>
+            <Text style={styles.premiumText}>Pro Member</Text>
+          </View>
+        ) : (
+          <TouchableOpacity 
+            style={styles.upgradeButton}
+            onPress={() => router.push('/pricing')}
+          >
+            <Text style={styles.upgradeText}>Upgrade to Pro</Text>
+          </TouchableOpacity>
+        )}
+      </View>
+
+      <View style={styles.section}>
+        <Text style={styles.sectionTitle}>Subscription</Text>
+        <TouchableOpacity 
+          style={styles.row}
+          onPress={() => router.push('/pricing')}
+        >
+          <View style={styles.rowLeft}>
+            {/* @ts-ignore */}
+            <CreditCard size={22} color="#6B7280" />
+            <Text style={styles.rowLabel}>Manage Subscription</Text>
+          </View>
+          {/* @ts-ignore */}
+          <ChevronRight size={20} color="#9CA3AF" />
+        </TouchableOpacity>
+      </View>
+
+      <View style={styles.section}>
+        <Text style={styles.sectionTitle}>Notifications</Text>
+        <View style={styles.row}>
+          <View style={styles.rowLeft}>
+            {/* @ts-ignore */}
+            <Bell size={22} color="#6B7280" />
+            <Text style={styles.rowLabel}>Occasion Reminders</Text>
+          </View>
+          <Switch 
+            value={preferences?.notifications?.occasionReminders}
+            onValueChange={() => toggleNotification('occasionReminders')}
+            trackColor={{ false: '#D1D5DB', true: '#FF4B4B' }}
+          />
+        </View>
+        <View style={styles.row}>
+          <View style={styles.rowLeft}>
+            {/* @ts-ignore */}
+            <Bell size={22} color="#6B7280" />
+            <Text style={styles.rowLabel}>Weekly Digest</Text>
+          </View>
+          <Switch 
+            value={preferences?.notifications?.weeklyDigest}
+            onValueChange={() => toggleNotification('weeklyDigest')}
+            trackColor={{ false: '#D1D5DB', true: '#FF4B4B' }}
+          />
+        </View>
+      </View>
+
+      <View style={styles.section}>
+        <Text style={styles.sectionTitle}>Support</Text>
+        <TouchableOpacity style={styles.row}>
+          <View style={styles.rowLeft}>
+            {/* @ts-ignore */}
+            <HelpCircle size={22} color="#6B7280" />
+            <Text style={styles.rowLabel}>Help Center</Text>
+          </View>
+          {/* @ts-ignore */}
+          <ChevronRight size={20} color="#9CA3AF" />
+        </TouchableOpacity>
+        <TouchableOpacity style={styles.row}>
+          <View style={styles.rowLeft}>
+            {/* @ts-ignore */}
+            <Shield size={22} color="#6B7280" />
+            <Text style={styles.rowLabel}>Privacy Policy</Text>
+          </View>
+          {/* @ts-ignore */}
+          <ChevronRight size={20} color="#9CA3AF" />
+        </TouchableOpacity>
+      </View>
+
+      <TouchableOpacity 
+        style={[styles.row, styles.logoutRow]}
+        onPress={handleLogout}
+      >
+        <View style={styles.rowLeft}>
+          {/* @ts-ignore */}
+          <LogOut size={22} color="#EF4444" />
+          <Text style={[styles.rowLabel, styles.logoutText]}>Sign Out</Text>
+        </View>
+      </TouchableOpacity>
+
+      <Text style={styles.version}>Version 1.0.0 (Build 100)</Text>
+    </ScrollView>
+  );
+}
+
+const styles = StyleSheet.create({
+  container: {
+    flex: 1,
+    backgroundColor: '#F3F4F6',
+  },
+  centerContainer: {
+    flex: 1,
+    justifyContent: 'center',
+    alignItems: 'center',
+  },
+  header: {
+    backgroundColor: 'white',
+    padding: 24,
+    alignItems: 'center',
+    borderBottomWidth: 1,
+    borderBottomColor: '#E5E7EB',
+  },
+  avatar: {
+    width: 80,
+    height: 80,
+    borderRadius: 40,
+    backgroundColor: '#F3F4F6',
+    justifyContent: 'center',
+    alignItems: 'center',
+    marginBottom: 12,
+  },
+  avatarText: {
+    fontSize: 32,
+    fontWeight: 'bold',
+    color: '#374151',
+  },
+  name: {
+    fontSize: 20,
+    fontWeight: 'bold',
+    color: '#111827',
+    marginBottom: 4,
+  },
+  email: {
+    fontSize: 14,
+    color: '#6B7280',
+    marginBottom: 16,
+  },
+  premiumBadge: {
+    backgroundColor: '#ECFDF5',
+    paddingHorizontal: 12,
+    paddingVertical: 4,
+    borderRadius: 12,
+    borderWidth: 1,
+    borderColor: '#10B981',
+  },
+  premiumText: {
+    color: '#059669',
+    fontWeight: '600',
+    fontSize: 12,
+  },
+  upgradeButton: {
+    backgroundColor: '#FF4B4B',
+    paddingHorizontal: 20,
+    paddingVertical: 8,
+    borderRadius: 20,
+  },
+  upgradeText: {
+    color: 'white',
+    fontWeight: '600',
+    fontSize: 14,
+  },
+  section: {
+    backgroundColor: 'white',
+    marginTop: 20,
+    borderTopWidth: 1,
+    borderBottomWidth: 1,
+    borderColor: '#E5E7EB',
+  },
+  sectionTitle: {
+    fontSize: 13,
+    fontWeight: '600',
+    color: '#6B7280',
+    textTransform: 'uppercase',
+    paddingHorizontal: 16,
+    paddingTop: 16,
+    paddingBottom: 8,
+  },
+  row: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    padding: 16,
+    borderTopWidth: 1,
+    borderColor: '#F3F4F6',
+  },
+  rowLeft: {
+    flexDirection: 'row',
+    alignItems: 'center',
+  },
+  rowLabel: {
+    fontSize: 16,
+    color: '#374151',
+    marginLeft: 12,
+  },
+  logoutRow: {
+    marginTop: 20,
+    backgroundColor: 'white',
+    borderTopWidth: 1,
+    borderBottomWidth: 1,
+    borderColor: '#E5E7EB',
+  },
+  logoutText: {
+    color: '#EF4444',
+  },
+  version: {
+    textAlign: 'center',
+    color: '#9CA3AF',
+    fontSize: 12,
+    marginVertical: 24,
+  },
+});

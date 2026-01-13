@@ -13,7 +13,10 @@
       "backgroundColor": "#FAFAFA"
     },
     "ios": {
-      "supportsTablet": true
+      "supportsTablet": true,
+      "infoPlist": {
+        "NSFaceIDUsageDescription": "Ribbon uses Face ID to securely authenticate you."
+      }
     },
     "android": {
       "adaptiveIcon": {

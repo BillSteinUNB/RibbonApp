@@ -1,4 +1,5 @@
 import { z } from 'zod';
+import { UserPreferences, DEFAULT_PREFERENCES } from './settings';
 
 /**
  * User data models and schemas
@@ -20,11 +21,7 @@ export interface UserProfile {
   preferences?: UserPreferences;
 }
 
-export interface UserPreferences {
-  theme: 'light' | 'dark' | 'auto';
-  notifications: boolean;
-  emailUpdates: boolean;
-}
+export { UserPreferences };
 
 /**
  * User schema for validation
@@ -41,8 +38,15 @@ export const userSchema = z.object({
     avatar: z.string().url().optional().or(z.literal('')),
     preferences: z.object({
       theme: z.enum(['light', 'dark', 'auto']),
-      notifications: z.boolean(),
-      emailUpdates: z.boolean(),
+      notifications: z.object({
+        emailUpdates: z.boolean(),
+        pushNotifications: z.boolean(),
+        marketing: z.boolean(),
+        occasionReminders: z.boolean(),
+        weeklyDigest: z.boolean(),
+      }),
+      language: z.string(),
+      currency: z.string(),
     }).optional(),
   }).optional(),
 });
@@ -52,8 +56,15 @@ export const userSchema = z.object({
  */
 export const userPreferencesSchema: z.ZodType<UserPreferences> = z.object({
   theme: z.enum(['light', 'dark', 'auto']),
-  notifications: z.boolean(),
-  emailUpdates: z.boolean(),
+  notifications: z.object({
+    emailUpdates: z.boolean(),
+    pushNotifications: z.boolean(),
+    marketing: z.boolean(),
+    occasionReminders: z.boolean(),
+    weeklyDigest: z.boolean(),
+  }),
+  language: z.string(),
+  currency: z.string(),
 });
 
 /**
