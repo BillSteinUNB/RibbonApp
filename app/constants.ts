@@ -12,6 +12,7 @@ export const COLORS = {
   accentPrimary: '#E85D75',
   accentSecondary: '#F4A261',
   accentSuccess: '#6BCB77',
+  error: '#EF4444',
   accentSoft: '#FEF0F0',
   border: '#E8E8E8',
   white: '#FFFFFF',

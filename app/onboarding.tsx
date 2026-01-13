@@ -14,17 +14,17 @@ export default function OnboardingScreen() {
     {
       title: 'Never struggle with gift ideas again',
       subtitle: 'Tell us about the people you care about and we\'ll handle the rest.',
-      icon: <User size={80} color={COLORS.accentPrimary} strokeWidth={1} />,
+      icon: <User size={80} />,
     },
     {
       title: 'Get personalized suggestions',
       subtitle: 'Our AI finds unique gifts they\'ll actually love based on their interests.',
-      icon: <Sparkles size={80} color={COLORS.accentPrimary} strokeWidth={1} />,
+      icon: <Sparkles size={80} />,
     },
     {
       title: 'Give with confidence',
       subtitle: 'Save ideas, track history, and never forget a special occasion.',
-      icon: <Gift size={80} color={COLORS.accentPrimary} strokeWidth={1} />,
+      icon: <Gift size={80} />,
     }
   ];
 
