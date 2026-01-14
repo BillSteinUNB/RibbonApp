@@ -1,5 +1,6 @@
 import { Subscription, PRICING_PLANS } from '../types/subscription';
 import { storage } from './storage';
+import { errorLogger } from './errorLogger';
 
 // Mock implementation since we don't have backend/RevenueCat keys yet
 const SUBSCRIPTION_KEY = 'user_subscription';
@@ -24,7 +25,7 @@ export const subscriptionService = {
       
       return stored;
     } catch (error) {
-      console.error('Failed to get subscription', error);
+      errorLogger.log(error, { context: 'getSubscription', userId });
       return null;
     }
   },

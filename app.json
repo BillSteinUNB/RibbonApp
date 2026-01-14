@@ -15,7 +15,8 @@
     "ios": {
       "supportsTablet": true,
       "infoPlist": {
-        "NSFaceIDUsageDescription": "Ribbon uses Face ID to securely authenticate you."
+        "NSFaceIDUsageDescription": "Ribbon uses Face ID to securely authenticate you.",
+        "NSUserNotificationsUsageDescription": "Ribbon uses notifications to remind you about upcoming occasions and gift ideas."
       }
     },
     "android": {

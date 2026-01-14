@@ -41,7 +41,7 @@ export default function HomeScreen() {
           style={[styles.actionCard, { backgroundColor: COLORS.accentPrimary }]}
           onPress={() => router.push('/recipients/new')}
         >
-          <Plus color="white" size={24} />
+          <Plus stroke="white" size={24} />
           <Text style={styles.actionTextLight}>New Recipient</Text>
         </TouchableOpacity>
         
@@ -49,7 +49,7 @@ export default function HomeScreen() {
           style={[styles.actionCard, { backgroundColor: COLORS.bgSecondary }]}
           onPress={() => router.push('/(tabs)/recipients')}
         >
-          <Gift color={COLORS.accentPrimary} size={24} />
+          <Gift stroke={COLORS.accentPrimary} size={24} />
           <Text style={styles.actionTextDark}>My Recipients</Text>
         </TouchableOpacity>
       </View>
@@ -71,7 +71,7 @@ export default function HomeScreen() {
               onPress={() => router.push(`/recipients/${recipient.id}`)}
             >
               <View style={styles.occasionIcon}>
-                <Calendar color={COLORS.accentPrimary} size={20} />
+                <Calendar stroke={COLORS.accentPrimary} size={20} />
               </View>
               <View style={styles.occasionInfo}>
                 <Text style={styles.occasionName}>{recipient.name}</Text>
@@ -79,7 +79,7 @@ export default function HomeScreen() {
                   {recipient.occasion.type} • {new Date(recipient.occasion.date!).toLocaleDateString()}
                 </Text>
               </View>
-              <Sparkles color="#FFD700" size={16} />
+              <Sparkles stroke="#FFD700" size={16} />
             </Card>
           ))
         ) : (

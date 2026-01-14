@@ -1,4 +1,5 @@
 import { AppError } from '../types/errors';
+import { logger } from '../utils/logger';
 
 /**
  * Error Logger Service for tracking and reporting errors
@@ -41,7 +42,7 @@ class ErrorLogger {
     }
 
     // Console log for debugging
-    console.error('[ErrorLogger]', {
+    logger.error('[ErrorLogger]', {
       name: appError.name,
       message: appError.message,
       code: appError.code,

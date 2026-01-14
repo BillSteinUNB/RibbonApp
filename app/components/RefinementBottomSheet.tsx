@@ -92,11 +92,11 @@ export function RefinementBottomSheet({
           {/* Header */}
           <View style={styles.header}>
             <View style={styles.headerTitle}>
-              <Crown size={20} color={COLORS.accentSecondary} />
+              <Crown size={20} stroke={COLORS.accentSecondary} />
               <Text style={styles.title}>Refine Results</Text>
             </View>
             <TouchableOpacity onPress={handleClose} style={styles.closeButton}>
-              <X size={24} color={COLORS.textSecondary} />
+              <X size={24} stroke={COLORS.textSecondary} />
             </TouchableOpacity>
           </View>
 
@@ -131,7 +131,7 @@ export function RefinementBottomSheet({
                   >
                     <ThumbsUp
                       size={18}
-                      color={
+                      stroke={
                         giftFeedback[gift.id] === 'liked'
                           ? COLORS.white
                           : COLORS.accentSuccess
@@ -147,7 +147,7 @@ export function RefinementBottomSheet({
                   >
                     <ThumbsDown
                       size={18}
-                      color={
+                      stroke={
                         giftFeedback[gift.id] === 'disliked'
                           ? COLORS.white
                           : COLORS.error

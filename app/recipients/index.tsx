@@ -9,6 +9,7 @@ import { Card } from '../components/Card';
 import { recipientService } from '../services/recipientService';
 import { useRecipientStore } from '../store/recipientStore';
 import { getCountdown } from '../utils/dates';
+import { errorLogger } from '../services/errorLogger';
 import { Plus, Search, Trash2, Edit2 } from 'lucide-react-native';
 
 export default function RecipientsListScreen() {
@@ -31,7 +32,7 @@ export default function RecipientsListScreen() {
       const data = await recipientService.getAllRecipients();
       setRecipients(data);
     } catch (error) {
-      console.error('Failed to load recipients:', error);
+      errorLogger.log(error, { context: 'loadRecipients' });
     } finally {
       setIsLoading(false);
     }

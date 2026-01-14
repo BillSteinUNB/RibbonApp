@@ -1,6 +1,9 @@
 import * as Notifications from 'expo-notifications';
 import { Platform } from 'react-native';
 
+import { errorLogger } from './errorLogger';
+import { logger } from '../utils/logger';
+
 // Configure notification behavior
 Notifications.setNotificationHandler({
   handleNotification: async () => ({
@@ -34,7 +37,7 @@ export const notificationService = {
       }
       
       if (finalStatus !== 'granted') {
-        console.log('Failed to get push token for push notification!');
+        logger.warn('Failed to get push token for push notification');
         return;
       }
       
@@ -43,7 +46,7 @@ export const notificationService = {
       // return token;
       return 'mock-push-token';
     } catch (error) {
-      console.error('Error registering notifications:', error);
+      errorLogger.log(error, { context: 'registerForPushNotifications' });
       return undefined;
     }
   },

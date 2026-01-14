@@ -294,7 +294,7 @@ export default function GiftIdeasScreen() {
               <Button
                 title="Refine"
                 onPress={handleOpenRefinement}
-                icon={<Crown size={16} color={canRefine ? COLORS.accentSecondary : COLORS.textMuted} />}
+                icon={<Crown size={16} stroke={canRefine ? COLORS.accentSecondary : COLORS.textMuted} />}
                 variant="outline"
                 disabled={!canRefine || isProcessing}
                 style={styles.refineButton}
@@ -374,8 +374,11 @@ export default function GiftIdeasScreen() {
                   <TouchableOpacity
                     onPress={() => gift.isSaved ? handleUnsaveGift(gift.id) : handleSaveGift(gift.id)}
                   >
-                    {/* @ts-ignore */}
-                    {gift.isSaved ? <Heart size={20} color={COLORS.accentPrimary} /> : <Heart size={20} />}
+                    {gift.isSaved ? (
+                      <Heart size={20} stroke={COLORS.accentPrimary} fill={COLORS.accentPrimary} />
+                    ) : (
+                      <Heart size={20} />
+                    )}
                   </TouchableOpacity>
                   {!gift.isPurchased && (
                     <TouchableOpacity
@@ -420,7 +423,7 @@ export default function GiftIdeasScreen() {
 
         {filteredGifts.length === 0 && !isProcessing && (
           <View style={styles.emptyState}>
-            <Sparkles size={48} color={COLORS.textMuted} />
+            <Sparkles size={48} stroke={COLORS.textMuted} />
             <Text style={styles.emptyText}>No gift ideas yet</Text>
           </View>
         )}

@@ -3,6 +3,7 @@ import { persist, createJSONStorage } from 'zustand/middleware';
 import { Subscription } from '../types/subscription';
 import { UserPreferences, DEFAULT_PREFERENCES } from '../types/settings';
 import { authService } from '../services/authService';
+import { errorLogger } from '../services/errorLogger';
 
 export interface User {
   id: string;
@@ -111,7 +112,7 @@ export const useAuthStore = create<AuthState & AuthActions>()(
         try {
           await authService.signOut();
         } catch (error) {
-          console.error('Logout failed:', error);
+          errorLogger.log(error, { context: 'logout' });
         }
         set({ user: null, isAuthenticated: false, error: null });
       },

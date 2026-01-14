@@ -2,6 +2,8 @@
  * Analytics tracking helpers
  */
 
+import { logger } from './logger';
+
 /**
  * Analytics event types
  */
@@ -44,14 +46,12 @@ export interface AnalyticsPayload {
 export function trackEvent(eventName: AnalyticsEvent, properties?: Record<string, any>): void {
   // In production, this would send to your analytics provider
   // For now, we'll just log in development mode
-  
-  if (__DEV__) {
-    console.log('[Analytics]', {
-      event_name: eventName,
-      properties,
-      timestamp: new Date().toISOString(),
-    });
-  }
+
+  logger.log('[Analytics]', {
+    event_name: eventName,
+    properties,
+    timestamp: new Date().toISOString(),
+  });
 
   // Future implementation:
   // - Send to Firebase Analytics
@@ -178,9 +178,7 @@ class AnalyticsBatcher {
     }
 
     // Send to analytics provider
-    if (__DEV__) {
-      console.log('[Analytics Batch]', JSON.stringify(this.events, null, 2));
-    }
+    logger.log('[Analytics Batch]', JSON.stringify(this.events, null, 2));
 
     this.events = [];
   }

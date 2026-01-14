@@ -1,6 +1,8 @@
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { STORAGE_KEYS, STORAGE_VERSION } from '../constants/storageKeys';
 
+import { logger } from '../utils/logger';
+
 export class StorageError extends Error {
   constructor(message: string, public originalError?: Error) {
     super(message);
@@ -38,7 +40,7 @@ class StorageService {
         await this.setItem(STORAGE_KEYS.STORAGE_VERSION, STORAGE_VERSION);
       }
     } catch (error) {
-      console.warn('Failed to initialize storage:', error);
+      logger.warn('Failed to initialize storage:', error);
     }
   }
 
@@ -46,7 +48,7 @@ class StorageService {
    * Run storage migrations when schema version changes
    */
   private async runMigrations(fromVersion: string | null): Promise<void> {
-    console.log('Running storage migrations from:', fromVersion);
+    logger.log('Running storage migrations from:', fromVersion);
     
     // Add migration logic here as needed
     // Example: if (!fromVersion) { /* first install setup */ }
@@ -55,7 +57,7 @@ class StorageService {
       // Clear any deprecated keys
       await this.clearDeprecatedKeys();
     } catch (error) {
-      console.warn('Migration failed:', error);
+      logger.warn('Migration failed:', error);
     }
   }
 
@@ -69,7 +71,7 @@ class StorageService {
       try {
         await this.removeItem(key);
       } catch (error) {
-        console.warn(`Failed to clear deprecated key ${key}:`, error);
+        logger.warn(`Failed to clear deprecated key ${key}:`, error);
       }
     }
   }

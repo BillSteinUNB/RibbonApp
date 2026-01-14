@@ -7,6 +7,7 @@ import type { GiftIdea, Recipient, GenerationSession } from '../types/recipient'
 import { useRecipientStore } from '../store/recipientStore';
 import { useGiftStore } from '../store/giftStore';
 import { useAuthStore } from '../store/authStore';
+import { logger } from '../utils/logger';
 
 /**
  * Gift Generation Service
@@ -29,7 +30,7 @@ class GiftService {
     try {
       // Check if AI service is configured
       if (!aiService.isAvailable()) {
-        console.warn('AI service not configured, using fallback');
+        logger.warn('AI service not configured, using fallback');
         return this.generateFallbackGifts(recipient, count, startTime);
       }
 
@@ -62,7 +63,7 @@ class GiftService {
       };
     } catch (error) {
       errorLogger.log(error, { context: 'generateGifts', recipientId: recipient.id });
-      console.error('AI generation failed, using fallback:', error);
+      logger.warn('AI generation failed, using fallback');
       return this.generateFallbackGifts(recipient, count, startTime);
     }
   }
@@ -377,7 +378,7 @@ Return a JSON array of gift ideas with this exact structure (no markdown, no ext
 
       // Check if AI service is configured
       if (!aiService.isAvailable()) {
-        console.warn('AI service not configured, cannot refine');
+        logger.warn('AI service not configured, cannot refine');
         throw new AppError('AI service unavailable for refinement', 'SERVICE_UNAVAILABLE');
       }
 

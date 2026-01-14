@@ -15,6 +15,7 @@ import {
 } from '../components/forms';
 import { recipientService } from '../services/recipientService';
 import { useRecipientStore } from '../store/recipientStore';
+import { errorLogger } from '../services/errorLogger';
 import type { RecipientFormData } from '../types/recipient';
 import { 
   AGE_RANGES, 
@@ -141,7 +142,7 @@ export default function NewRecipientScreen() {
       );
     } catch (error) {
       Alert.alert('Error', 'Failed to create recipient. Please try again.');
-      console.error(error);
+      errorLogger.log(error, { context: 'createRecipient' });
     } finally {
       setIsLoading(false);
     }
