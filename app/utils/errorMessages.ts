@@ -5,6 +5,31 @@ import { AppError } from '../types/errors';
  */
 
 /**
+ * Sensitive patterns that should be stripped from user-facing errors in production
+ */
+const SENSITIVE_PATTERNS: RegExp[] = [
+  /[\/\\][a-zA-Z0-9_\-\/\\]+\.(ts|js|tsx|jsx)/g,  // File paths
+  /at\s+[\w.<>]+\s+\([^)]+\)/g,                    // Stack trace lines
+  /line\s+\d+/gi,                                  // Line numbers
+  /column\s+\d+/gi,                                // Column numbers
+  /supabase|postgres|postgresql|mysql|sqlite/gi,  // Database references
+  /api[_-]?key|secret|token|password/gi,          // Credential references
+];
+
+/**
+ * Sanitize error message to prevent information leakage in production
+ */
+function sanitizeErrorMessage(message: string): string {
+  if (__DEV__) return message; // Allow full details in development
+
+  let sanitized = message;
+  for (const pattern of SENSITIVE_PATTERNS) {
+    sanitized = sanitized.replace(pattern, '[redacted]');
+  }
+  return sanitized;
+}
+
+/**
  * Format error message for user display
  */
 export function formatErrorMessage(error: unknown): string {
@@ -14,17 +39,17 @@ export function formatErrorMessage(error: unknown): string {
 
   // AppError instances
   if (error instanceof AppError) {
-    return getUserFriendlyMessage(error);
+    return sanitizeErrorMessage(getUserFriendlyMessage(error));
   }
 
   // Error instances
   if (error instanceof Error) {
-    return getUserFriendlyMessageFromError(error);
+    return sanitizeErrorMessage(getUserFriendlyMessageFromError(error));
   }
 
   // String errors
   if (typeof error === 'string') {
-    return error;
+    return sanitizeErrorMessage(error);
   }
 
   // Unknown types
@@ -74,7 +99,7 @@ function getUserFriendlyMessageFromError(error: Error): string {
  */
 export function formatErrorWithDetails(error: unknown, context?: any): string {
   const baseMessage = formatErrorMessage(error);
-  
+
   if (__DEV__ && context) {
     return `${baseMessage}\n\nDetails: ${JSON.stringify(context, null, 2)}`;
   }

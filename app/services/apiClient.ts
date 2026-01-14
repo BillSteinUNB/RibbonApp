@@ -21,7 +21,7 @@ class APIClient {
   constructor(config: Partial<APIClientConfig> = {}) {
     this.config = {
       baseURL: config.baseURL || '',
-      timeout: config.timeout || 30000,
+      timeout: config.timeout || 15000,
       maxRetries: config.maxRetries || 3,
       retryDelay: config.retryDelay || 1000,
       headers: {
@@ -71,11 +71,11 @@ class APIClient {
     if (!abortController) {
       abortController = new AbortController();
     }
-    
+
     setTimeout(() => {
       abortController?.abort();
     }, this.config.timeout);
-    
+
     return abortController;
   }
 
@@ -84,10 +84,10 @@ class APIClient {
    */
   private async handleResponse<T>(response: Response, attempt: number, method?: string): Promise<ApiResponse<T>> {
     const contentType = response.headers.get('content-type');
-    
+
     if (!response.ok) {
       let errorData: any = {};
-      
+
       if (contentType?.includes('application/json')) {
         try {
           errorData = await response.json();
@@ -99,11 +99,11 @@ class APIClient {
       }
 
       const error = this.createError(errorData, response.status);
-      
+
       if (this.shouldRetry(error, attempt)) {
         throw error; // Will be caught by retry logic
       }
-      
+
       throw error;
     }
 
@@ -154,10 +154,10 @@ class APIClient {
     attempt: number = 0
   ): Promise<ApiResponse<T>> {
     const abortController = this.getAbortController();
-    
+
     try {
       const url = this.config.baseURL + endpoint;
-      
+
       const response = await fetch(url, {
         method: config.method || 'GET',
         headers: {
@@ -169,7 +169,7 @@ class APIClient {
       });
 
       return await this.handleResponse<T>(response, attempt, config.method);
-      
+
     } catch (error: any) {
       // Abort error (timeout)
       if (error.name === 'AbortError') {

@@ -77,9 +77,12 @@ export interface GenerationSession {
  */
 
 export const budgetSchema = z.object({
-  minimum: z.number().min(0, 'Minimum budget must be positive'),
-  maximum: z.number().min(0, 'Maximum budget must be positive'),
+  minimum: z.number().min(1, 'Minimum budget must be at least 1').max(100000, 'Budget exceeds maximum limit'),
+  maximum: z.number().min(1, 'Maximum budget must be at least 1').max(100000, 'Budget exceeds maximum limit'),
   currency: z.enum(['USD', 'EUR', 'GBP', 'CAD', 'AUD', 'JPY']),
+}).refine(data => data.maximum >= data.minimum, {
+  message: 'Maximum budget must be greater than or equal to minimum',
+  path: ['maximum'],
 });
 
 export const occasionSchema = z.object({

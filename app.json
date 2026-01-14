@@ -14,12 +14,16 @@
     },
     "ios": {
       "supportsTablet": true,
+      "bundleIdentifier": "com.ribbon.app",
+      "buildNumber": "1",
       "infoPlist": {
         "NSFaceIDUsageDescription": "Ribbon uses Face ID to securely authenticate you.",
         "NSUserNotificationsUsageDescription": "Ribbon uses notifications to remind you about upcoming occasions and gift ideas."
       }
     },
     "android": {
+      "package": "com.ribbon.app",
+      "versionCode": 1,
       "adaptiveIcon": {
         "foregroundImage": "./assets/adaptive-icon.png",
         "backgroundColor": "#FAFAFA"
