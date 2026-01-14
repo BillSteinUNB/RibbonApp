@@ -3,7 +3,7 @@ import { giftParser } from './giftParser';
 import { getPromptForOccasion } from '../prompts';
 import { AppError } from '../types/errors';
 import { errorLogger } from './errorLogger';
-import type { GiftIdea, Recipient } from '../types/recipient';
+import type { GiftIdea, Recipient, GenerationSession } from '../types/recipient';
 import { useRecipientStore } from '../store/recipientStore';
 import { useGiftStore } from '../store/giftStore';
 import { useAuthStore } from '../store/authStore';
@@ -260,7 +260,7 @@ class GiftService {
     byCategory: Record<string, number>;
   } {
     const byCategory: Record<string, number> = {};
-    
+
     gifts.forEach((gift) => {
       byCategory[gift.category] = (byCategory[gift.category] || 0) + 1;
     });
@@ -271,6 +271,208 @@ class GiftService {
       purchased: gifts.filter((g) => g.isPurchased).length,
       byCategory,
     };
+  }
+
+  /**
+   * Build refinement prompt with context from user feedback
+   */
+  private buildRefinementPrompt(
+    recipient: Recipient,
+    likedGifts: GiftIdea[],
+    dislikedGifts: GiftIdea[],
+    userInstructions: string,
+    count: number
+  ): string {
+    const interestsList = recipient.interests.join(', ') || 'Not specified';
+
+    // Format liked gifts
+    const likedGiftsText = likedGifts.length > 0
+      ? likedGifts.map(g =>
+          `- ${g.name}: ${g.description} (Category: ${g.category}, Price: ${g.price}, Tags: ${g.tags.join(', ')})`
+        ).join('\n')
+      : 'None specified';
+
+    // Format disliked gifts with reasons to avoid
+    const dislikedGiftsText = dislikedGifts.length > 0
+      ? dislikedGifts.map(g =>
+          `- ${g.name}: ${g.description} (Category: ${g.category}) - AVOID similar items`
+        ).join('\n')
+      : 'None specified';
+
+    return `I need ${count} REFINED gift suggestions based on previous recommendations that didn't quite fit.
+
+**Recipient Context:**
+- Name: ${recipient.name}
+- Relationship: ${recipient.relationship}
+- Age: ${recipient.ageRange || 'Not specified'}
+- Gender: ${recipient.gender || 'Not specified'}
+- Interests: ${interestsList}
+- Dislikes/Allergies: ${recipient.dislikes || 'None'}
+- Budget: ${recipient.budget.currency} ${recipient.budget.minimum} - ${recipient.budget.maximum}
+- Occasion: ${recipient.occasion.type}${recipient.occasion.customName ? ` (${recipient.occasion.customName})` : ''}
+
+**GIFTS THE USER LIKED:**
+${likedGiftsText}
+
+**GIFTS THE USER DISLIKED:**
+${dislikedGiftsText}
+
+**USER'S REFINEMENT INSTRUCTIONS:**
+"${userInstructions || 'Please suggest better alternatives based on my feedback.'}"
+
+**REFINEMENT REQUIREMENTS:**
+1. Generate ${count} COMPLETELY NEW gift ideas (DO NOT repeat any gifts from above)
+2. Build on patterns from LIKED gifts (similar categories, themes, price points, styles)
+3. AVOID patterns from DISLIKED gifts (different categories, themes, styles)
+4. Carefully incorporate the user's specific instructions
+5. Stay within budget: ${recipient.budget.currency} ${recipient.budget.minimum} - ${recipient.budget.maximum}
+6. Maintain the same occasion focus: ${recipient.occasion.type}
+7. Consider recipient's core interests: ${interestsList}
+8. Ensure variety across categories unless user requests focus on specific type
+9. Be more specific and personalized than the original suggestions
+10. If user said gifts were "too generic", be more creative and unique
+11. If user said gifts were "too expensive", focus on lower end of budget
+12. If user said gifts were "not personal enough", emphasize customization/personalization
+
+**RESPONSE FORMAT:**
+Return a JSON array of gift ideas with this exact structure (no markdown, no extra text):
+[
+  {
+    "name": "Gift Name",
+    "description": "Detailed 2-3 sentence description",
+    "reasoning": "Why this refined gift addresses the user's feedback and fits better",
+    "price": "Price range or specific price",
+    "category": "Category (e.g., Tech, Fashion, Experience, Home, Books, etc.)",
+    "url": null,
+    "stores": [],
+    "tags": ["relevant", "keywords", "for", "filtering"]
+  }
+]`;
+  }
+
+  /**
+   * Refine gift ideas based on user feedback
+   * Premium-only feature - does NOT decrement trial uses
+   */
+  async refineGifts(
+    recipient: Recipient,
+    sessionId: string,
+    likedGifts: GiftIdea[],
+    dislikedGifts: GiftIdea[],
+    userInstructions: string,
+    count: number = 5
+  ): Promise<{
+    gifts: GiftIdea[];
+    duration: number;
+    method: 'ai' | 'fallback';
+  }> {
+    const startTime = Date.now();
+
+    try {
+      // Validate session can be refined
+      const canRefine = useGiftStore.getState().canRefineSession(sessionId);
+      if (!canRefine) {
+        throw new AppError('This generation has already been refined', 'REFINEMENT_LIMIT_REACHED');
+      }
+
+      // Check if AI service is configured
+      if (!aiService.isAvailable()) {
+        console.warn('AI service not configured, cannot refine');
+        throw new AppError('AI service unavailable for refinement', 'SERVICE_UNAVAILABLE');
+      }
+
+      // Build refinement prompt
+      const systemPrompt = 'You are a helpful and creative gift recommendation assistant specializing in refining suggestions based on user feedback.';
+      const userPrompt = this.buildRefinementPrompt(
+        recipient,
+        likedGifts,
+        dislikedGifts,
+        userInstructions,
+        count
+      );
+
+      // Initialize AI client
+      aiService.initialize();
+
+      // Call AI service with refinement context
+      const response = await aiService.generateGiftSuggestions(
+        systemPrompt,
+        userPrompt
+      );
+
+      // Parse response
+      const refinedGifts = await giftParser.parseResponse(response, recipient.id);
+
+      // Mark gifts as refined
+      const giftsWithRefinementFlag = refinedGifts.map(gift => ({
+        ...gift,
+        isRefined: true,
+        generationSessionId: sessionId,
+      }));
+
+      // NOTE: Do NOT decrement trial uses - this is a premium feature
+      // and the user already used a generation for the initial gifts
+
+      const duration = Date.now() - startTime;
+
+      return {
+        gifts: giftsWithRefinementFlag,
+        duration,
+        method: 'ai',
+      };
+    } catch (error) {
+      errorLogger.log(error, { context: 'refineGifts', sessionId });
+      throw error;
+    }
+  }
+
+  /**
+   * Refine with progress messages
+   * Premium-only feature
+   */
+  async refineWithProgress(
+    recipient: Recipient,
+    sessionId: string,
+    likedGifts: GiftIdea[],
+    dislikedGifts: GiftIdea[],
+    userInstructions: string,
+    count: number = 5,
+    onProgress?: (message: string) => void
+  ): Promise<GiftIdea[]> {
+    const messages = [
+      'Analyzing your feedback...',
+      'Understanding what you liked and disliked...',
+      'Refining gift recommendations...',
+      'Finding better matches...',
+      'Finalizing refined suggestions...',
+    ];
+
+    for (const message of messages) {
+      if (onProgress) {
+        onProgress(message);
+      }
+      await this.delay(800);
+    }
+
+    try {
+      const result = await this.refineGifts(
+        recipient,
+        sessionId,
+        likedGifts,
+        dislikedGifts,
+        userInstructions,
+        count
+      );
+
+      if (onProgress) {
+        onProgress('Refined suggestions ready!');
+        await this.delay(300);
+      }
+
+      return result.gifts;
+    } catch (error) {
+      throw error;
+    }
   }
 }
 

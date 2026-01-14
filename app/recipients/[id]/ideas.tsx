@@ -6,23 +6,31 @@ import { Text, TouchableOpacity } from 'react-native';
 import { COLORS, SPACING, FONTS, RADIUS } from '../../constants';
 import { Button } from '../../components/Button';
 import { Card } from '../../components/Card';
+import { RefinementBottomSheet } from '../../components/RefinementBottomSheet';
 import { recipientService } from '../../services/recipientService';
 import { giftService } from '../../services/giftService';
-import { 
+import {
   X,
   Heart,
   ShoppingCart,
   Sparkles,
   Filter,
-  ArrowUpDown 
+  ArrowUpDown,
+  Crown
 } from 'lucide-react-native';
 import type { GiftIdea } from '../../types/recipient';
 import { useRecipientStore } from '../../store/recipientStore';
+import { useAuthStore } from '../../store/authStore';
+import { useGiftStore } from '../../store/giftStore';
 
 export default function GiftIdeasScreen() {
   const { id } = useLocalSearchParams<{ id: string }>();
   const router = useRouter();
   const setRecipients = useRecipientStore((state) => state.setRecipients);
+  const isPremium = useAuthStore((state) => state.user?.isPremium ?? false);
+  const createGenerationSession = useGiftStore((state) => state.createGenerationSession);
+  const markSessionAsRefined = useGiftStore((state) => state.markSessionAsRefined);
+
   const [recipient, setRecipient] = useState<any>(null);
   const [gifts, setGifts] = useState<GiftIdea[]>([]);
   const [filteredGifts, setFilteredGifts] = useState<GiftIdea[]>([]);
@@ -31,6 +39,11 @@ export default function GiftIdeasScreen() {
   const [progressMessage, setProgressMessage] = useState('');
   const [selectedCategory, setSelectedCategory] = useState<string | null>(null);
   const [sortOrder, setSortOrder] = useState<'low-to-high' | 'high-to-low'>('low-to-high');
+
+  // Refinement state
+  const [currentSessionId, setCurrentSessionId] = useState<string | null>(null);
+  const [showRefinementSheet, setShowRefinementSheet] = useState(false);
+  const [canRefine, setCanRefine] = useState(true);
 
   useEffect(() => {
     if (id) {
@@ -76,6 +89,15 @@ export default function GiftIdeasScreen() {
 
       setGifts(generatedGifts);
       setFilteredGifts(generatedGifts);
+
+      // Create generation session for refinement tracking
+      const sessionId = createGenerationSession(
+        id,
+        generatedGifts.map(g => g.id)
+      );
+      setCurrentSessionId(sessionId);
+      setCanRefine(true);
+
       setIsProcessing(false);
     } catch (error) {
       Alert.alert('Error', 'Failed to generate gift ideas');
@@ -164,6 +186,87 @@ export default function GiftIdeasScreen() {
     setFilteredGifts(sorted);
   };
 
+  const handleOpenRefinement = () => {
+    if (!isPremium) {
+      Alert.alert(
+        'Premium Feature',
+        'Gift refinement is available with Ribbon Pro. Upgrade to refine your gift suggestions based on your feedback.',
+        [
+          { text: 'Maybe Later', style: 'cancel' },
+          {
+            text: 'Upgrade to Pro',
+            onPress: () => router.push('/pricing'),
+          },
+        ]
+      );
+      return;
+    }
+
+    if (!canRefine) {
+      Alert.alert(
+        'Refinement Already Used',
+        'You can only refine results once per generation. To get new suggestions, use the Regenerate button.',
+        [{ text: 'OK' }]
+      );
+      return;
+    }
+
+    if (gifts.length === 0) {
+      Alert.alert('No Gifts', 'Generate gifts first before refining.');
+      return;
+    }
+
+    setShowRefinementSheet(true);
+  };
+
+  const handleSubmitRefinement = async (feedback: {
+    likedGiftIds: string[];
+    dislikedGiftIds: string[];
+    instructions: string;
+  }) => {
+    setShowRefinementSheet(false);
+    setIsProcessing(true);
+
+    try {
+      const likedGifts = gifts.filter(g => feedback.likedGiftIds.includes(g.id));
+      const dislikedGifts = gifts.filter(g => feedback.dislikedGiftIds.includes(g.id));
+
+      // Generate refined gifts with progress
+      const refinedGifts = await giftService.refineWithProgress(
+        recipient,
+        currentSessionId!,
+        likedGifts,
+        dislikedGifts,
+        feedback.instructions,
+        5,
+        (message) => setProgressMessage(message)
+      );
+
+      // Update state: keep gifts that weren't disliked, append refined gifts
+      const keptGifts = gifts.filter(g => !feedback.dislikedGiftIds.includes(g.id));
+      const updatedGifts = [...keptGifts, ...refinedGifts];
+
+      setGifts(updatedGifts);
+      setFilteredGifts(updatedGifts);
+
+      // Mark session as refined
+      markSessionAsRefined(currentSessionId!, {
+        likedGiftIds: feedback.likedGiftIds,
+        dislikedGiftIds: feedback.dislikedGiftIds,
+        instructions: feedback.instructions,
+        refinedAt: new Date().toISOString(),
+      });
+
+      setCanRefine(false);
+      setIsProcessing(false);
+
+      Alert.alert('Success', 'Your gift suggestions have been refined!');
+    } catch (error: any) {
+      setIsProcessing(false);
+      Alert.alert('Error', error.message || 'Failed to refine gifts');
+    }
+  };
+
   const categories = Array.from(new Set(gifts.map((gift) => gift.category)));
 
   const delay = (ms: number) => new Promise(resolve => setTimeout(resolve, ms));
@@ -187,13 +290,23 @@ export default function GiftIdeasScreen() {
               <Text style={styles.name}>{recipient.name}</Text>
               <Text style={styles.relationship}>{recipient.relationship}</Text>
             </View>
-            <Button
-              title="Regenerate"
-              onPress={handleRegenerate}
-              icon={<Sparkles size={20} />}
-              variant="outline"
-              style={styles.regenerateButton}
-            />
+            <View style={styles.headerActions}>
+              <Button
+                title="Refine"
+                onPress={handleOpenRefinement}
+                icon={<Crown size={16} color={canRefine ? COLORS.accentSecondary : COLORS.textMuted} />}
+                variant="outline"
+                disabled={!canRefine || isProcessing}
+                style={styles.refineButton}
+              />
+              <Button
+                title="Regenerate"
+                onPress={handleRegenerate}
+                icon={<Sparkles size={16} />}
+                variant="outline"
+                style={styles.regenerateButton}
+              />
+            </View>
           </View>
         )}
 
@@ -312,6 +425,14 @@ export default function GiftIdeasScreen() {
           </View>
         )}
       </View>
+
+      {/* Refinement Bottom Sheet */}
+      <RefinementBottomSheet
+        visible={showRefinementSheet}
+        gifts={gifts}
+        onClose={() => setShowRefinementSheet(false)}
+        onSubmit={handleSubmitRefinement}
+      />
     </>
   );
 }
@@ -331,6 +452,10 @@ const styles = StyleSheet.create({
     padding: SPACING.lg,
     backgroundColor: COLORS.bgSecondary,
   },
+  headerActions: {
+    flexDirection: 'row',
+    gap: SPACING.sm,
+  },
   name: {
     fontSize: 20,
     fontWeight: '600',
@@ -343,8 +468,12 @@ const styles = StyleSheet.create({
     color: COLORS.textSecondary,
     fontFamily: FONTS.body,
   },
+  refineButton: {
+    paddingHorizontal: SPACING.sm,
+    paddingVertical: 8,
+  },
   regenerateButton: {
-    paddingHorizontal: SPACING.md,
+    paddingHorizontal: SPACING.sm,
     paddingVertical: 8,
   },
   progressCard: {

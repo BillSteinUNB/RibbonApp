@@ -48,6 +48,28 @@ export interface GiftIdea {
   isSaved: boolean;
   isPurchased: boolean;
   generatedAt: string;
+  // Refinement fields
+  isRefined?: boolean;
+  refinementFeedback?: 'liked' | 'disliked' | null;
+  generationSessionId?: string;
+}
+
+/**
+ * Generation Session for tracking refinements
+ */
+export interface GenerationSession {
+  id: string;
+  recipientId: string;
+  createdAt: string;
+  hasBeenRefined: boolean;
+  originalGiftIds: string[];
+  refinedGiftIds?: string[];
+  refinementData?: {
+    likedGiftIds: string[];
+    dislikedGiftIds: string[];
+    instructions: string;
+    refinedAt: string;
+  };
 }
 
 /**

@@ -1,6 +1,7 @@
 import { create } from 'zustand';
 import { persist, createJSONStorage } from 'zustand/middleware';
 import type { GiftIdea } from './recipientStore';
+import type { GenerationSession } from '../types/recipient';
 
 interface GiftState {
   allGifts: GiftIdea[];
@@ -10,6 +11,11 @@ interface GiftState {
   isGenerating: boolean;
   generationProgress: string;
   error: string | null;
+  // Refinement state
+  currentSessionId: string | null;
+  generationSessions: Record<string, GenerationSession>;
+  isRefining: boolean;
+  refinementProgress: string;
 }
 
 interface GiftActions {
@@ -26,6 +32,14 @@ interface GiftActions {
   setError: (error: string | null) => void;
   clearError: () => void;
   reset: () => void;
+  // Refinement actions
+  createGenerationSession: (recipientId: string, giftIds: string[]) => string;
+  getSession: (sessionId: string) => GenerationSession | null;
+  canRefineSession: (sessionId: string) => boolean;
+  setGiftFeedback: (giftId: string, feedback: 'liked' | 'disliked' | null) => void;
+  markSessionAsRefined: (sessionId: string, refinementData: GenerationSession['refinementData']) => void;
+  setIsRefining: (isRefining: boolean) => void;
+  setRefinementProgress: (progress: string) => void;
 }
 
 export const useGiftStore = create<GiftState & GiftActions>()(
@@ -38,6 +52,10 @@ export const useGiftStore = create<GiftState & GiftActions>()(
       isGenerating: false,
       generationProgress: '',
       error: null,
+      currentSessionId: null,
+      generationSessions: {},
+      isRefining: false,
+      refinementProgress: '',
 
       setAllGifts: (gifts) => set({ allGifts: gifts, error: null }),
       setCurrentGifts: (gifts) => set({ currentGifts: gifts, error: null }),
@@ -109,7 +127,72 @@ export const useGiftStore = create<GiftState & GiftActions>()(
         isGenerating: false,
         generationProgress: '',
         error: null,
+        currentSessionId: null,
+        generationSessions: {},
+        isRefining: false,
+        refinementProgress: '',
       }),
+
+      // Refinement action implementations
+      createGenerationSession: (recipientId: string, giftIds: string[]) => {
+        const sessionId = `session_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`;
+        const session: GenerationSession = {
+          id: sessionId,
+          recipientId,
+          createdAt: new Date().toISOString(),
+          hasBeenRefined: false,
+          originalGiftIds: giftIds,
+        };
+
+        set({
+          currentSessionId: sessionId,
+          generationSessions: {
+            ...get().generationSessions,
+            [sessionId]: session,
+          },
+        });
+
+        return sessionId;
+      },
+
+      getSession: (sessionId: string) => {
+        return get().generationSessions[sessionId] || null;
+      },
+
+      canRefineSession: (sessionId: string) => {
+        const session = get().generationSessions[sessionId];
+        return session ? !session.hasBeenRefined : false;
+      },
+
+      setGiftFeedback: (giftId: string, feedback: 'liked' | 'disliked' | null) => {
+        set({
+          allGifts: get().allGifts.map((g) =>
+            g.id === giftId ? { ...g, refinementFeedback: feedback } : g
+          ),
+          currentGifts: get().currentGifts.map((g) =>
+            g.id === giftId ? { ...g, refinementFeedback: feedback } : g
+          ),
+        });
+      },
+
+      markSessionAsRefined: (sessionId: string, refinementData: GenerationSession['refinementData']) => {
+        const session = get().generationSessions[sessionId];
+        if (session) {
+          set({
+            generationSessions: {
+              ...get().generationSessions,
+              [sessionId]: {
+                ...session,
+                hasBeenRefined: true,
+                refinementData,
+              },
+            },
+          });
+        }
+      },
+
+      setIsRefining: (isRefining: boolean) => set({ isRefining, error: null }),
+      setRefinementProgress: (progress: string) => set({ refinementProgress: progress }),
     }),
     {
       name: 'gift-storage',

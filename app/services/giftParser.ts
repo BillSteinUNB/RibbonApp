@@ -5,16 +5,19 @@ import { errorLogger } from './errorLogger';
 
 /**
  * Raw Gift Idea Schema (from AI response)
+ * Made flexible to handle different AI model response formats
  */
 const rawGiftIdeaSchema = z.object({
   name: z.string().min(1, 'Gift name is required'),
   description: z.string().min(10, 'Description must be at least 10 characters'),
-  reasoning: z.string().min(10, 'Reasoning must be at least 10 characters'),
-  price: z.string().min(1, 'Price is required'),
+  reasoning: z.string().optional().default('A thoughtful gift choice.'),
+  price: z.union([z.string(), z.number()]).transform(val =>
+    typeof val === 'number' ? `$${val}` : val
+  ),
   category: z.string().min(1, 'Category is required'),
   url: z.string().url().nullable().optional(),
   stores: z.array(z.string()).default([]),
-  tags: z.array(z.string()).min(1, 'At least one tag is required'),
+  tags: z.array(z.string()).default(['gift']),
 });
 
 /**
@@ -42,19 +45,27 @@ class GiftParser {
   }
 
   /**
-   * Clean the the AI response
-   * Remove markdown code blocks, extra text, etc.
+   * Clean the AI response
+   * Remove markdown code blocks, thinking sections, extra text, etc.
+   * Handles MiniMax M2.1 format with <think> sections
    */
   private cleanResponse(response: string): string {
-    let cleaned = response.replace(/```json\\n?/gi, '').replace(/```/g, '');
-    
+    let cleaned = response;
+
+    // Remove MiniMax <think>...</think> reasoning sections
+    cleaned = cleaned.replace(/<think>[\s\S]*?<\/think>/gi, '');
+
+    // Remove markdown code blocks
+    cleaned = cleaned.replace(/```json\n?/gi, '').replace(/```/g, '');
+
+    // Extract JSON array
     const firstBracket = cleaned.indexOf('[');
     const lastBracket = cleaned.lastIndexOf(']');
-    
+
     if (firstBracket !== -1 && lastBracket !== -1) {
       cleaned = cleaned.substring(firstBracket, lastBracket + 1);
     }
-    
+
     return cleaned.trim();
   }
 
