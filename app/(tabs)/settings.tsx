@@ -1,9 +1,10 @@
 import React from 'react';
-import { View, Text, ScrollView, TouchableOpacity, StyleSheet, Switch, Alert } from 'react-native';
+import { View, Text, ScrollView, TouchableOpacity, StyleSheet, Switch, Alert, Linking } from 'react-native';
 import { useRouter } from 'expo-router';
-import { User, Bell, Shield, CircleHelp as HelpCircle, LogOut, ChevronRight, CreditCard } from 'lucide-react-native';
+import { User, Bell, Shield, CircleHelp as HelpCircle, LogOut, ChevronRight, CreditCard, FileText } from 'lucide-react-native';
 import { useAuthStore, selectUser, selectUserPreferences } from '../store/authStore';
 import { subscriptionService } from '../services/subscriptionService';
+import { LEGAL_CONFIG } from '../config/app.config';
 
 export default function SettingsScreen() {
   const router = useRouter();
@@ -39,6 +40,22 @@ export default function SettingsScreen() {
         [key]: !preferences.notifications[key]
       }
     });
+  };
+
+  const openPrivacyPolicy = async () => {
+    try {
+      await Linking.openURL(LEGAL_CONFIG.privacyPolicyUrl);
+    } catch (error) {
+      Alert.alert('Error', 'Could not open Privacy Policy');
+    }
+  };
+
+  const openTermsOfService = async () => {
+    try {
+      await Linking.openURL(LEGAL_CONFIG.termsOfServiceUrl);
+    } catch (error) {
+      Alert.alert('Error', 'Could not open Terms of Service');
+    }
   };
 
   if (!user) {
@@ -128,11 +145,20 @@ export default function SettingsScreen() {
           {/* @ts-ignore */}
           <ChevronRight size={20} color="#9CA3AF" />
         </TouchableOpacity>
-        <TouchableOpacity style={styles.row}>
+        <TouchableOpacity style={styles.row} onPress={openPrivacyPolicy}>
           <View style={styles.rowLeft}>
             {/* @ts-ignore */}
             <Shield size={22} color="#6B7280" />
             <Text style={styles.rowLabel}>Privacy Policy</Text>
+          </View>
+          {/* @ts-ignore */}
+          <ChevronRight size={20} color="#9CA3AF" />
+        </TouchableOpacity>
+        <TouchableOpacity style={styles.row} onPress={openTermsOfService}>
+          <View style={styles.rowLeft}>
+            {/* @ts-ignore */}
+            <FileText size={22} color="#6B7280" />
+            <Text style={styles.rowLabel}>Terms of Service</Text>
           </View>
           {/* @ts-ignore */}
           <ChevronRight size={20} color="#9CA3AF" />

@@ -174,6 +174,15 @@ export const STORAGE_CONFIG = {
 } as const;
 
 /**
+ * Legal Documents Configuration
+ */
+export const LEGAL_CONFIG = {
+  privacyPolicyUrl: 'https://billsteinunb.github.io/RibbonApp/privacy-policy.html',
+  termsOfServiceUrl: 'https://billsteinunb.github.io/RibbonApp/terms-of-service.html',
+  contactEmail: 'Contact@Billstein.dev',
+} as const;
+
+/**
  * Validate required environment variables on startup
  */
 export function validateConfig(): void {
@@ -209,6 +218,7 @@ const appConfig = {
   FEATURE_FLAGS,
   UI_CONFIG,
   STORAGE_CONFIG,
+  LEGAL_CONFIG,
 } as const;
 
 export default appConfig;
