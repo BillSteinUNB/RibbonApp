@@ -9,6 +9,8 @@
 interface EnvVars {
   EXPO_PUBLIC_API_KEY?: string;
   EXPO_PUBLIC_AI_API_KEY?: string;
+  EXPO_PUBLIC_SUPABASE_URL?: string;
+  EXPO_PUBLIC_SUPABASE_ANON_KEY?: string;
   EXPO_PUBLIC_FIREBASE_API_KEY?: string;
   EXPO_PUBLIC_FIREBASE_AUTH_DOMAIN?: string;
   EXPO_PUBLIC_FIREBASE_PROJECT_ID?: string;
@@ -38,6 +40,8 @@ export function getEnvVar(name: keyof EnvVars): string | undefined {
 function isEnvVarRequired(name: keyof EnvVars): boolean {
   const requiredVars: (keyof EnvVars)[] = [
     'EXPO_PUBLIC_AI_API_KEY',
+    'EXPO_PUBLIC_SUPABASE_URL',
+    'EXPO_PUBLIC_SUPABASE_ANON_KEY',
   ];
 
   return requiredVars.includes(name);
@@ -56,6 +60,8 @@ export function getAllEnvVars(): EnvVars {
 export function validateEnvVars(): { valid: boolean; missing: string[] } {
   const requiredVars: (keyof EnvVars)[] = [
     'EXPO_PUBLIC_AI_API_KEY',
+    'EXPO_PUBLIC_SUPABASE_URL',
+    'EXPO_PUBLIC_SUPABASE_ANON_KEY',
   ];
 
   const missing: string[] = [];
