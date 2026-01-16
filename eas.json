@@ -45,6 +45,7 @@
   "submit": {
     "preview": {
       "ios": {
+        "ascAppId": "6757934358",
         "ascApiKeyPath": "./AuthKey_WY8PV47DWJ.p8",
         "ascApiKeyIssuerId": "6ec43bb1-8c3c-43f2-8a90-cb35865f0226",
         "ascApiKeyId": "WY8PV47DWJ"
@@ -52,6 +53,7 @@
     },
     "production": {
       "ios": {
+        "ascAppId": "6757934358",
         "ascApiKeyPath": "./AuthKey_WY8PV47DWJ.p8",
         "ascApiKeyIssuerId": "6ec43bb1-8c3c-43f2-8a90-cb35865f0226",
         "ascApiKeyId": "WY8PV47DWJ"
