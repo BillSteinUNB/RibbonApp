@@ -36,29 +36,17 @@
     },
     "plugins": [
       "expo-router",
-      "expo-secure-store",
-      "react-native-purchases",
-      [
-        "react-native-purchases-ui",
-        {
-          "ios": {
-            "errorColor": "#FF3B30",
-            "backgroundColor": "#FAFAFA"
-          },
-          "android": {
-            "errorColor": "#FF3B30",
-            "backgroundColor": "#FAFAFA"
-          }
-        }
-      ]
+      "expo-secure-store"
     ],
     "extra": {
-      "eas": {
-        "projectId": "YOUR_EAS_PROJECT_ID"
-      },
       "privacyPolicyUrl": "https://billsteinunb.github.io/RibbonApp/privacy-policy.html",
       "termsOfServiceUrl": "https://billsteinunb.github.io/RibbonApp/terms-of-service.html",
-      "supportEmail": "support@ribbon.app"
-    }
+      "supportEmail": "Contact@Billstein.dev",
+      "router": {},
+      "eas": {
+        "projectId": "b70a8ab8-6acf-45e5-b506-76747f430c86"
+      }
+    },
+    "owner": "billsteinunb"
   }
 }
