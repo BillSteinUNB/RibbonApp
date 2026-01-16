@@ -2,11 +2,18 @@ import { useEffect, useRef, useCallback } from 'react';
 import { AppState, AppStateStatus } from 'react-native';
 import { Stack } from 'expo-router';
 import { StatusBar } from 'expo-status-bar';
+import * as Sentry from '@sentry/react-native';
 import { useAuthStore } from './store/authStore';
 import * as revenueCat from './services/revenueCatService';
 import { logger } from './utils/logger';
 
-export default function RootLayout() {
+Sentry.init({
+  dsn: 'https://b71131849b83863eb53d60386a1a7823@o4510722439774208.ingest.us.sentry.io/4510722440757248',
+  debug: __DEV__,
+  tracesSampleRate: 1.0,
+});
+
+function RootLayout() {
   const { user, syncFromRevenueCat } = useAuthStore();
   const appState = useRef(AppState.currentState);
   const isRevenueCatInitialized = useRef(false);
@@ -121,3 +128,5 @@ export default function RootLayout() {
     </>
   );
 }
+
+export default Sentry.wrap(RootLayout);

@@ -409,6 +409,16 @@ Return a JSON array of gift ideas with this exact structure (no markdown, no ext
       const userId = user.id;
       const isPremium = user.isPremium;
 
+      // PREMIUM-ONLY FEATURE: Check if user has premium subscription
+      // Note: This is client-side validation. For complete security, server-side validation
+      // should be implemented if the API is exposed to external callers.
+      if (!isPremium) {
+        throw new AppError(
+          'Premium subscription required for gift refinement',
+          'PREMIUM_REQUIRED'
+        );
+      }
+
       // Validate session can be refined
       const canRefine = useGiftStore.getState().canRefineSession(sessionId);
       if (!canRefine) {
@@ -489,6 +499,17 @@ Return a JSON array of gift ideas with this exact structure (no markdown, no ext
     count: number = 5,
     onProgress?: (message: string) => void
   ): Promise<GiftIdea[]> {
+    // PREMIUM-ONLY FEATURE: Check if user has premium subscription
+    // Note: This is client-side validation. For complete security, server-side validation
+    // should be implemented if API is exposed to external callers.
+    const user = useAuthStore.getState().user;
+    if (!user || !user.isPremium) {
+      throw new AppError(
+        'Premium subscription required for gift refinement',
+        'PREMIUM_REQUIRED'
+      );
+    }
+
     const messages = [
       'Analyzing your feedback...',
       'Understanding what you liked and disliked...',

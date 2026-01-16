@@ -30,6 +30,7 @@ interface AuthState {
   isAuthenticated: boolean;
   isLoading: boolean;
   error: string | null;
+  logoutError: string | null;
 }
 
 interface AuthActions {
@@ -42,8 +43,10 @@ interface AuthActions {
   resetTrialUses: () => void;
   setLoading: (isLoading: boolean) => void;
   setError: (error: string | null) => void;
+  setLogoutError: (error: string | null) => void;
   logout: () => Promise<void>;
   clearError: () => void;
+  cleanupFailedLogout: () => Promise<void>;
 }
 
 export const useAuthStore = create<AuthState & AuthActions>()(
@@ -53,6 +56,7 @@ export const useAuthStore = create<AuthState & AuthActions>()(
       isAuthenticated: false,
       isLoading: false,
       error: null,
+      logoutError: null,
 
       setUser: (user) => set({ user, isAuthenticated: !!user, error: null }),
       setAuthenticated: (isAuthenticated) => set({ isAuthenticated }),
@@ -172,26 +176,121 @@ export const useAuthStore = create<AuthState & AuthActions>()(
           });
         }
       },
-      
+
       setLoading: (isLoading) => set({ isLoading }),
       setError: (error) => set({ error, isLoading: false }),
+      setLogoutError: (error) => set({ logoutError: error }),
       logout: async () => {
-        try {
-          await authService.signOut();
-        } catch (error) {
-          errorLogger.log(error, { context: 'logout' });
-        }
+        set({ logoutError: null });
 
-        // Log out from RevenueCat to clear subscription state
-        try {
-          await revenueCatService.logOutUser();
-        } catch (error) {
-          errorLogger.log(error, { context: 'revenueCat logout' });
-        }
+        // Helper function for retry with exponential backoff
+        const retryWithBackoff = async <T>(
+          operation: () => Promise<T>,
+          operationName: string,
+          maxRetries: number = 3
+        ): Promise<{ success: boolean; error?: Error }> => {
+          for (let attempt = 0; attempt < maxRetries; attempt++) {
+            try {
+              await operation();
+              return { success: true };
+            } catch (error) {
+              errorLogger.log(error, { context: operation, attempt: attempt + 1 });
+              if (attempt === maxRetries - 1) {
+                return { success: false, error: error as Error };
+              }
+              // Exponential backoff: 500ms, 1000ms, 2000ms
+              const delay = Math.pow(2, attempt) * 500;
+              await new Promise(resolve => setTimeout(resolve, delay));
+            }
+          }
+          return { success: false };
+        };
 
-        set({ user: null, isAuthenticated: false, error: null });
+        // Attempt Supabase logout with retries
+        const supabaseResult = await retryWithBackoff(
+          () => authService.signOut(),
+          'supabase logout',
+          3
+        );
+
+        // Attempt RevenueCat logout with retries
+        const revenueCatResult = await retryWithBackoff(
+          () => revenueCatService.logOutUser(),
+          'revenueCat logout',
+          3
+        );
+
+        // Check results and handle accordingly
+        if (supabaseResult.success && revenueCatResult.success) {
+          // Both logged out successfully - clear state
+          set({ user: null, isAuthenticated: false, error: null, logoutError: null });
+        } else {
+          // At least one logout failed
+          const errors: string[] = [];
+          if (!supabaseResult.success) {
+            errors.push(`Supabase: ${supabaseResult.error?.message || 'Unknown error'}`);
+          }
+          if (!revenueCatResult.success) {
+            errors.push(`RevenueCat: ${revenueCatResult.error?.message || 'Unknown error'}`);
+          }
+
+          const errorMessage = `Logout failed: ${errors.join(', ')}`;
+          set({
+            logoutError: errorMessage,
+            isLoading: false,
+          });
+
+          // Store failed logout timestamp for cleanup
+          try {
+            await require('@react-native-async-storage/async-storage').default.setItem(
+              '@ribbon/failed-logout-timestamp',
+              Date.now().toString()
+            );
+          } catch {
+            // Ignore storage errors
+          }
+        }
       },
       clearError: () => set({ error: null }),
+      cleanupFailedLogout: async () => {
+        try {
+          const AsyncStorage = require('@react-native-async-storage/async-storage').default;
+          const failedLogoutTimestamp = await AsyncStorage.getItem('@ribbon/failed-logout-timestamp');
+
+          if (!failedLogoutTimestamp) {
+            return; // No failed logout to clean up
+          }
+
+          const failedTime = parseInt(failedLogoutTimestamp, 10);
+          const hoursSinceFailure = (Date.now() - failedTime) / (1000 * 60 * 60);
+
+          if (hoursSinceFailure > 24) {
+            // Force clear state if failed for more than 24 hours
+            console.log('[Auth] Force clearing stale logout state after 24 hours');
+            await AsyncStorage.removeItem('@ribbon/failed-logout-timestamp');
+            set({
+              user: null,
+              isAuthenticated: false,
+              error: null,
+              logoutError: null,
+            });
+          } else {
+            // Try to complete the failed logout
+            console.log('[Auth] Attempting to complete failed logout');
+            const store = get();
+            await store.logout();
+          }
+        } catch (error) {
+          console.warn('[Auth] Failed to cleanup logout state:', error);
+          // If cleanup fails, remove the timestamp to prevent stuck state
+          try {
+            const AsyncStorage = require('@react-native-async-storage/async-storage').default;
+            await AsyncStorage.removeItem('@ribbon/failed-logout-timestamp');
+          } catch {
+            // Ignore storage errors
+          }
+        }
+      },
     }),
     {
       name: 'auth-storage',

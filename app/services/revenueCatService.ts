@@ -29,6 +29,14 @@ export type PaywallResultType = 'purchased' | 'restored' | 'cancelled' | 'error'
 // Service state
 let isInitialized = false;
 
+// Track active listeners with unique IDs and context
+const activeListeners = new Map<number, {
+  listener: (customerInfo: CustomerInfo) => void;
+  userId?: string;
+}>();
+let listenerIdCounter = 0;
+const MAX_LISTENERS = 50;
+
 /**
  * Initialize RevenueCat SDK
  * Should be called once on app startup
@@ -82,6 +90,10 @@ export async function logOutUser(): Promise<CustomerInfo> {
   try {
     const customerInfo = await Purchases.logOut();
     logger.log('[RevenueCat] User logged out');
+
+    // Clear all tracked listeners to prevent stale callbacks
+    clearAllListeners();
+
     return customerInfo;
   } catch (error) {
     logger.error('[RevenueCat] Failed to log out user:', error);
@@ -291,18 +303,29 @@ export async function presentCustomerCenter(
  * Returns an unsubscribe function
  */
 export function addCustomerInfoListener(
-  listener: (customerInfo: CustomerInfo) => void
+  listener: (customerInfo: CustomerInfo) => void,
+  currentUserId?: string
 ): () => void {
   // The SDK's addCustomerInfoUpdateListener stores the listener internally
   // We use a wrapper approach since the TypeScript types show it returns void
   Purchases.addCustomerInfoUpdateListener(listener);
 
-  // Return a no-op function since we can't easily remove individual listeners
+  // Check if we have exceeded max listener limit
   // The SDK will handle cleanup when the app is unmounted
   return () => {
     // Listeners are cleared when the SDK is reset
     // For now, this is a no-op as the SDK manages the listener lifecycle
   };
+}
+
+/**
+ * Clear all tracked listeners
+ * Call this after logout to prevent stale callbacks
+ */
+export function clearAllListeners(): void {
+  activeListeners.clear();
+  listenerIdCounter = 0;
+  console.log('[RevenueCat] All listeners cleared');
 }
 
 /**

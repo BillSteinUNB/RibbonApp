@@ -6,7 +6,7 @@
     "orientation": "portrait",
     "icon": "./assets/icon.png",
     "userInterfaceStyle": "light",
-    "newArchEnabled": true,
+    "newArchEnabled": false,
     "splash": {
       "image": "./assets/splash-icon.png",
       "resizeMode": "contain",
@@ -37,7 +37,21 @@
     },
     "plugins": [
       "expo-router",
-      "expo-secure-store"
+      "expo-secure-store",
+      [
+        "expo-notifications",
+        {
+          "icon": "./assets/icon.png",
+          "color": "#FF4B4B"
+        }
+      ],
+      "      [
+        "@sentry/react-native",
+        {
+          "organization": "bill-stein",
+          "project": "react-native"
+        }
+      ]"
     ],
     "extra": {
       "privacyPolicyUrl": "https://billsteinunb.github.io/RibbonApp/privacy-policy.html",
