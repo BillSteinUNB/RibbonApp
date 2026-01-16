@@ -9,6 +9,7 @@ import { Card } from '../../components/Card';
 import { RefinementBottomSheet } from '../../components/RefinementBottomSheet';
 import { recipientService } from '../../services/recipientService';
 import { giftService } from '../../services/giftService';
+import { biometricAuthService } from '../../services/biometricAuthService';
 import {
   X,
   Heart,
@@ -145,6 +146,19 @@ export default function GiftIdeasScreen() {
           text: 'Yes',
           onPress: async () => {
             try {
+              // Check if biometric is enabled and available
+              const biometricEnabled = await biometricAuthService.isBiometricEnabled();
+              const biometricAvailable = await biometricAuthService.checkAvailability();
+
+              if (biometricEnabled && biometricAvailable) {
+                // Require biometric authentication before marking as purchased
+                const authenticated = await biometricAuthService.authenticate('Authenticate to mark gift as purchased');
+                if (!authenticated) {
+                  Alert.alert('Authentication Required', 'Biometric authentication is required to mark gifts as purchased.');
+                  return;
+                }
+              }
+
               await giftService.markAsPurchased(giftId, id);
               setGifts((prev) =>
                 prev.map((g) => (g.id === giftId ? { ...g, isPurchased: !g.isPurchased } : g))

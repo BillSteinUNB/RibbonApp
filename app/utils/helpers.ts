@@ -1,16 +1,37 @@
+import * as Crypto from 'expo-crypto';
+
 /**
  * General helper utility functions
  */
 
 /**
- * Generate a unique ID (similar to UUID v4)
+ * Generate a cryptographically secure unique ID (UUID v4 format)
+ * Uses expo-crypto for secure random byte generation
  */
 export function generateId(): string {
-  return 'xxxxxxxx-xxxx-4xxx-yxxx-xxxxxxxxxxxx'.replace(/[xy]/g, function(c) {
-    const r = Math.random() * 16 | 0;
-    const v = c === 'x' ? r : (r & 0x3 | 0x8);
-    return v.toString(16);
-  });
+  const bytes = Crypto.getRandomBytes(16);
+
+  // Set version (4) and variant (RFC4122)
+  bytes[6] = (bytes[6] & 0x0f) | 0x40; // Version 4
+  bytes[8] = (bytes[8] & 0x3f) | 0x80; // Variant RFC4122
+
+  const hex = Array.from(bytes)
+    .map(b => b.toString(16).padStart(2, '0'))
+    .join('');
+
+  return `${hex.slice(0, 8)}-${hex.slice(8, 12)}-${hex.slice(12, 16)}-${hex.slice(16, 20)}-${hex.slice(20, 32)}`;
+}
+
+/**
+ * Generate a cryptographically secure session ID
+ * Format: prefix_timestamp_secureRandom
+ */
+export function generateSecureSessionId(prefix: string = 'session'): string {
+  const bytes = Crypto.getRandomBytes(12);
+  const randomPart = Array.from(bytes)
+    .map(b => b.toString(16).padStart(2, '0'))
+    .join('');
+  return `${prefix}_${Date.now()}_${randomPart}`;
 }
 
 /**

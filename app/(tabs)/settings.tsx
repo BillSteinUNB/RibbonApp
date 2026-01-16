@@ -5,6 +5,7 @@ import { User, Bell, Shield, CircleHelp as HelpCircle, LogOut, ChevronRight, Cre
 import { useAuthStore, selectUser, selectUserPreferences } from '../store/authStore';
 import { subscriptionService } from '../services/subscriptionService';
 import { LEGAL_CONFIG } from '../config/app.config';
+import { biometricAuthService } from '../services/biometricAuthService';
 
 export default function SettingsScreen() {
   const router = useRouter();
@@ -17,10 +18,23 @@ export default function SettingsScreen() {
       'Are you sure you want to sign out?',
       [
         { text: 'Cancel', style: 'cancel' },
-        { 
-          text: 'Sign Out', 
+        {
+          text: 'Sign Out',
           style: 'destructive',
-          onPress: () => {
+          onPress: async () => {
+            // Check if biometric is enabled and available
+            const biometricEnabled = await biometricAuthService.isBiometricEnabled();
+            const biometricAvailable = await biometricAuthService.checkAvailability();
+
+            if (biometricEnabled && biometricAvailable) {
+              // Require biometric authentication before logout
+              const authenticated = await biometricAuthService.authenticate('Authenticate to sign out');
+              if (!authenticated) {
+                Alert.alert('Authentication Required', 'Biometric authentication is required to sign out.');
+                return;
+              }
+            }
+
             logout();
             router.replace('/(auth)/sign-in');
           }

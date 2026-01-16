@@ -1,6 +1,7 @@
 import { Subscription, PRICING_PLANS } from '../types/subscription';
 import { storage } from './storage';
 import { errorLogger } from './errorLogger';
+import { generateSecureSessionId } from '../utils/helpers';
 
 // Mock implementation since we don't have backend/RevenueCat keys yet
 const SUBSCRIPTION_KEY = 'user_subscription';
@@ -43,7 +44,7 @@ export const subscriptionService = {
       endDate: new Date(Date.now() + (plan.interval === 'year' ? 365 : 30) * 24 * 60 * 60 * 1000),
       cancelAtPeriodEnd: false,
       paymentProvider: 'revenuecat', // Simulating external provider
-      providerSubscriptionId: `sub_${Math.random().toString(36).substring(7)}`
+      providerSubscriptionId: generateSecureSessionId('sub')
     };
 
     await storage.setItem(SUBSCRIPTION_KEY, newSubscription);

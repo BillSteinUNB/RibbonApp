@@ -41,7 +41,10 @@
     "extra": {
       "eas": {
         "projectId": "YOUR_EAS_PROJECT_ID"
-      }
+      },
+      "privacyPolicyUrl": "https://billsteinunb.github.io/RibbonApp/privacy-policy.html",
+      "termsOfServiceUrl": "https://billsteinunb.github.io/RibbonApp/terms-of-service.html",
+      "supportEmail": "support@ribbon.app"
     }
   }
 }

@@ -14,6 +14,7 @@
     "@types/node": "^25.0.8",
     "expo": "~54.0.31",
     "expo-constants": "~18.0.13",
+    "expo-crypto": "^15.0.8",
     "expo-linking": "~8.0.11",
     "expo-local-authentication": "^17.0.8",
     "expo-notifications": "^0.32.16",

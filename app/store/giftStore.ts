@@ -2,6 +2,7 @@ import { create } from 'zustand';
 import { persist, createJSONStorage } from 'zustand/middleware';
 import type { GiftIdea } from './recipientStore';
 import type { GenerationSession } from '../types/recipient';
+import { generateSecureSessionId } from '../utils/helpers';
 
 interface GiftState {
   allGifts: GiftIdea[];
@@ -135,7 +136,7 @@ export const useGiftStore = create<GiftState & GiftActions>()(
 
       // Refinement action implementations
       createGenerationSession: (recipientId: string, giftIds: string[]) => {
-        const sessionId = `session_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`;
+        const sessionId = generateSecureSessionId('session');
         const session: GenerationSession = {
           id: sessionId,
           recipientId,

@@ -4,6 +4,7 @@ import { useRouter } from 'expo-router';
 import { Check, Star } from 'lucide-react-native';
 import { useAuthStore } from '../store/authStore';
 import { subscriptionService } from '../services/subscriptionService';
+import { biometricAuthService } from '../services/biometricAuthService';
 import { PRICING_PLANS } from '../types/subscription';
 
 export default function PricingScreen() {
@@ -16,6 +17,19 @@ export default function PricingScreen() {
     if (!user) {
       router.push('/(auth)/sign-in');
       return;
+    }
+
+    // Check if biometric is enabled and available
+    const biometricEnabled = await biometricAuthService.isBiometricEnabled();
+    const biometricAvailable = await biometricAuthService.checkAvailability();
+
+    if (biometricEnabled && biometricAvailable) {
+      // Require biometric authentication before subscription changes
+      const authenticated = await biometricAuthService.authenticate('Authenticate to subscribe');
+      if (!authenticated) {
+        Alert.alert('Authentication Required', 'Biometric authentication is required to manage subscriptions.');
+        return;
+      }
     }
 
     setLoading(true);
