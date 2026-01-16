@@ -45,13 +45,13 @@
           "color": "#FF4B4B"
         }
       ],
-      "      [
+      [
         "@sentry/react-native",
         {
           "organization": "bill-stein",
           "project": "react-native"
         }
-      ]"
+      ]
     ],
     "extra": {
       "privacyPolicyUrl": "https://billsteinunb.github.io/RibbonApp/privacy-policy.html",
