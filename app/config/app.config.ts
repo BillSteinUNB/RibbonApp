@@ -74,6 +74,8 @@ export const BUSINESS_CONFIG = {
     resetPeriodDays: 30,
   },
   subscription: {
+    // Note: Actual prices are fetched from RevenueCat at runtime
+    // These are just display defaults if RevenueCat is unavailable
     plans: [
       {
         id: 'free',
@@ -89,33 +91,43 @@ export const BUSINESS_CONFIG = {
         popular: false,
       },
       {
-        id: 'monthly',
-        name: 'Premium Monthly',
-        price: 9.99,
+        id: 'weekly',
+        name: 'Pro Weekly',
+        price: 3.99,
         currency: 'USD',
-        interval: 'month' as const,
+        interval: 'week' as const,
         features: [
           'Unlimited gift generations',
           'Unlimited recipients',
           'Gift history tracking',
+        ],
+        popular: false,
+      },
+      {
+        id: 'monthly',
+        name: 'Pro Monthly',
+        price: 8.99,
+        currency: 'USD',
+        interval: 'month' as const,
+        features: [
+          'Unlimited gift generations',
+          'Advanced AI persona analysis',
+          'Unlimited recipients',
+          'Gift history tracking',
           'Priority support',
-          'Early access to new features',
         ],
         popular: false,
       },
       {
         id: 'yearly',
-        name: 'Premium Yearly',
-        price: 79.99,
+        name: 'Pro Yearly',
+        price: 24.99,
         currency: 'USD',
         interval: 'year' as const,
         features: [
-          'Unlimited gift generations',
-          'Unlimited recipients',
-          'Gift history tracking',
-          'Priority support',
+          'All Monthly features',
+          'Save 77%',
           'Early access to new features',
-          'Save 33% vs monthly',
         ],
         popular: true,
       },

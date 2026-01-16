@@ -36,7 +36,21 @@
     },
     "plugins": [
       "expo-router",
-      "expo-secure-store"
+      "expo-secure-store",
+      "react-native-purchases",
+      [
+        "react-native-purchases-ui",
+        {
+          "ios": {
+            "errorColor": "#FF3B30",
+            "backgroundColor": "#FAFAFA"
+          },
+          "android": {
+            "errorColor": "#FF3B30",
+            "backgroundColor": "#FAFAFA"
+          }
+        }
+      ]
     ],
     "extra": {
       "eas": {

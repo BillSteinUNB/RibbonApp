@@ -1,18 +1,61 @@
-import React, { useEffect, useState } from 'react';
+import React, { useState } from 'react';
 import { View, Text, ScrollView, TouchableOpacity, StyleSheet, ActivityIndicator, Alert } from 'react-native';
 import { useRouter } from 'expo-router';
-import { Check, Star } from 'lucide-react-native';
+import { Check, Crown, Sparkles } from 'lucide-react-native';
 import { useAuthStore } from '../store/authStore';
 import { subscriptionService } from '../services/subscriptionService';
 import { biometricAuthService } from '../services/biometricAuthService';
+import * as revenueCat from '../services/revenueCatService';
 import { PRICING_PLANS } from '../types/subscription';
 
 export default function PricingScreen() {
   const router = useRouter();
   const [loading, setLoading] = useState(false);
-  const { user, setSubscription } = useAuthStore();
+  const { user, setSubscription, syncFromRevenueCat } = useAuthStore();
   const isPremium = user?.isPremium;
 
+  // Present RevenueCat Paywall (recommended approach)
+  const handlePresentPaywall = async () => {
+    if (!user) {
+      router.push('/(auth)/sign-in');
+      return;
+    }
+
+    // Check if biometric is enabled and available
+    const biometricEnabled = await biometricAuthService.isBiometricEnabled();
+    const biometricAvailable = await biometricAuthService.checkAvailability();
+
+    if (biometricEnabled && biometricAvailable) {
+      const authenticated = await biometricAuthService.authenticate('Authenticate to subscribe');
+      if (!authenticated) {
+        Alert.alert('Authentication Required', 'Biometric authentication is required to manage subscriptions.');
+        return;
+      }
+    }
+
+    setLoading(true);
+    try {
+      const result = await revenueCat.presentPaywall();
+
+      if (result === 'purchased' || result === 'restored') {
+        // Sync subscription status
+        const customerInfo = await revenueCat.getCustomerInfo();
+        syncFromRevenueCat(customerInfo);
+        Alert.alert('Success', 'Welcome to Ribbon Pro!');
+        router.back();
+      } else if (result === 'error') {
+        Alert.alert('Error', 'Something went wrong. Please try again.');
+      }
+      // 'cancelled' and 'not_presented' are handled silently
+    } catch (error) {
+      const message = revenueCat.getErrorMessage(error);
+      Alert.alert('Error', message);
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  // Subscribe using custom UI (fallback)
   const handleSubscribe = async (planId: string) => {
     if (!user) {
       router.push('/(auth)/sign-in');
@@ -24,7 +67,6 @@ export default function PricingScreen() {
     const biometricAvailable = await biometricAuthService.checkAvailability();
 
     if (biometricEnabled && biometricAvailable) {
-      // Require biometric authentication before subscription changes
       const authenticated = await biometricAuthService.authenticate('Authenticate to subscribe');
       if (!authenticated) {
         Alert.alert('Authentication Required', 'Biometric authentication is required to manage subscriptions.');
@@ -39,15 +81,21 @@ export default function PricingScreen() {
       Alert.alert('Success', 'Welcome to Ribbon Pro!');
       router.back();
     } catch (error) {
-      Alert.alert('Error', 'Failed to process subscription. Please try again.');
+      if (!revenueCat.isUserCancellation(error)) {
+        const message = revenueCat.getErrorMessage(error);
+        Alert.alert('Error', message);
+      }
     } finally {
       setLoading(false);
     }
   };
 
   const handleRestore = async () => {
-    if (!user) return;
-    
+    if (!user) {
+      router.push('/(auth)/sign-in');
+      return;
+    }
+
     setLoading(true);
     try {
       const subscription = await subscriptionService.restorePurchases(user.id);
@@ -58,38 +106,119 @@ export default function PricingScreen() {
         Alert.alert('Info', 'No active subscription found');
       }
     } catch (error) {
-      Alert.alert('Error', 'Failed to restore purchases');
+      const message = revenueCat.getErrorMessage(error);
+      Alert.alert('Error', message);
     } finally {
       setLoading(false);
     }
   };
 
+  // If already premium, show current status
+  if (isPremium) {
+    return (
+      <ScrollView style={styles.container} contentContainerStyle={styles.content}>
+        <View style={styles.header}>
+          <View style={styles.crownContainer}>
+            {/* @ts-ignore */}
+            <Crown size={48} color="#FFD700" fill="#FFD700" />
+          </View>
+          <Text style={styles.title}>You're a Pro!</Text>
+          <Text style={styles.subtitle}>
+            Thank you for supporting Ribbon
+          </Text>
+        </View>
+
+        <View style={styles.statusCard}>
+          <Text style={styles.statusTitle}>Current Plan</Text>
+          <Text style={styles.statusPlan}>
+            {user?.subscription?.plan === 'yearly' ? 'Pro Yearly' :
+             user?.subscription?.plan === 'weekly' ? 'Pro Weekly' :
+             'Pro Monthly'}
+          </Text>
+          {user?.subscription?.endDate && (
+            <Text style={styles.statusDate}>
+              Renews: {new Date(user.subscription.endDate).toLocaleDateString()}
+            </Text>
+          )}
+          {user?.subscription?.cancelAtPeriodEnd && (
+            <Text style={styles.cancelingText}>
+              Your subscription will not renew
+            </Text>
+          )}
+        </View>
+
+        <TouchableOpacity
+          style={styles.manageButton}
+          onPress={() => subscriptionService.openCustomerCenter(user?.id, setSubscription)}
+          disabled={loading}
+        >
+          {loading ? (
+            <ActivityIndicator color="#374151" />
+          ) : (
+            <Text style={styles.manageButtonText}>Manage Subscription</Text>
+          )}
+        </TouchableOpacity>
+
+        <TouchableOpacity
+          style={styles.restoreButton}
+          onPress={handleRestore}
+          disabled={loading}
+        >
+          <Text style={styles.restoreText}>Restore Purchases</Text>
+        </TouchableOpacity>
+      </ScrollView>
+    );
+  }
+
   return (
     <ScrollView style={styles.container} contentContainerStyle={styles.content}>
       <View style={styles.header}>
+        <View style={styles.sparkleContainer}>
+          {/* @ts-ignore */}
+          <Sparkles size={40} color="#FF4B4B" />
+        </View>
         <Text style={styles.title}>Unlock Full Potential</Text>
         <Text style={styles.subtitle}>
           Get unlimited gift ideas and advanced AI features
         </Text>
       </View>
 
+      {/* Primary CTA - Opens RevenueCat Paywall */}
+      <TouchableOpacity
+        style={styles.paywallButton}
+        onPress={handlePresentPaywall}
+        disabled={loading}
+      >
+        {loading ? (
+          <ActivityIndicator color="white" />
+        ) : (
+          <>
+            {/* @ts-ignore */}
+            <Crown size={24} color="white" style={styles.buttonIcon} />
+            <Text style={styles.paywallButtonText}>Upgrade to Pro</Text>
+          </>
+        )}
+      </TouchableOpacity>
+
+      <Text style={styles.orText}>or choose a plan</Text>
+
+      {/* Plan cards for custom selection */}
       {PRICING_PLANS.map((plan) => (
         <TouchableOpacity
           key={plan.id}
           style={[
             styles.planCard,
             plan.popular && styles.popularCard,
-            isPremium && user?.subscription?.plan === plan.id && styles.activeCard
           ]}
           onPress={() => handleSubscribe(plan.id)}
-          disabled={loading || (isPremium && user?.subscription?.plan === plan.id)}
+          disabled={loading}
         >
           {plan.popular && (
             <View style={styles.popularBadge}>
-              <Text style={styles.popularText}>Most Popular</Text>
+              <Text style={styles.popularText}>Best Value</Text>
             </View>
           )}
-          
+
           <View style={styles.planHeader}>
             <Text style={styles.planName}>{plan.name}</Text>
             <View style={styles.priceContainer}>
@@ -103,32 +232,28 @@ export default function PricingScreen() {
             {plan.features.map((feature, index) => (
               <View key={index} style={styles.featureRow}>
                 {/* @ts-ignore */}
-                <Check size={20} color="#10B981" />
+                <Check size={18} color="#10B981" />
                 <Text style={styles.featureText}>{feature}</Text>
               </View>
             ))}
           </View>
 
           <View style={[
-            styles.button,
-            plan.popular && styles.popularButton,
-            isPremium && user?.subscription?.plan === plan.id && styles.activeButton
+            styles.selectButton,
+            plan.popular && styles.popularSelectButton,
           ]}>
-            {loading ? (
-              <ActivityIndicator color="white" />
-            ) : (
-              <Text style={styles.buttonText}>
-                {isPremium && user?.subscription?.plan === plan.id 
-                  ? 'Current Plan' 
-                  : `Subscribe ${plan.interval === 'year' ? 'Yearly' : 'Monthly'}`}
-              </Text>
-            )}
+            <Text style={[
+              styles.selectButtonText,
+              plan.popular && styles.popularSelectButtonText,
+            ]}>
+              Select Plan
+            </Text>
           </View>
         </TouchableOpacity>
       ))}
 
-      <TouchableOpacity 
-        style={styles.restoreButton} 
+      <TouchableOpacity
+        style={styles.restoreButton}
         onPress={handleRestore}
         disabled={loading}
       >
@@ -136,7 +261,7 @@ export default function PricingScreen() {
       </TouchableOpacity>
 
       <Text style={styles.disclaimer}>
-        Subscriptions automatically renew unless auto-renew is turned off at least 24-hours before the end of the current period.
+        Subscriptions automatically renew unless auto-renew is turned off at least 24-hours before the end of the current period. Payment will be charged to your App Store or Google Play account.
       </Text>
     </ScrollView>
   );
@@ -153,8 +278,14 @@ const styles = StyleSheet.create({
   },
   header: {
     alignItems: 'center',
-    marginBottom: 30,
+    marginBottom: 24,
     marginTop: 20,
+  },
+  sparkleContainer: {
+    marginBottom: 16,
+  },
+  crownContainer: {
+    marginBottom: 16,
   },
   title: {
     fontSize: 28,
@@ -168,11 +299,40 @@ const styles = StyleSheet.create({
     color: '#6B7280',
     textAlign: 'center',
   },
+  paywallButton: {
+    backgroundColor: '#FF4B4B',
+    borderRadius: 16,
+    paddingVertical: 18,
+    paddingHorizontal: 24,
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    marginBottom: 16,
+    shadowColor: '#FF4B4B',
+    shadowOffset: { width: 0, height: 4 },
+    shadowOpacity: 0.3,
+    shadowRadius: 8,
+    elevation: 4,
+  },
+  buttonIcon: {
+    marginRight: 8,
+  },
+  paywallButtonText: {
+    color: 'white',
+    fontSize: 18,
+    fontWeight: 'bold',
+  },
+  orText: {
+    textAlign: 'center',
+    color: '#9CA3AF',
+    fontSize: 14,
+    marginBottom: 16,
+  },
   planCard: {
     backgroundColor: 'white',
     borderRadius: 16,
-    padding: 24,
-    marginBottom: 20,
+    padding: 20,
+    marginBottom: 16,
     borderWidth: 1,
     borderColor: '#E5E7EB',
     position: 'relative',
@@ -185,10 +345,6 @@ const styles = StyleSheet.create({
   popularCard: {
     borderColor: '#FF4B4B',
     borderWidth: 2,
-  },
-  activeCard: {
-    borderColor: '#10B981',
-    backgroundColor: '#ECFDF5',
   },
   popularBadge: {
     position: 'absolute',
@@ -205,60 +361,107 @@ const styles = StyleSheet.create({
     fontWeight: 'bold',
   },
   planHeader: {
-    marginBottom: 20,
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    marginBottom: 16,
   },
   planName: {
-    fontSize: 18,
+    fontSize: 16,
     fontWeight: '600',
     color: '#374151',
-    marginBottom: 8,
   },
   priceContainer: {
     flexDirection: 'row',
     alignItems: 'baseline',
   },
   currency: {
-    fontSize: 20,
+    fontSize: 16,
     fontWeight: '500',
     color: '#111827',
   },
   price: {
-    fontSize: 36,
+    fontSize: 24,
     fontWeight: 'bold',
     color: '#111827',
   },
   interval: {
-    fontSize: 16,
+    fontSize: 14,
     color: '#6B7280',
-    marginLeft: 4,
+    marginLeft: 2,
   },
   featuresList: {
-    marginBottom: 24,
+    marginBottom: 16,
   },
   featureRow: {
     flexDirection: 'row',
     alignItems: 'center',
-    marginBottom: 12,
+    marginBottom: 8,
   },
   featureText: {
-    marginLeft: 12,
-    fontSize: 15,
+    marginLeft: 10,
+    fontSize: 14,
     color: '#4B5563',
   },
-  button: {
-    backgroundColor: '#374151',
-    borderRadius: 12,
-    paddingVertical: 14,
+  selectButton: {
+    borderWidth: 1,
+    borderColor: '#E5E7EB',
+    borderRadius: 10,
+    paddingVertical: 12,
     alignItems: 'center',
   },
-  popularButton: {
+  popularSelectButton: {
     backgroundColor: '#FF4B4B',
+    borderColor: '#FF4B4B',
   },
-  activeButton: {
-    backgroundColor: '#10B981',
+  selectButtonText: {
+    fontSize: 14,
+    fontWeight: '600',
+    color: '#374151',
   },
-  buttonText: {
+  popularSelectButtonText: {
     color: 'white',
+  },
+  statusCard: {
+    backgroundColor: 'white',
+    borderRadius: 16,
+    padding: 24,
+    marginBottom: 20,
+    borderWidth: 2,
+    borderColor: '#10B981',
+    alignItems: 'center',
+  },
+  statusTitle: {
+    fontSize: 14,
+    color: '#6B7280',
+    marginBottom: 4,
+  },
+  statusPlan: {
+    fontSize: 24,
+    fontWeight: 'bold',
+    color: '#111827',
+    marginBottom: 8,
+  },
+  statusDate: {
+    fontSize: 14,
+    color: '#6B7280',
+  },
+  cancelingText: {
+    fontSize: 14,
+    color: '#EF4444',
+    marginTop: 8,
+  },
+  manageButton: {
+    backgroundColor: 'white',
+    borderRadius: 12,
+    paddingVertical: 16,
+    alignItems: 'center',
+    borderWidth: 1,
+    borderColor: '#E5E7EB',
+    marginBottom: 12,
+  },
+  manageButtonText: {
+    color: '#374151',
     fontSize: 16,
     fontWeight: '600',
   },
@@ -275,7 +478,7 @@ const styles = StyleSheet.create({
     fontSize: 12,
     color: '#9CA3AF',
     textAlign: 'center',
-    marginTop: 20,
+    marginTop: 16,
     lineHeight: 18,
   },
 });

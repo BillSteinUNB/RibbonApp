@@ -1,11 +1,12 @@
 import React, { useState, useEffect } from 'react';
-import { View, StyleSheet, ScrollView, TouchableOpacity, Alert } from 'react-native';
+import { View, StyleSheet, ScrollView, TouchableOpacity, Alert, Keyboard } from 'react-native';
 import { useRouter, Stack } from 'expo-router';
 import { StatusBar } from 'expo-status-bar';
 import { Text } from 'react-native';
 import { COLORS, SPACING, FONTS, RADIUS, SCREEN_WIDTH } from '../constants';
 import { Button } from '../components/Button';
 import { Card } from '../components/Card';
+import { SearchModal } from '../components/SearchModal';
 import { recipientService } from '../services/recipientService';
 import { useRecipientStore } from '../store/recipientStore';
 import { getCountdown } from '../utils/dates';
@@ -21,6 +22,7 @@ export default function RecipientsListScreen() {
   const [searchQuery, setSearchQuery] = useState('');
   const [isLoading, setIsLoading] = useState(false);
   const [deletingId, setDeletingId] = useState<string | null>(null);
+  const [searchModalVisible, setSearchModalVisible] = useState(false);
 
   useEffect(() => {
     loadRecipients();
@@ -62,6 +64,24 @@ export default function RecipientsListScreen() {
         },
       ]
     );
+  };
+
+  const handleOpenSearch = () => {
+    setSearchModalVisible(true);
+  };
+
+  const handleCloseSearch = () => {
+    setSearchModalVisible(false);
+    Keyboard.dismiss();
+  };
+
+  const handleSearch = (query: string) => {
+    setSearchQuery(query);
+  };
+
+  const handleClearSearch = () => {
+    setSearchQuery('');
+    setSearchModalVisible(false);
   };
 
   const filteredRecipients = recipients.filter((recipient) => {
@@ -107,7 +127,7 @@ export default function RecipientsListScreen() {
         <View style={styles.header}>
           <TouchableOpacity 
             style={styles.searchButton}
-            onPress={() => {/* Search modal */}}
+            onPress={handleOpenSearch}
           >
             <Search size={20} />
             {searchQuery ? (
@@ -205,6 +225,15 @@ export default function RecipientsListScreen() {
           </ScrollView>
         )}
       </View>
+      
+      {/* Search Modal */}
+      <SearchModal
+        visible={searchModalVisible}
+        onClose={handleCloseSearch}
+        onSearch={handleSearch}
+        initialQuery={searchQuery}
+        placeholder="Search by name or relationship"
+      />
       
       {/* Floating Add Button (if needed) */}
       <View style={styles.fabContainer}>

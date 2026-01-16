@@ -1,16 +1,17 @@
 import React, { useState, useEffect } from 'react';
 import { View, Text, ScrollView, TouchableOpacity, StyleSheet, Switch, Alert, Linking } from 'react-native';
 import { useRouter } from 'expo-router';
-import { User, Bell, Shield, CircleHelp as HelpCircle, LogOut, ChevronRight, CreditCard, FileText, BarChart3 } from 'lucide-react-native';
+import { User, Bell, Shield, CircleHelp as HelpCircle, LogOut, ChevronRight, CreditCard, FileText, BarChart3, Crown, RefreshCw } from 'lucide-react-native';
 import { useAuthStore, selectUser, selectUserPreferences } from '../store/authStore';
 import { subscriptionService } from '../services/subscriptionService';
 import { LEGAL_CONFIG } from '../config/app.config';
 import { biometricAuthService } from '../services/biometricAuthService';
 import { getAnalyticsConsent, setAnalyticsConsent, clearAnalyticsData } from '../utils/analytics';
+import * as revenueCat from '../services/revenueCatService';
 
 export default function SettingsScreen() {
   const router = useRouter();
-  const { user, logout, updateUserPreferences } = useAuthStore();
+  const { user, logout, updateUserPreferences, setSubscription } = useAuthStore();
   const preferences = user?.profile?.preferences;
   const [analyticsEnabled, setAnalyticsEnabled] = useState(false);
 
@@ -146,18 +147,83 @@ export default function SettingsScreen() {
 
       <View style={styles.section}>
         <Text style={styles.sectionTitle}>Subscription</Text>
-        <TouchableOpacity 
-          style={styles.row}
-          onPress={() => router.push('/pricing')}
-        >
-          <View style={styles.rowLeft}>
-            {/* @ts-ignore */}
-            <CreditCard size={22} color="#6B7280" />
-            <Text style={styles.rowLabel}>Manage Subscription</Text>
-          </View>
-          {/* @ts-ignore */}
-          <ChevronRight size={20} color="#9CA3AF" />
-        </TouchableOpacity>
+        {user.isPremium ? (
+          <>
+            <TouchableOpacity
+              style={styles.row}
+              onPress={() => subscriptionService.openCustomerCenter(user.id, setSubscription)}
+            >
+              <View style={styles.rowLeft}>
+                {/* @ts-ignore */}
+                <CreditCard size={22} color="#6B7280" />
+                <Text style={styles.rowLabel}>Manage Subscription</Text>
+              </View>
+              {/* @ts-ignore */}
+              <ChevronRight size={20} color="#9CA3AF" />
+            </TouchableOpacity>
+            <TouchableOpacity
+              style={styles.row}
+              onPress={async () => {
+                try {
+                  const subscription = await subscriptionService.restorePurchases(user.id);
+                  if (subscription) {
+                    Alert.alert('Success', 'Purchases restored successfully');
+                  } else {
+                    Alert.alert('Info', 'No additional purchases found');
+                  }
+                } catch (error) {
+                  Alert.alert('Error', revenueCat.getErrorMessage(error));
+                }
+              }}
+            >
+              <View style={styles.rowLeft}>
+                {/* @ts-ignore */}
+                <RefreshCw size={22} color="#6B7280" />
+                <Text style={styles.rowLabel}>Restore Purchases</Text>
+              </View>
+              {/* @ts-ignore */}
+              <ChevronRight size={20} color="#9CA3AF" />
+            </TouchableOpacity>
+          </>
+        ) : (
+          <>
+            <TouchableOpacity
+              style={styles.row}
+              onPress={() => router.push('/pricing')}
+            >
+              <View style={styles.rowLeft}>
+                {/* @ts-ignore */}
+                <Crown size={22} color="#FF4B4B" />
+                <Text style={[styles.rowLabel, { color: '#FF4B4B' }]}>Upgrade to Pro</Text>
+              </View>
+              {/* @ts-ignore */}
+              <ChevronRight size={20} color="#FF4B4B" />
+            </TouchableOpacity>
+            <TouchableOpacity
+              style={styles.row}
+              onPress={async () => {
+                try {
+                  const subscription = await subscriptionService.restorePurchases(user.id);
+                  if (subscription) {
+                    Alert.alert('Success', 'Purchases restored successfully');
+                  } else {
+                    Alert.alert('Info', 'No purchases found to restore');
+                  }
+                } catch (error) {
+                  Alert.alert('Error', revenueCat.getErrorMessage(error));
+                }
+              }}
+            >
+              <View style={styles.rowLeft}>
+                {/* @ts-ignore */}
+                <RefreshCw size={22} color="#6B7280" />
+                <Text style={styles.rowLabel}>Restore Purchases</Text>
+              </View>
+              {/* @ts-ignore */}
+              <ChevronRight size={20} color="#9CA3AF" />
+            </TouchableOpacity>
+          </>
+        )}
       </View>
 
       <View style={styles.section}>
@@ -215,7 +281,7 @@ export default function SettingsScreen() {
 
       <View style={styles.section}>
         <Text style={styles.sectionTitle}>Support</Text>
-        <TouchableOpacity style={styles.row}>
+        <TouchableOpacity style={styles.row} onPress={() => router.push('/help')}>
           <View style={styles.rowLeft}>
             {/* @ts-ignore */}
             <HelpCircle size={22} color="#6B7280" />

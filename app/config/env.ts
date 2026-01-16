@@ -19,6 +19,7 @@ interface EnvVars {
   EXPO_PUBLIC_FIREBASE_APP_ID?: string;
   EXPO_PUBLIC_FIREBASE_MEASUREMENT_ID?: string;
   EXPO_PUBLIC_ANALYTICS_ID?: string;
+  EXPO_PUBLIC_REVENUECAT_API_KEY?: string;
 }
 
 /**
@@ -98,3 +99,19 @@ export function isProduction(): boolean {
 export function getEnvironmentName(): 'development' | 'production' {
   return isDevelopment() ? 'development' : 'production';
 }
+
+/**
+ * RevenueCat Configuration
+ */
+export const REVENUECAT_CONFIG = {
+  // Use environment variable if available, otherwise use test key
+  apiKey: process.env.EXPO_PUBLIC_REVENUECAT_API_KEY || 'test_DFHjpUvPJPbWkARVGuQSDQRSmEB',
+  entitlementId: 'Ribbon Pro',
+  // Product identifiers matching RevenueCat dashboard configuration
+  products: {
+    weekly: 'weekly',
+    monthly: 'monthly',
+    yearly: 'yearly',
+    consumable: 'consumable',
+  },
+} as const;

@@ -26,4 +26,4 @@
 // In no event shall the Company be liable for any indirect, incidental, special, consequential, or punitive damages arising out of or related to your use of the App.
 
 // 8. Contact Information
-// If you have any questions about this Agreement, please contact us at: support@ribbonapp.com
+// If you have any questions about this Agreement, please contact us at: Contact@Billstein.dev

@@ -4,6 +4,9 @@ import { Subscription } from '../types/subscription';
 import { UserPreferences, DEFAULT_PREFERENCES } from '../types/settings';
 import { authService } from '../services/authService';
 import { errorLogger } from '../services/errorLogger';
+import { CustomerInfo } from 'react-native-purchases';
+import { REVENUECAT_CONFIG } from '../config/env';
+import * as revenueCatService from '../services/revenueCatService';
 
 export interface User {
   id: string;
@@ -34,6 +37,7 @@ interface AuthActions {
   setAuthenticated: (isAuthenticated: boolean) => void;
   updateUserPreferences: (preferences: Partial<UserPreferences>) => void;
   setSubscription: (subscription: Subscription) => void;
+  syncFromRevenueCat: (customerInfo: CustomerInfo) => void;
   decrementTrialUses: () => void;
   resetTrialUses: () => void;
   setLoading: (isLoading: boolean) => void;
@@ -72,12 +76,76 @@ export const useAuthStore = create<AuthState & AuthActions>()(
       setSubscription: (subscription) => {
         const { user } = get();
         if (user) {
+          // User has premium access if subscription is active OR canceling (still valid until period ends)
+          const hasPremiumAccess = subscription.status === 'active' || subscription.status === 'canceling';
           set({
             user: {
               ...user,
-              isPremium: subscription.status === 'active',
+              isPremium: hasPremiumAccess,
               subscription
             }
+          });
+        }
+      },
+
+      syncFromRevenueCat: (customerInfo: CustomerInfo) => {
+        const { user } = get();
+        if (!user) return;
+
+        const entitlement = customerInfo.entitlements.active[REVENUECAT_CONFIG.entitlementId];
+        const isPremium = entitlement !== undefined;
+
+        if (isPremium && entitlement) {
+          // Determine plan type from product identifier
+          let plan: 'free' | 'weekly' | 'monthly' | 'yearly' = 'monthly';
+          const productId = entitlement.productIdentifier;
+
+          if (productId.includes('yearly') || productId.includes('annual')) {
+            plan = 'yearly';
+          } else if (productId.includes('weekly')) {
+            plan = 'weekly';
+          } else if (productId.includes('monthly')) {
+            plan = 'monthly';
+          }
+
+          const subscription: Subscription = {
+            userId: user.id,
+            plan,
+            status: entitlement.willRenew === false ? 'canceling' : 'active',
+            startDate: entitlement.originalPurchaseDate
+              ? new Date(entitlement.originalPurchaseDate)
+              : new Date(),
+            endDate: entitlement.expirationDate
+              ? new Date(entitlement.expirationDate)
+              : undefined,
+            cancelAtPeriodEnd: !entitlement.willRenew,
+            paymentProvider: 'revenuecat',
+            providerSubscriptionId: entitlement.productIdentifier,
+          };
+
+          set({
+            user: {
+              ...user,
+              isPremium: true,
+              premiumSince: entitlement.originalPurchaseDate || new Date().toISOString(),
+              subscription,
+            },
+          });
+        } else {
+          // User is not premium
+          set({
+            user: {
+              ...user,
+              isPremium: false,
+              subscription: {
+                userId: user.id,
+                plan: 'free',
+                status: 'active',
+                startDate: new Date(),
+                cancelAtPeriodEnd: false,
+                paymentProvider: 'none',
+              },
+            },
           });
         }
       },
@@ -114,6 +182,14 @@ export const useAuthStore = create<AuthState & AuthActions>()(
         } catch (error) {
           errorLogger.log(error, { context: 'logout' });
         }
+
+        // Log out from RevenueCat to clear subscription state
+        try {
+          await revenueCatService.logOutUser();
+        } catch (error) {
+          errorLogger.log(error, { context: 'revenueCat logout' });
+        }
+
         set({ user: null, isAuthenticated: false, error: null });
       },
       clearError: () => set({ error: null }),
