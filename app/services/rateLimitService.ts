@@ -6,9 +6,17 @@ import AsyncStorage from '@react-native-async-storage/async-storage';
  */
 
 const STORAGE_KEY = '@ribbon/rate_limit_data';
+const GENERATION_STORAGE_KEY = '@ribbon/generation_limits';
 const MAX_ATTEMPTS = 5;
 const LOCKOUT_DURATION_MS = 15 * 60 * 1000; // 15 minutes
 const ATTEMPT_WINDOW_MS = 60 * 60 * 1000; // 1 hour window for tracking attempts
+
+const GENERATION_CONFIG = {
+  FREE_DAILY_LIMIT: 5,
+  PREMIUM_DAILY_LIMIT: 50,
+  WINDOW_MS: 24 * 60 * 60 * 1000, // 24 hours
+  REFINEMENT_DAILY_LIMIT: 25, // Premium only
+};
 
 interface AttemptRecord {
   attempts: number;
@@ -21,6 +29,20 @@ interface RateLimitData {
   [email: string]: AttemptRecord;
 }
 
+interface GenerationRecord {
+  userId: string;
+  generations: number;
+  refinements: number;
+  windowStart: number;
+}
+
+interface GenerationLimitCheckResult {
+  allowed: boolean;
+  remaining: number;
+  windowEndsAt: number;
+  remainingHours: number;
+}
+
 interface RateLimitCheckResult {
   allowed: boolean;
   remainingAttempts: number;
@@ -30,7 +52,9 @@ interface RateLimitCheckResult {
 
 class RateLimitService {
   private cache: RateLimitData = {};
+  private generationCache: Record<string, GenerationRecord> = {};
   private initialized = false;
+  private generationInitialized = false;
 
   /**
    * Initialize the service by loading data from storage
@@ -221,6 +245,213 @@ class RateLimitService {
       this.cache = {};
     }
     await this.persist();
+  }
+
+  /**
+   * Initialize the generation cache by loading data from storage
+   */
+  private async initializeGenerationCache(): Promise<void> {
+    if (this.generationInitialized) return;
+
+    try {
+      const data = await AsyncStorage.getItem(GENERATION_STORAGE_KEY);
+      if (data) {
+        this.generationCache = JSON.parse(data);
+        this.cleanupExpiredGenerationRecords();
+      }
+      this.generationInitialized = true;
+    } catch (error) {
+      this.generationCache = {};
+      this.generationInitialized = true;
+    }
+  }
+
+  /**
+   * Save current generation state to storage
+   */
+  private async persistGenerationCache(): Promise<void> {
+    try {
+      await AsyncStorage.setItem(GENERATION_STORAGE_KEY, JSON.stringify(this.generationCache));
+    } catch (error) {
+    }
+  }
+
+  /**
+   * Clean up expired generation records
+   */
+  private cleanupExpiredGenerationRecords(): void {
+    const now = Date.now();
+    for (const userId of Object.keys(this.generationCache)) {
+      const record = this.generationCache[userId];
+      if (record.windowStart + GENERATION_CONFIG.WINDOW_MS < now) {
+        delete this.generationCache[userId];
+      }
+    }
+  }
+
+  /**
+   * Get or create a generation record for a user
+   */
+  private getGenerationRecord(userId: string): GenerationRecord {
+    if (!this.generationCache[userId]) {
+      this.generationCache[userId] = {
+        userId,
+        generations: 0,
+        refinements: 0,
+        windowStart: Date.now(),
+      };
+    }
+    return this.generationCache[userId];
+  }
+
+  /**
+   * Check if user can generate gifts
+   */
+  async checkGenerationLimit(userId: string, isPremium: boolean): Promise<GenerationLimitCheckResult> {
+    await this.initializeGenerationCache();
+
+    const record = this.getGenerationRecord(userId);
+    const limit = isPremium ? GENERATION_CONFIG.PREMIUM_DAILY_LIMIT : GENERATION_CONFIG.FREE_DAILY_LIMIT;
+
+    if (Date.now() - record.windowStart >= GENERATION_CONFIG.WINDOW_MS) {
+      record.generations = 0;
+      record.refinements = 0;
+      record.windowStart = Date.now();
+      await this.persistGenerationCache();
+    }
+
+    const remaining = Math.max(0, limit - record.generations);
+
+    return {
+      allowed: record.generations < limit,
+      remaining,
+      windowEndsAt: record.windowStart + GENERATION_CONFIG.WINDOW_MS,
+      remainingHours: Math.ceil((record.windowStart + GENERATION_CONFIG.WINDOW_MS - Date.now()) / (1000 * 60 * 60)),
+    };
+  }
+
+  /**
+   * Check if user can refine gifts (premium only)
+   */
+  async checkRefinementLimit(userId: string, isPremium: boolean): Promise<GenerationLimitCheckResult> {
+    if (!isPremium) {
+      return {
+        allowed: false,
+        remaining: 0,
+        windowEndsAt: 0,
+        remainingHours: 0,
+      };
+    }
+
+    await this.initializeGenerationCache();
+    const record = this.getGenerationRecord(userId);
+
+    if (Date.now() - record.windowStart >= GENERATION_CONFIG.WINDOW_MS) {
+      record.generations = 0;
+      record.refinements = 0;
+      record.windowStart = Date.now();
+      await this.persistGenerationCache();
+    }
+
+    const remaining = Math.max(0, GENERATION_CONFIG.REFINEMENT_DAILY_LIMIT - record.refinements);
+
+    return {
+      allowed: record.refinements < GENERATION_CONFIG.REFINEMENT_DAILY_LIMIT,
+      remaining,
+      windowEndsAt: record.windowStart + GENERATION_CONFIG.WINDOW_MS,
+      remainingHours: Math.ceil((record.windowStart + GENERATION_CONFIG.WINDOW_MS - Date.now()) / (1000 * 60 * 60)),
+    };
+  }
+
+  /**
+   * Record a gift generation
+   */
+  async recordGeneration(userId: string): Promise<void> {
+    await this.initializeGenerationCache();
+    const record = this.getGenerationRecord(userId);
+    record.generations++;
+    await this.persistGenerationCache();
+  }
+
+  /**
+   * Record a refinement
+   */
+  async recordRefinement(userId: string): Promise<void> {
+    await this.initializeGenerationCache();
+    const record = this.getGenerationRecord(userId);
+    record.refinements++;
+    await this.persistGenerationCache();
+  }
+
+  /**
+   * Check and record generation (atomic)
+   */
+  async checkAndRecordGeneration(userId: string, isPremium: boolean): Promise<GenerationLimitCheckResult> {
+    const check = await this.checkGenerationLimit(userId, isPremium);
+    if (check.allowed) {
+      await this.recordGeneration(userId);
+    }
+    return check;
+  }
+
+  /**
+   * Check and record refinement (atomic)
+   */
+  async checkAndRecordRefinement(userId: string, isPremium: boolean): Promise<GenerationLimitCheckResult> {
+    const check = await this.checkRefinementLimit(userId, isPremium);
+    if (check.allowed) {
+      await this.recordRefinement(userId);
+    }
+    return check;
+  }
+
+  /**
+   * Get current generation stats for a user
+   */
+  async getGenerationStats(userId: string, isPremium: boolean): Promise<{
+    generationsUsed: number;
+    generationsRemaining: number;
+    generationsLimit: number;
+    refinementsUsed: number;
+    refinementsRemaining: number;
+    refinementsLimit: number;
+    windowEndsAt: number;
+    remainingHours: number;
+  }> {
+    await this.initializeGenerationCache();
+    const record = this.getGenerationRecord(userId);
+    const limit = isPremium ? GENERATION_CONFIG.PREMIUM_DAILY_LIMIT : GENERATION_CONFIG.FREE_DAILY_LIMIT;
+
+    if (Date.now() - record.windowStart >= GENERATION_CONFIG.WINDOW_MS) {
+      record.generations = 0;
+      record.refinements = 0;
+      record.windowStart = Date.now();
+      await this.persistGenerationCache();
+    }
+
+    return {
+      generationsUsed: record.generations,
+      generationsRemaining: Math.max(0, limit - record.generations),
+      generationsLimit: limit,
+      refinementsUsed: record.refinements,
+      refinementsRemaining: Math.max(0, GENERATION_CONFIG.REFINEMENT_DAILY_LIMIT - record.refinements),
+      refinementsLimit: isPremium ? GENERATION_CONFIG.REFINEMENT_DAILY_LIMIT : 0,
+      windowEndsAt: record.windowStart + GENERATION_CONFIG.WINDOW_MS,
+      remainingHours: Math.ceil((record.windowStart + GENERATION_CONFIG.WINDOW_MS - Date.now()) / (1000 * 60 * 60)),
+    };
+  }
+
+  /**
+   * Clear generation data for testing or account recovery
+   */
+  async clearGenerationData(userId?: string): Promise<void> {
+    await this.initializeGenerationCache();
+    if (userId) {
+      delete this.generationCache[userId];
+    } else {
+      this.generationCache = {};
+    }
+    await this.persistGenerationCache();
   }
 }
 

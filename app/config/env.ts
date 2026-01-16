@@ -8,7 +8,7 @@
  */
 interface EnvVars {
   EXPO_PUBLIC_API_KEY?: string;
-  EXPO_PUBLIC_AI_API_KEY?: string;
+  // Note: AI API key is now stored in Supabase secrets, not client-side
   EXPO_PUBLIC_SUPABASE_URL?: string;
   EXPO_PUBLIC_SUPABASE_ANON_KEY?: string;
   EXPO_PUBLIC_FIREBASE_API_KEY?: string;
@@ -40,7 +40,6 @@ export function getEnvVar(name: keyof EnvVars): string | undefined {
  */
 function isEnvVarRequired(name: keyof EnvVars): boolean {
   const requiredVars: (keyof EnvVars)[] = [
-    'EXPO_PUBLIC_AI_API_KEY',
     'EXPO_PUBLIC_SUPABASE_URL',
     'EXPO_PUBLIC_SUPABASE_ANON_KEY',
   ];
@@ -60,7 +59,6 @@ export function getAllEnvVars(): EnvVars {
  */
 export function validateEnvVars(): { valid: boolean; missing: string[] } {
   const requiredVars: (keyof EnvVars)[] = [
-    'EXPO_PUBLIC_AI_API_KEY',
     'EXPO_PUBLIC_SUPABASE_URL',
     'EXPO_PUBLIC_SUPABASE_ANON_KEY',
   ];

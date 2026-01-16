@@ -1,16 +1,14 @@
-import OpenAI from 'openai';
 import { getEnvVar } from '../config/env';
 import { errorLogger } from './errorLogger';
 
 /**
- * MiniMax M2.1 Configuration
- * Uses OpenAI-compatible API format
- * Docs: https://platform.minimax.io/docs
+ * AI Service Configuration
+ * Now routes through Supabase Edge Function to keep API key secure
  */
 const AI_CONFIG = {
-  apiKey: getEnvVar('EXPO_PUBLIC_AI_API_KEY'),
-  baseUrl: 'https://api.minimax.io/v1',
-  model: 'MiniMax-M2.1',
+  // Supabase Edge Function URL
+  functionUrl: `${getEnvVar('EXPO_PUBLIC_SUPABASE_URL')}/functions/v1/generate-gifts`,
+  supabaseAnonKey: getEnvVar('EXPO_PUBLIC_SUPABASE_ANON_KEY'),
   maxTokens: 1000,
   temperature: 0.7,
   topP: 0.95,
@@ -19,38 +17,27 @@ const AI_CONFIG = {
 
 /**
  * AI Service
- * Manages MiniMax M2.1 API calls for gift generation
- * Uses OpenAI SDK with custom base URL for MiniMax compatibility
+ * Manages gift generation via Supabase Edge Function
+ * API key is stored securely in Supabase secrets, not exposed to client
  */
 class AIService {
-  private client: OpenAI | null = null;
   private isInitialized = false;
 
   /**
-   * Initialize MiniMax client (OpenAI-compatible)
+   * Initialize AI service
    */
   initialize(): void {
     if (this.isInitialized) return;
 
-    if (!AI_CONFIG.apiKey) {
-      throw new Error('AI_API_KEY environment variable is not set');
+    if (!AI_CONFIG.functionUrl || !AI_CONFIG.supabaseAnonKey) {
+      throw new Error('Supabase configuration is not set');
     }
 
-    try {
-      this.client = new OpenAI({
-        apiKey: AI_CONFIG.apiKey,
-        baseURL: AI_CONFIG.baseUrl,
-        dangerouslyAllowBrowser: true,
-      });
-      this.isInitialized = true;
-    } catch (error) {
-      errorLogger.log(error, { context: 'AI Service initialization' });
-      throw error;
-    }
+    this.isInitialized = true;
   }
 
   /**
-   * Generate gift suggestions
+   * Generate gift suggestions via secure Edge Function
    */
   async generateGiftSuggestions(
     systemPrompt: string,
@@ -60,29 +47,27 @@ class AIService {
       this.initialize();
     }
 
-    if (!this.client) {
-      throw new Error('AI client not initialized');
-    }
-
     try {
-      const response = await this.client.chat.completions.create({
-        model: AI_CONFIG.model,
-        messages: [
-          {
-            role: 'system',
-            content: systemPrompt,
-          },
-          {
-            role: 'user',
-            content: userPrompt,
-          },
-        ],
-        max_tokens: AI_CONFIG.maxTokens,
-        temperature: AI_CONFIG.temperature,
-        top_p: AI_CONFIG.topP,
+      const response = await fetch(AI_CONFIG.functionUrl, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': `Bearer ${AI_CONFIG.supabaseAnonKey}`,
+          'apikey': AI_CONFIG.supabaseAnonKey || '',
+        },
+        body: JSON.stringify({
+          systemPrompt,
+          userPrompt,
+        }),
       });
 
-      return response.choices[0].message.content || '';
+      if (!response.ok) {
+        const errorData = await response.json().catch(() => ({}));
+        throw new Error(errorData.error || `HTTP ${response.status}`);
+      }
+
+      const data = await response.json();
+      return data.content || '';
     } catch (error) {
       errorLogger.log(error, { context: 'generateGiftSuggestions' });
       throw new Error('Failed to generate gift suggestions');
@@ -93,16 +78,14 @@ class AIService {
    * Check if AI service is available
    */
   isAvailable(): boolean {
-    return !!AI_CONFIG.apiKey;
+    return !!(AI_CONFIG.functionUrl && AI_CONFIG.supabaseAnonKey);
   }
 
   /**
-   * Get AI configuration
+   * Get AI configuration (public info only)
    */
   getConfig() {
     return {
-      model: AI_CONFIG.model,
-      baseUrl: AI_CONFIG.baseUrl,
       maxTokens: AI_CONFIG.maxTokens,
       temperature: AI_CONFIG.temperature,
       topP: AI_CONFIG.topP,

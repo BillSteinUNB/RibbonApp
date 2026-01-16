@@ -76,12 +76,11 @@ export const useAuthStore = create<AuthState & AuthActions>()(
       setSubscription: (subscription) => {
         const { user } = get();
         if (user) {
-          // User has premium access if subscription is active OR canceling (still valid until period ends)
-          const hasPremiumAccess = subscription.status === 'active' || subscription.status === 'canceling';
+          // Only update subscription data here - isPremium is controlled exclusively
+          // by syncFromRevenueCat() to prevent race conditions (see GitHub issue #38)
           set({
             user: {
               ...user,
-              isPremium: hasPremiumAccess,
               subscription
             }
           });

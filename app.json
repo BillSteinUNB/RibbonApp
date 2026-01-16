@@ -18,7 +18,8 @@
       "buildNumber": "1",
       "infoPlist": {
         "NSFaceIDUsageDescription": "Ribbon uses Face ID to securely authenticate you.",
-        "NSUserNotificationsUsageDescription": "Ribbon uses notifications to remind you about upcoming occasions and gift ideas."
+        "NSUserNotificationsUsageDescription": "Ribbon uses notifications to remind you about upcoming occasions and gift ideas.",
+        "ITSAppUsesNonExemptEncryption": false
       }
     },
     "android": {

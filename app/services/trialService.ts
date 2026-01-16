@@ -3,6 +3,7 @@ import { errorLogger } from './errorLogger';
 import type { User } from '../types/user';
 import { storage } from './storage';
 import { STORAGE_KEYS } from '../constants/storageKeys';
+import { useAuthStore } from '../store/authStore';
 
 /**
  * Trial limit configuration
@@ -159,12 +160,10 @@ class TrialService {
   }
 
   /**
-   * Get current user ID (placeholder - should get from auth service)
+   * Get current user ID from auth store
    */
   private getCurrentUserId(): string | null {
-    // This should get the current user ID from auth service
-    // For now, return null
-    return null;
+    return useAuthStore.getState().user?.id ?? null;
   }
 
   /**

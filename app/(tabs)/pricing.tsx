@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { View, Text, ScrollView, TouchableOpacity, StyleSheet, ActivityIndicator, Alert } from 'react-native';
 import { useRouter } from 'expo-router';
 import { Check, Crown, Sparkles } from 'lucide-react-native';
@@ -6,15 +6,91 @@ import { useAuthStore } from '../store/authStore';
 import { subscriptionService } from '../services/subscriptionService';
 import { biometricAuthService } from '../services/biometricAuthService';
 import * as revenueCat from '../services/revenueCatService';
-import { PRICING_PLANS } from '../types/subscription';
+import { PRICING_PLANS, PricingPlan } from '../types/subscription';
+import { PurchasesPackage } from 'react-native-purchases';
+
+// Map plan ID to RevenueCat product identifiers (as configured in RevenueCat dashboard)
+// Also includes package type fallbacks for standard RevenueCat package slots
+const PLAN_IDENTIFIERS: Record<string, { productIds: string[]; packageType: string }> = {
+  weekly: {
+    productIds: ['weekly', 'ribbon_weekly', 'pro_weekly'],
+    packageType: '$rc_weekly',
+  },
+  monthly: {
+    productIds: ['monthly', 'ribbon_monthly', 'pro_monthly'],
+    packageType: '$rc_monthly',
+  },
+  yearly: {
+    productIds: ['yearly', 'annual', 'ribbon_yearly', 'pro_yearly'],
+    packageType: '$rc_annual',
+  },
+};
 
 export default function PricingScreen() {
   const router = useRouter();
   const [loading, setLoading] = useState(false);
+  const [loadingPackages, setLoadingPackages] = useState(true);
+  const [packages, setPackages] = useState<PurchasesPackage[]>([]);
+  const [purchasingPlanId, setPurchasingPlanId] = useState<string | null>(null);
   const { user, setSubscription, syncFromRevenueCat } = useAuthStore();
   const isPremium = user?.isPremium;
 
-  // Present RevenueCat Paywall (recommended approach)
+  // Fetch offerings on mount
+  useEffect(() => {
+    const fetchOfferings = async () => {
+      try {
+        const offering = await revenueCat.getOfferings();
+        if (offering?.availablePackages) {
+          setPackages(offering.availablePackages);
+
+          // Debug: Log available packages
+          if (__DEV__) {
+            console.log('[Pricing] Fetched packages:');
+            offering.availablePackages.forEach((pkg) => {
+              console.log(`  - ${pkg.identifier}: ${pkg.product.identifier} (${pkg.packageType}) - ${pkg.product.priceString}`);
+            });
+          }
+        }
+      } catch (error) {
+        console.error('Failed to fetch offerings:', error);
+        // Will fall back to static prices
+      } finally {
+        setLoadingPackages(false);
+      }
+    };
+
+    fetchOfferings();
+  }, []);
+
+  // Get package for a specific plan (matches by product ID first, then package type)
+  const getPackageForPlan = (planId: string): PurchasesPackage | undefined => {
+    const identifiers = PLAN_IDENTIFIERS[planId];
+    if (!identifiers) return undefined;
+
+    // First try to match by product identifier (most reliable)
+    const byProductId = packages.find((pkg) =>
+      identifiers.productIds.some(
+        (id) => pkg.product.identifier.toLowerCase().includes(id.toLowerCase())
+      )
+    );
+    if (byProductId) return byProductId;
+
+    // Fallback to package type (if using standard RevenueCat package slots)
+    return packages.find((pkg) => pkg.packageType === identifiers.packageType);
+  };
+
+  // Get display price for a plan (from RevenueCat or fallback to static)
+  const getPriceForPlan = (plan: PricingPlan): string => {
+    const pkg = getPackageForPlan(plan.id);
+    if (pkg) {
+      return pkg.product.priceString;
+    }
+    // Fallback to static price
+    const symbol = plan.currency === 'USD' ? '$' : plan.currency;
+    return `${symbol}${plan.price}`;
+  };
+
+  // Present RevenueCat Paywall (fallback approach)
   const handlePresentPaywall = async () => {
     if (!user) {
       router.push('/(auth)/sign-in');
@@ -55,10 +131,17 @@ export default function PricingScreen() {
     }
   };
 
-  // Subscribe using custom UI (fallback)
+  // Subscribe using custom UI with direct package purchase
   const handleSubscribe = async (planId: string) => {
     if (!user) {
       router.push('/(auth)/sign-in');
+      return;
+    }
+
+    // Find the package for this plan
+    const pkg = getPackageForPlan(planId);
+    if (!pkg) {
+      Alert.alert('Error', 'This plan is not available. Please try again later.');
       return;
     }
 
@@ -74,10 +157,13 @@ export default function PricingScreen() {
       }
     }
 
-    setLoading(true);
+    setPurchasingPlanId(planId);
     try {
-      const subscription = await subscriptionService.subscribeToPlan(user.id, planId);
-      setSubscription(subscription);
+      // Purchase the package directly
+      const customerInfo = await revenueCat.purchasePackage(pkg);
+
+      // Sync subscription status
+      syncFromRevenueCat(customerInfo);
       Alert.alert('Success', 'Welcome to Ribbon Pro!');
       router.back();
     } catch (error) {
@@ -86,7 +172,7 @@ export default function PricingScreen() {
         Alert.alert('Error', message);
       }
     } finally {
-      setLoading(false);
+      setPurchasingPlanId(null);
     }
   };
 
@@ -203,54 +289,71 @@ export default function PricingScreen() {
       <Text style={styles.orText}>or choose a plan</Text>
 
       {/* Plan cards for custom selection */}
-      {PRICING_PLANS.map((plan) => (
-        <TouchableOpacity
-          key={plan.id}
-          style={[
-            styles.planCard,
-            plan.popular && styles.popularCard,
-          ]}
-          onPress={() => handleSubscribe(plan.id)}
-          disabled={loading}
-        >
-          {plan.popular && (
-            <View style={styles.popularBadge}>
-              <Text style={styles.popularText}>Best Value</Text>
-            </View>
-          )}
+      {loadingPackages ? (
+        <View style={styles.loadingContainer}>
+          <ActivityIndicator size="large" color="#FF4B4B" />
+          <Text style={styles.loadingText}>Loading plans...</Text>
+        </View>
+      ) : (
+        PRICING_PLANS.map((plan) => {
+          const isAvailable = !!getPackageForPlan(plan.id);
+          const isPurchasing = purchasingPlanId === plan.id;
 
-          <View style={styles.planHeader}>
-            <Text style={styles.planName}>{plan.name}</Text>
-            <View style={styles.priceContainer}>
-              <Text style={styles.currency}>{plan.currency === 'USD' ? '$' : plan.currency}</Text>
-              <Text style={styles.price}>{plan.price}</Text>
-              <Text style={styles.interval}>/{plan.interval}</Text>
-            </View>
-          </View>
+          return (
+            <TouchableOpacity
+              key={plan.id}
+              style={[
+                styles.planCard,
+                plan.popular && styles.popularCard,
+                !isAvailable && styles.unavailableCard,
+              ]}
+              onPress={() => handleSubscribe(plan.id)}
+              disabled={loading || isPurchasing || !isAvailable}
+            >
+              {plan.popular && (
+                <View style={styles.popularBadge}>
+                  <Text style={styles.popularText}>Best Value</Text>
+                </View>
+              )}
 
-          <View style={styles.featuresList}>
-            {plan.features.map((feature, index) => (
-              <View key={index} style={styles.featureRow}>
-                {/* @ts-ignore */}
-                <Check size={18} color="#10B981" />
-                <Text style={styles.featureText}>{feature}</Text>
+              <View style={styles.planHeader}>
+                <Text style={styles.planName}>{plan.name}</Text>
+                <View style={styles.priceContainer}>
+                  <Text style={styles.priceString}>{getPriceForPlan(plan)}</Text>
+                  <Text style={styles.interval}>/{plan.interval}</Text>
+                </View>
               </View>
-            ))}
-          </View>
 
-          <View style={[
-            styles.selectButton,
-            plan.popular && styles.popularSelectButton,
-          ]}>
-            <Text style={[
-              styles.selectButtonText,
-              plan.popular && styles.popularSelectButtonText,
-            ]}>
-              Select Plan
-            </Text>
-          </View>
-        </TouchableOpacity>
-      ))}
+              <View style={styles.featuresList}>
+                {plan.features.map((feature, index) => (
+                  <View key={index} style={styles.featureRow}>
+                    {/* @ts-ignore */}
+                    <Check size={18} color="#10B981" />
+                    <Text style={styles.featureText}>{feature}</Text>
+                  </View>
+                ))}
+              </View>
+
+              <View style={[
+                styles.selectButton,
+                plan.popular && styles.popularSelectButton,
+                !isAvailable && styles.unavailableButton,
+              ]}>
+                {isPurchasing ? (
+                  <ActivityIndicator color={plan.popular ? 'white' : '#374151'} />
+                ) : (
+                  <Text style={[
+                    styles.selectButtonText,
+                    plan.popular && styles.popularSelectButtonText,
+                  ]}>
+                    {isAvailable ? 'Select Plan' : 'Not Available'}
+                  </Text>
+                )}
+              </View>
+            </TouchableOpacity>
+          );
+        })
+      )}
 
       <TouchableOpacity
         style={styles.restoreButton}
@@ -328,6 +431,15 @@ const styles = StyleSheet.create({
     fontSize: 14,
     marginBottom: 16,
   },
+  loadingContainer: {
+    alignItems: 'center',
+    paddingVertical: 40,
+  },
+  loadingText: {
+    marginTop: 12,
+    fontSize: 14,
+    color: '#6B7280',
+  },
   planCard: {
     backgroundColor: 'white',
     borderRadius: 16,
@@ -345,6 +457,9 @@ const styles = StyleSheet.create({
   popularCard: {
     borderColor: '#FF4B4B',
     borderWidth: 2,
+  },
+  unavailableCard: {
+    opacity: 0.5,
   },
   popularBadge: {
     position: 'absolute',
@@ -375,13 +490,8 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     alignItems: 'baseline',
   },
-  currency: {
-    fontSize: 16,
-    fontWeight: '500',
-    color: '#111827',
-  },
-  price: {
-    fontSize: 24,
+  priceString: {
+    fontSize: 20,
     fontWeight: 'bold',
     color: '#111827',
   },
@@ -413,6 +523,10 @@ const styles = StyleSheet.create({
   popularSelectButton: {
     backgroundColor: '#FF4B4B',
     borderColor: '#FF4B4B',
+  },
+  unavailableButton: {
+    backgroundColor: '#E5E7EB',
+    borderColor: '#E5E7EB',
   },
   selectButtonText: {
     fontSize: 14,

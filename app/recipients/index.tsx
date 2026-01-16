@@ -6,7 +6,7 @@ import { Text } from 'react-native';
 import { COLORS, SPACING, FONTS, RADIUS, SCREEN_WIDTH } from '../constants';
 import { Button } from '../components/Button';
 import { Card } from '../components/Card';
-import { SearchModal } from '../components/SearchModal';
+import SearchModal from '../components/SearchModal';
 import { recipientService } from '../services/recipientService';
 import { useRecipientStore } from '../store/recipientStore';
 import { getCountdown } from '../utils/dates';

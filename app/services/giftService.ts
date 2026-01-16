@@ -3,6 +3,7 @@ import { giftParser } from './giftParser';
 import { getPromptForOccasion } from '../prompts';
 import { AppError } from '../types/errors';
 import { errorLogger } from './errorLogger';
+import { rateLimitService } from './rateLimitService';
 import type { GiftIdea, Recipient, GenerationSession } from '../types/recipient';
 import { useRecipientStore } from '../store/recipientStore';
 import { useGiftStore } from '../store/giftStore';
@@ -27,10 +28,29 @@ class GiftService {
     method: 'ai' | 'fallback';
   }> {
     const startTime = Date.now();
-    
+
     try {
-      // Check if AI service is configured
-      if (!aiService.isAvailable()) {
+      // Get user info for rate limiting
+      const user = useAuthStore.getState().user;
+
+      if (!user) {
+        throw new AppError('User not authenticated', 'UNAUTHORIZED');
+      }
+
+      const userId = user.id;
+      const isPremium = user.isPremium;
+
+      // Check rate limit for AI generation (skip for fallback mode)
+      if (aiService.isAvailable()) {
+        const limitCheck = await rateLimitService.checkAndRecordGeneration(userId, isPremium);
+
+        if (!limitCheck.allowed) {
+          throw new AppError(
+            `Daily limit reached. ${limitCheck.remainingHours} hours until reset.`,
+            'RATE_LIMIT_EXCEEDED'
+          );
+        }
+      } else {
         logger.warn('AI service not configured, using fallback');
         return this.generateFallbackGifts(recipient, count, startTime);
       }
@@ -379,6 +399,16 @@ Return a JSON array of gift ideas with this exact structure (no markdown, no ext
     const startTime = Date.now();
 
     try {
+      // Get user info for rate limiting
+      const user = useAuthStore.getState().user;
+
+      if (!user) {
+        throw new AppError('User not authenticated', 'UNAUTHORIZED');
+      }
+
+      const userId = user.id;
+      const isPremium = user.isPremium;
+
       // Validate session can be refined
       const canRefine = useGiftStore.getState().canRefineSession(sessionId);
       if (!canRefine) {
@@ -389,6 +419,16 @@ Return a JSON array of gift ideas with this exact structure (no markdown, no ext
       if (!aiService.isAvailable()) {
         logger.warn('AI service not configured, cannot refine');
         throw new AppError('AI service unavailable for refinement', 'SERVICE_UNAVAILABLE');
+      }
+
+      // Check rate limit for refinement (premium only)
+      const limitCheck = await rateLimitService.checkAndRecordRefinement(userId, isPremium);
+
+      if (!limitCheck.allowed) {
+        throw new AppError(
+          `Daily refinement limit reached. ${limitCheck.remainingHours} hours until reset.`,
+          'RATE_LIMIT_EXCEEDED'
+        );
       }
 
       // Build refinement prompt
