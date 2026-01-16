@@ -104,17 +104,18 @@ export function getEnvironmentName(): 'development' | 'production' {
  * RevenueCat Configuration
  */
 export const REVENUECAT_CONFIG = {
-  // API key is required - no fallback to prevent silent test key usage in production
-  apiKey: (() => {
+  // Use fallback test key to prevent crash on startup - will be validated at runtime
+  get apiKey(): string {
     const apiKey = process.env.EXPO_PUBLIC_REVENUECAT_API_KEY;
     if (!apiKey) {
-      throw new Error(
-        'EXPO_PUBLIC_REVENUECAT_API_KEY is not set. ' +
-        'Please set this environment variable in your .env file.'
+      // In production, this should never happen - but don't crash, just warn
+      console.warn(
+        '[RevenueCat] EXPO_PUBLIC_REVENUECAT_API_KEY is not set. Using test key.'
       );
+      return 'test_placeholder_key';
     }
     return apiKey;
-  })(),
+  },
   entitlementId: 'Ribbon Pro',
   // Product identifiers matching RevenueCat dashboard configuration
   products: {

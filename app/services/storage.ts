@@ -4,6 +4,8 @@ import { StorageError, StorageParseError } from '../types/errors';
 
 import { logger } from '../utils/logger';
 import { errorLogger } from './errorLogger';
+import { encryptedStorage } from './encryptedStorage';
+import { STORAGE_KEY_SENSITIVITY } from '../constants/storageKeys';
 
 /**
  * Type-safe storage service with error handling
@@ -44,15 +46,61 @@ class StorageService {
    */
   private async runMigrations(fromVersion: string | null): Promise<void> {
     logger.log('Running storage migrations from:', fromVersion);
-    
+
+    // Migration to v1.1.0: Encrypt sensitive data
+    if (fromVersion && fromVersion < '1.1.0') {
+      logger.log('[Migration] Encrypting existing sensitive data...');
+      await this.encryptSensitiveData();
+    }
+
     // Add migration logic here as needed
     // Example: if (!fromVersion) { /* first install setup */ }
-    
+
     try {
       // Clear any deprecated keys
       await this.clearDeprecatedKeys();
     } catch (error) {
       logger.warn('Migration failed:', error);
+    }
+  }
+
+  /**
+   * Migrate existing sensitive data to encryption (v1.1.0 migration)
+   */
+  private async encryptSensitiveData(): Promise<void> {
+    try {
+      const keys = Object.keys(STORAGE_KEYS);
+      let migratedCount = 0;
+
+      for (const key of keys) {
+        // Check if this key is sensitive
+        const sensitivity = STORAGE_KEYS[key as keyof typeof STORAGE_KEYS];
+        if (!sensitivity) continue;
+
+        // Get current value
+        const value = await this.getItem(sensitivity);
+
+        // Skip if null or already encrypted
+        if (!value) continue;
+
+        // Check if value is already encrypted (has 'data', 'iv', 'version' properties)
+        if (typeof value === 'object' && 'data' in value && 'iv' in value && 'version' in value) {
+          continue;
+        }
+
+        // Encrypt the value
+        const encrypted = await encryptedStorage.EncryptedStorageService.encryptValue(sensitivity, value);
+        if (encrypted !== value) {
+          // Save encrypted value
+          await AsyncStorage.setItem(sensitivity, JSON.stringify(encrypted));
+          migratedCount++;
+        }
+      }
+
+      logger.log(`[Migration] Encrypted ${migratedCount} sensitive keys`);
+    } catch (error) {
+      logger.error('[Migration] Failed to encrypt sensitive data:', error);
+      // Don't throw - we don't want to block the app on migration failure
     }
   }
 
@@ -72,14 +120,26 @@ class StorageService {
   }
 
   /**
-   * Get an item from storage
+   * Get an item from storage (with automatic decryption for sensitive keys)
    */
   async getItem<T>(key: string): Promise<T | null> {
     try {
       const jsonValue = await AsyncStorage.getItem(key);
       if (jsonValue !== null) {
         try {
-          return JSON.parse(jsonValue) as T;
+          let parsedValue = JSON.parse(jsonValue) as T;
+
+          // Decrypt if this is a sensitive key
+          if (STORAGE_KEYS[key as keyof typeof STORAGE_KEYS]) {
+            const sensitivity = STORAGE_KEYS[key as keyof typeof STORAGE_KEYS];
+            const keySensitivity = STORAGE_KEY_SENSITIVITY[sensitivity];
+
+            if (keySensitivity === 'SENSITIVE') {
+              parsedValue = await encryptedStorage.EncryptedStorageService.decryptValue(key, parsedValue);
+            }
+          }
+
+          return parsedValue;
         } catch (parseError) {
           const error = new StorageParseError(`Invalid JSON in storage key: ${key}`);
           errorLogger.log(error, { key, value: jsonValue });
@@ -96,11 +156,23 @@ class StorageService {
   }
 
   /**
-   * Set an item in storage
+   * Set an item in storage (with automatic encryption for sensitive keys)
    */
   async setItem<T>(key: string, value: T): Promise<void> {
     try {
-      const jsonValue = JSON.stringify(value);
+      // Encrypt if this is a sensitive key
+      let finalValue = value;
+
+      if (STORAGE_KEYS[key as keyof typeof STORAGE_KEYS]) {
+        const sensitivity = STORAGE_KEYS[key as keyof typeof STORAGE_KEYS];
+        const keySensitivity = STORAGE_KEY_SENSITIVITY[sensitivity];
+
+        if (keySensitivity === 'SENSITIVE') {
+          finalValue = await encryptedStorage.EncryptedStorageService.encryptValue(key, value) as T;
+        }
+      }
+
+      const jsonValue = JSON.stringify(finalValue);
       await AsyncStorage.setItem(key, jsonValue);
     } catch (error) {
       throw new StorageError(`Failed to set item for key: ${key}`, 'STORAGE_ERROR', undefined, { originalError: error as Error });

@@ -4,17 +4,29 @@ import { Platform } from 'react-native';
 import { errorLogger } from './errorLogger';
 import { logger } from '../utils/logger';
 
-// Configure notification behavior
-Notifications.setNotificationHandler({
-  handleNotification: async () => ({
-    shouldShowAlert: true,
-    shouldPlaySound: true,
-    shouldSetBadge: false,
-    priority: Notifications.AndroidNotificationPriority.HIGH,
-    shouldShowBanner: true,
-    shouldShowList: true,
-  }),
-});
+// Flag to track if notification handler is set up
+let isNotificationHandlerConfigured = false;
+
+// Configure notification behavior - call this function before using notifications
+export function configureNotificationHandler() {
+  if (isNotificationHandlerConfigured) return;
+  
+  try {
+    Notifications.setNotificationHandler({
+      handleNotification: async () => ({
+        shouldShowAlert: true,
+        shouldPlaySound: true,
+        shouldSetBadge: false,
+        priority: Notifications.AndroidNotificationPriority.HIGH,
+        shouldShowBanner: true,
+        shouldShowList: true,
+      }),
+    });
+    isNotificationHandlerConfigured = true;
+  } catch (error) {
+    logger.error('[Notifications] Failed to configure handler:', error);
+  }
+}
 
 export const notificationService = {
   registerForPushNotifications: async (): Promise<string | undefined> => {

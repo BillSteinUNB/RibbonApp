@@ -18,14 +18,8 @@ class ErrorLogger {
   private reportTimer: NodeJS.Timeout | null = null;
 
   private constructor() {
-    // Delay periodic reporting to avoid issues during app startup
-    setTimeout(() => {
-      try {
-        this.startPeriodicReporting();
-      } catch (error) {
-        console.warn('[ErrorLogger] Failed to start periodic reporting:', error);
-      }
-    }, 5000); // Wait 5 seconds before starting
+    // Start periodic reporting
+    this.startPeriodicReporting();
   }
 
   public static getInstance(): ErrorLogger {
