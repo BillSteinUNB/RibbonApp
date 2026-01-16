@@ -4,6 +4,7 @@ import { Subscription } from '../types/subscription';
 import { UserPreferences, DEFAULT_PREFERENCES } from '../types/settings';
 import { authService } from '../services/authService';
 import { errorLogger } from '../services/errorLogger';
+import { logger } from '../utils/logger';
 import { CustomerInfo } from 'react-native-purchases';
 import { REVENUECAT_CONFIG } from '../config/env';
 import * as revenueCatService from '../services/revenueCatService';
@@ -47,6 +48,7 @@ interface AuthActions {
   logout: () => Promise<void>;
   clearError: () => void;
   cleanupFailedLogout: () => Promise<void>;
+  validateAndCorrectPremiumStatus: () => void;
 }
 
 export const useAuthStore = create<AuthState & AuthActions>()(
@@ -58,7 +60,11 @@ export const useAuthStore = create<AuthState & AuthActions>()(
       error: null,
       logoutError: null,
 
-      setUser: (user) => set({ user, isAuthenticated: !!user, error: null }),
+      setUser: (user) => {
+        set({ user, isAuthenticated: !!user, error: null });
+        // Validate premium status after setting user
+        if (user) get().validateAndCorrectPremiumStatus();
+      },
       setAuthenticated: (isAuthenticated) => set({ isAuthenticated }),
 
       updateUserPreferences: (preferences) => {
@@ -80,12 +86,54 @@ export const useAuthStore = create<AuthState & AuthActions>()(
       setSubscription: (subscription) => {
         const { user } = get();
         if (user) {
-          // Only update subscription data here - isPremium is controlled exclusively
-          // by syncFromRevenueCat() to prevent race conditions (see GitHub issue #38)
+          // Update subscription data and derive isPremium status from plan
+          const isPremium = subscription.plan !== 'free';
+
           set({
             user: {
               ...user,
+              isPremium,
               subscription
+            }
+          });
+
+          // Validate and log any inconsistencies
+          if (user.isPremium !== isPremium) {
+            logger.warn('[AuthStore] Inconsistent premium status detected and corrected:', {
+              userId: user.id,
+              oldIsPremium: user.isPremium,
+              newIsPremium: isPremium,
+              subscriptionPlan: subscription.plan
+            });
+          }
+        }
+      },
+
+      /**
+       * Validate and correct inconsistencies between isPremium and subscription.plan
+       * This addresses GitHub issue #45
+       */
+      validateAndCorrectPremiumStatus: () => {
+        const { user } = get();
+        if (!user || !user.subscription) return;
+
+        // Derive correct isPremium status from subscription plan
+        const correctIsPremium = user.subscription.plan !== 'free';
+
+        // Check for inconsistency
+        if (user.isPremium !== correctIsPremium) {
+          logger.warn('[AuthStore] Validating premium status - inconsistency detected:', {
+            userId: user.id,
+            currentIsPremium: user.isPremium,
+            correctIsPremium,
+            subscriptionPlan: user.subscription.plan
+          });
+
+          // Correct the inconsistency by updating isPremium
+          set({
+            user: {
+              ...user,
+              isPremium: correctIsPremium
             }
           });
         }

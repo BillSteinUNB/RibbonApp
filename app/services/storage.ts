@@ -1,14 +1,9 @@
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { STORAGE_KEYS, STORAGE_VERSION } from '../constants/storageKeys';
+import { StorageError, StorageParseError } from '../types/errors';
 
 import { logger } from '../utils/logger';
-
-export class StorageError extends Error {
-  constructor(message: string, public originalError?: Error) {
-    super(message);
-    this.name = 'StorageError';
-  }
-}
+import { errorLogger } from './errorLogger';
 
 /**
  * Type-safe storage service with error handling
@@ -83,11 +78,20 @@ class StorageService {
     try {
       const jsonValue = await AsyncStorage.getItem(key);
       if (jsonValue !== null) {
-        return JSON.parse(jsonValue) as T;
+        try {
+          return JSON.parse(jsonValue) as T;
+        } catch (parseError) {
+          const error = new StorageParseError(`Invalid JSON in storage key: ${key}`);
+          errorLogger.log(error, { key, value: jsonValue });
+          throw error;
+        }
       }
       return null;
     } catch (error) {
-      throw new StorageError(`Failed to get item for key: ${key}`, error as Error);
+      if (error instanceof StorageParseError) {
+        throw error;
+      }
+      throw new StorageError(`Failed to get item for key: ${key}`, 'STORAGE_ERROR', undefined, { originalError: error as Error });
     }
   }
 
@@ -99,7 +103,7 @@ class StorageService {
       const jsonValue = JSON.stringify(value);
       await AsyncStorage.setItem(key, jsonValue);
     } catch (error) {
-      throw new StorageError(`Failed to set item for key: ${key}`, error as Error);
+      throw new StorageError(`Failed to set item for key: ${key}`, 'STORAGE_ERROR', undefined, { originalError: error as Error });
     }
   }
 
@@ -110,7 +114,7 @@ class StorageService {
     try {
       await AsyncStorage.removeItem(key);
     } catch (error) {
-      throw new StorageError(`Failed to remove item for key: ${key}`, error as Error);
+      throw new StorageError(`Failed to remove item for key: ${key}`, 'STORAGE_ERROR', undefined, { originalError: error as Error });
     }
   }
 
@@ -121,16 +125,25 @@ class StorageService {
     try {
       const items = await AsyncStorage.multiGet(keys);
       const result = new Map<string, T>();
-      
+
       items.forEach(([key, value]) => {
         if (value !== null) {
-          result.set(key, JSON.parse(value) as T);
+          try {
+            result.set(key, JSON.parse(value) as T);
+          } catch (parseError) {
+            const error = new StorageParseError(`Invalid JSON in storage key: ${key}`);
+            errorLogger.log(error, { key, value });
+            throw error;
+          }
         }
       });
-      
+
       return result;
     } catch (error) {
-      throw new StorageError('Failed to get multiple items', error as Error);
+      if (error instanceof StorageParseError) {
+        throw error;
+      }
+      throw new StorageError('Failed to get multiple items', 'STORAGE_ERROR', undefined, { originalError: error as Error });
     }
   }
 
@@ -147,7 +160,7 @@ class StorageService {
       
       await AsyncStorage.multiSet(keyValuePairPairs);
     } catch (error) {
-      throw new StorageError('Failed to set multiple items', error as Error);
+      throw new StorageError('Failed to set multiple items', 'STORAGE_ERROR', undefined, { originalError: error as Error });
     }
   }
 
@@ -158,7 +171,7 @@ class StorageService {
     try {
       await AsyncStorage.clear();
     } catch (error) {
-      throw new StorageError('Failed to clear storage', error as Error);
+      throw new StorageError('Failed to clear storage', 'STORAGE_ERROR', undefined, { originalError: error as Error });
     }
   }
 
@@ -169,7 +182,7 @@ class StorageService {
     try {
       return await AsyncStorage.getAllKeys();
     } catch (error) {
-      throw new StorageError('Failed to get all keys', error as Error);
+      throw new StorageError('Failed to get all keys', 'STORAGE_ERROR', undefined, { originalError: error as Error });
     }
   }
 
@@ -180,7 +193,7 @@ class StorageService {
     try {
       await AsyncStorage.multiRemove(keys);
     } catch (error) {
-      throw new StorageError('Failed to remove multiple items', error as Error);
+      throw new StorageError('Failed to remove multiple items', 'STORAGE_ERROR', undefined, { originalError: error as Error });
     }
   }
 
@@ -192,7 +205,7 @@ class StorageService {
       const value = await AsyncStorage.getItem(key);
       return value !== null;
     } catch (error) {
-      throw new StorageError(`Failed to check key existence: ${key}`, error as Error);
+      throw new StorageError(`Failed to check key existence: ${key}`, 'STORAGE_ERROR', undefined, { originalError: error as Error });
     }
   }
 
@@ -203,20 +216,20 @@ class StorageService {
     try {
       const keys = await this.getAllKeys();
       const items = await AsyncStorage.multiGet(keys);
-      
+
       let totalSize = 0;
       items.forEach(([key, value]) => {
         if (value) {
           totalSize += key.length + value.length;
         }
       });
-      
+
       return {
         keys: keys.length,
         approxSizeMb: totalSize / (1024 * 1024),
       };
     } catch (error) {
-      throw new StorageError('Failed to calculate storage size', error as Error);
+      throw new StorageError('Failed to calculate storage size', 'STORAGE_ERROR', undefined, { originalError: error as Error });
     }
   }
 }

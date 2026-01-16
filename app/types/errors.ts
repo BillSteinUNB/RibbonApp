@@ -52,8 +52,14 @@ export class ServerError extends AppError {
 }
 
 export class StorageError extends AppError {
-  constructor(message: string = 'Storage error occurred') {
-    super(message, 'STORAGE_ERROR');
+  constructor(message: string = 'Storage error occurred', code?: string, statusCode?: number, details?: any) {
+    super(message, code || 'STORAGE_ERROR', statusCode, details);
+  }
+}
+
+export class StorageParseError extends StorageError {
+  constructor(message: string = 'Storage parse error occurred') {
+    super(message, 'STORAGE_PARSE_ERROR');
   }
 }
 
@@ -65,4 +71,5 @@ export type ErrorType =
   | NotFoundError
   | RateLimitError
   | ServerError
-  | StorageError;
+  | StorageError
+  | StorageParseError;

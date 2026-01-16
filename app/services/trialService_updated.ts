@@ -208,9 +208,47 @@ class TrialService {
   }
 
   /**
-   * Decrement trial uses
+   * Decrement trial uses (server-side validation)
+   * Calls server to decrement, which enforces limits
    */
   async decrementUses(userId: string): Promise<boolean> {
+    try {
+      // Call server to decrement (server enforces limits)
+      const { data, error } = await supabase.rpc('decrement_trial_uses');
+
+      if (error) {
+        logger.error('[TrialService] Server decrement failed:', error);
+        // Fall back to local logic if server fails (shouldn't happen in production)
+        return await this.decrementUsesLocal(userId);
+      }
+
+      if (data && data.length > 0) {
+        const result = data[0];
+
+        // Update local cache with server data
+        this.usageData = {
+          usesRemaining: result.uses_remaining,
+          lastResetDate: this.usageData?.lastResetDate || new Date().toISOString(),
+          totalCount: result.total_uses,
+        };
+
+        await this.saveUsageData(userId);
+
+        return result.success;
+      }
+
+      return false;
+    } catch (error) {
+      errorLogger.log(error, { context: 'decrementUses', userId });
+      // Fall back to local logic if error occurs
+      return await this.decrementUsesLocal(userId);
+    }
+  }
+
+  /**
+   * Decrement trial uses locally (fallback if server fails)
+   */
+  private async decrementUsesLocal(userId: string): Promise<boolean> {
     try {
       if (!this.isLoaded) {
         await this.loadUsageData(userId);
@@ -225,7 +263,7 @@ class TrialService {
 
       return false;
     } catch (error) {
-      errorLogger.log(error, { context: 'decrementUses', userId });
+      errorLogger.log(error, { context: 'decrementUsesLocal', userId });
       throw new AppError('Failed to decrement trial uses');
     }
   }
@@ -261,7 +299,7 @@ class TrialService {
     const now = new Date();
     const daysSinceReset = this.getDaysBetween(lastReset, now);
     const daysUntilReset = TRIAL_CONFIG.RESET_PERIOD_DAYS - daysSinceReset;
-    
+
     return Math.max(0, daysUntilReset);
   }
 
@@ -277,6 +315,14 @@ class TrialService {
    */
   async resetTrial(userId: string): Promise<void> {
     try {
+      // Try server reset first
+      const { error } = await supabase.rpc('reset_trial_limits');
+
+      if (!error) {
+        // Sync with server after reset
+        await this.syncWithServer();
+      }
+
       this.usageData = {
         usesRemaining: TRIAL_CONFIG.FREE_TRIAL_USES,
         lastResetDate: new Date().toISOString(),
@@ -290,7 +336,7 @@ class TrialService {
   }
 
   /**
-   * Check if user can use gift generation (server-side check)
+   * Check if user can use gift generation (local check)
    */
   canUseFeature(): boolean {
     return this.hasRemainingUses();

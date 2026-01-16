@@ -6,6 +6,17 @@ import type { Recipient, RecipientFormData } from '../types/recipient';
 import { generateId, getTimestamp } from '../utils/helpers';
 import { recipientFormSchema } from '../types/recipient';
 import { z } from 'zod';
+import { useAuthStore } from '../store/authStore';
+
+/**
+ * Audit log entry for destructive operations
+ */
+interface AuditLog {
+  operation: 'CLEAR_ALL' | 'DELETE' | 'UPDATE';
+  timestamp: string;
+  userId: string | null;
+  details: Record<string, any>;
+}
 
 /**
  * Recipient Service
@@ -13,6 +24,8 @@ import { z } from 'zod';
  */
 class RecipientService {
   private recipients: Recipient[] = [];
+  private auditLogs: AuditLog[] = [];
+  private maxAuditLogs = 50;
 
   /**
    * Load all recipients from storage
@@ -236,15 +249,127 @@ class RecipientService {
   }
 
   /**
-   * Clear all recipients (for logout or testing)
+   * Add audit log entry
    */
-  async clearAll(): Promise<void> {
+  private async addAuditLog(log: AuditLog): Promise<void> {
     try {
+      this.auditLogs.push(log);
+
+      // Keep only most recent logs
+      if (this.auditLogs.length > this.maxAuditLogs) {
+        this.auditLogs.shift();
+      }
+
+      // Persist audit logs
+      await storage.setItem('@ribbon/recipient_audit_logs', this.auditLogs);
+    } catch (error) {
+      errorLogger.log(error, { context: 'addAuditLog' });
+      // Don't throw - audit logging should not break the app
+    }
+  }
+
+  /**
+   * Get all audit logs
+   */
+  async getAuditLogs(): Promise<AuditLog[]> {
+    try {
+      const logs = await storage.getItem<AuditLog[]>('@ribbon/recipient_audit_logs');
+      return logs || [];
+    } catch (error) {
+      errorLogger.log(error, { context: 'getAuditLogs' });
+      return [];
+    }
+  }
+
+  /**
+   * Restore recipients from backup (for recovery)
+   */
+  private async applyBackup(recipients: Recipient[]): Promise<void> {
+    try {
+      this.recipients = recipients;
+      await this.saveRecipients();
+
+      // Log restoration
+      await this.addAuditLog({
+        operation: 'UPDATE',
+        timestamp: getTimestamp(),
+        userId: useAuthStore.getState().user?.id ?? null,
+        details: { restoredCount: recipients.length },
+      });
+    } catch (error) {
+      errorLogger.log(error, { context: 'applyBackup' });
+      throw new AppError('Failed to restore recipients from backup');
+    }
+  }
+
+  /**
+   * Clear all recipients (for logout or testing)
+   * REQUIRES: User authentication and confirmation
+   */
+  async clearAll(backup?: boolean): Promise<{ success: boolean; backup?: Recipient[] }> {
+    try {
+      // Check if user is authenticated
+      const user = useAuthStore.getState().user;
+      if (!user) {
+        throw new AppError('User must be authenticated to clear recipients', 'AUTHORIZATION_ERROR');
+      }
+
+      // Create backup if requested (for recovery)
+      let backupData: Recipient[] | undefined;
+      if (backup) {
+        backupData = [...this.recipients];
+      }
+
+      // Create backup for recovery regardless
+      const backupForRecovery = [...this.recipients];
+      await storage.setItem('@ribbon/recipients_backup', backupForRecovery);
+
+      // Clear recipients
       this.recipients = [];
       await storage.removeItem(STORAGE_KEYS.RECIPIENTS);
+
+      // Log deletion
+      await this.addAuditLog({
+        operation: 'CLEAR_ALL',
+        timestamp: getTimestamp(),
+        userId: user.id,
+        details: { deletedCount: backupForRecovery.length, backupCreated: true },
+      });
+
+      return {
+        success: true,
+        backup: backupData,
+      };
     } catch (error) {
       errorLogger.log(error, { context: 'clearAllRecipients' });
       throw new AppError('Failed to clear recipients');
+    }
+  }
+
+  /**
+   * Restore recipients from backup (recovery after accidental clear)
+   */
+  async restoreFromBackup(): Promise<void> {
+    try {
+      const backupData = await storage.getItem<Recipient[]>('@ribbon/recipients_backup');
+
+      if (!backupData || backupData.length === 0) {
+        throw new AppError('No backup found to restore', 'NOT_FOUND');
+      }
+
+      // Check if user is authenticated
+      const user = useAuthStore.getState().user;
+      if (!user) {
+        throw new AppError('User must be authenticated to restore recipients', 'AUTHORIZATION_ERROR');
+      }
+
+      await this.applyBackup(backupData);
+
+      // Clear backup after successful restore
+      await storage.removeItem('@ribbon/recipients_backup');
+    } catch (error) {
+      errorLogger.log(error, { context: 'restoreFromBackup' });
+      throw new AppError('Failed to restore recipients from backup');
     }
   }
 }

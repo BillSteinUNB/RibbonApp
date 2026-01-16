@@ -4,6 +4,7 @@
  */
 
 import { Platform } from 'react-native';
+import * as Sentry from '@sentry/react-native';
 import Purchases, {
   LOG_LEVEL,
   CustomerInfo,
@@ -13,7 +14,7 @@ import Purchases, {
   PurchasesError,
 } from 'react-native-purchases';
 import RevenueCatUI, { PAYWALL_RESULT } from 'react-native-purchases-ui';
-import { REVENUECAT_CONFIG } from '../config/env';
+import { REVENUECAT_CONFIG, isProduction } from '../config/env';
 import { logger } from '../utils/logger';
 
 // Types
@@ -48,6 +49,20 @@ export async function initializeRevenueCat(): Promise<void> {
   }
 
   try {
+    // Validate API key is not a test key in production
+    if (isProduction()) {
+      const apiKey = REVENUECAT_CONFIG.apiKey;
+      if (apiKey.startsWith('test_') || apiKey.includes('test_')) {
+        const error = new Error(
+          'CRITICAL: Test API key detected in production! ' +
+          'This will break payments. Please set EXPO_PUBLIC_REVENUECAT_API_KEY.'
+        );
+        logger.error('[RevenueCat]', error);
+        Sentry.captureException(error);
+        throw error;
+      }
+    }
+
     // Enable verbose logging in development
     if (__DEV__) {
       Purchases.setLogLevel(LOG_LEVEL.VERBOSE);
@@ -56,13 +71,13 @@ export async function initializeRevenueCat(): Promise<void> {
     }
 
     // Configure with API key
-    // RevenueCat uses the same API key for both platforms when configured in dashboard
     await Purchases.configure({ apiKey: REVENUECAT_CONFIG.apiKey });
 
     isInitialized = true;
     logger.log('[RevenueCat] Initialized successfully');
   } catch (error) {
     logger.error('[RevenueCat] Initialization failed:', error);
+    Sentry.captureException(error);
     throw error;
   }
 }

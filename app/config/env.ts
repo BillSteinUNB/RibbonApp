@@ -42,6 +42,7 @@ function isEnvVarRequired(name: keyof EnvVars): boolean {
   const requiredVars: (keyof EnvVars)[] = [
     'EXPO_PUBLIC_SUPABASE_URL',
     'EXPO_PUBLIC_SUPABASE_ANON_KEY',
+    'EXPO_PUBLIC_REVENUECAT_API_KEY',
   ];
 
   return requiredVars.includes(name);
@@ -61,6 +62,7 @@ export function validateEnvVars(): { valid: boolean; missing: string[] } {
   const requiredVars: (keyof EnvVars)[] = [
     'EXPO_PUBLIC_SUPABASE_URL',
     'EXPO_PUBLIC_SUPABASE_ANON_KEY',
+    'EXPO_PUBLIC_REVENUECAT_API_KEY',
   ];
 
   const missing: string[] = [];
@@ -102,8 +104,17 @@ export function getEnvironmentName(): 'development' | 'production' {
  * RevenueCat Configuration
  */
 export const REVENUECAT_CONFIG = {
-  // Use environment variable if available, otherwise use test key
-  apiKey: process.env.EXPO_PUBLIC_REVENUECAT_API_KEY || 'test_DFHjpUvPJPbWkARVGuQSDQRSmEB',
+  // API key is required - no fallback to prevent silent test key usage in production
+  apiKey: (() => {
+    const apiKey = process.env.EXPO_PUBLIC_REVENUECAT_API_KEY;
+    if (!apiKey) {
+      throw new Error(
+        'EXPO_PUBLIC_REVENUECAT_API_KEY is not set. ' +
+        'Please set this environment variable in your .env file.'
+      );
+    }
+    return apiKey;
+  })(),
   entitlementId: 'Ribbon Pro',
   // Product identifiers matching RevenueCat dashboard configuration
   products: {
