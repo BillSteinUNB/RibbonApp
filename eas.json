@@ -43,11 +43,18 @@
     }
   },
   "submit": {
+    "preview": {
+      "ios": {
+        "ascApiKeyPath": "./AuthKey_WY8PV47DWJ.p8",
+        "ascApiKeyIssuerId": "6ec43bb1-8c3c-43f2-8a90-cb35865f0226",
+        "ascApiKeyId": "WY8PV47DWJ"
+      }
+    },
     "production": {
       "ios": {
-        "appleId": "${APPLE_ID}",
-        "ascAppId": "${ASC_APP_ID}",
-        "appleTeamId": "${APPLE_TEAM_ID}"
+        "ascApiKeyPath": "./AuthKey_WY8PV47DWJ.p8",
+        "ascApiKeyIssuerId": "6ec43bb1-8c3c-43f2-8a90-cb35865f0226",
+        "ascApiKeyId": "WY8PV47DWJ"
       },
       "android": {
         "serviceAccountKeyPath": "./google-services.json",
