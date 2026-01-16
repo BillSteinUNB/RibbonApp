@@ -28,6 +28,16 @@
         "EXPO_PUBLIC_SUPABASE_ANON_KEY": "${EXPO_PUBLIC_SUPABASE_ANON_KEY}"
       }
     },
+    "testflight": {
+      "distribution": "store",
+      "ios": {
+        "resourceClass": "m-medium"
+      },
+      "env": {
+        "EXPO_PUBLIC_SUPABASE_URL": "${EXPO_PUBLIC_SUPABASE_URL}",
+        "EXPO_PUBLIC_SUPABASE_ANON_KEY": "${EXPO_PUBLIC_SUPABASE_ANON_KEY}"
+      }
+    },
     "production": {
       "autoIncrement": true,
       "ios": {
@@ -43,7 +53,7 @@
     }
   },
   "submit": {
-    "preview": {
+    "testflight": {
       "ios": {
         "ascAppId": "6757934358",
         "ascApiKeyPath": "./AuthKey_WY8PV47DWJ.p8",
