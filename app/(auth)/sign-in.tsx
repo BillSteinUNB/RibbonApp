@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { View, StyleSheet, ScrollView, KeyboardAvoidingView, Platform } from 'react-native';
 import { useRouter, Stack } from 'expo-router';
 import { StatusBar } from 'expo-status-bar';
@@ -12,6 +12,7 @@ import { validateEmail, validateRequired } from '../utils/validation';
 import { formatErrorMessage } from '../utils/errorMessages';
 import { errorLogger } from '../services/errorLogger';
 import { trackEvent } from '../utils/analytics';
+import { rateLimitService } from '../services/rateLimitService';
 
 export default function SignInScreen() {
   const router = useRouter();
@@ -21,6 +22,28 @@ export default function SignInScreen() {
     password: '',
   });
   const [errors, setErrors] = useState<Partial<Record<keyof AuthCredentials, string>>>({});
+  const [rateLimitInfo, setRateLimitInfo] = useState<{
+    isLocked: boolean;
+    remainingSeconds: number;
+    remainingAttempts: number;
+  }>({ isLocked: false, remainingSeconds: 0, remainingAttempts: 5 });
+
+  // Countdown timer for rate limit lockout
+  useEffect(() => {
+    if (rateLimitInfo.remainingSeconds <= 0) return;
+
+    const timer = setInterval(() => {
+      setRateLimitInfo(prev => {
+        const newSeconds = prev.remainingSeconds - 1;
+        if (newSeconds <= 0) {
+          return { ...prev, isLocked: false, remainingSeconds: 0 };
+        }
+        return { ...prev, remainingSeconds: newSeconds };
+      });
+    }, 1000);
+
+    return () => clearInterval(timer);
+  }, [rateLimitInfo.remainingSeconds]);
 
   const validateForm = (): boolean => {
     const newErrors: Partial<Record<keyof AuthCredentials, string>> = {};
@@ -49,24 +72,59 @@ export default function SignInScreen() {
       return;
     }
 
+    // Check rate limit before attempting
+    const rateLimitCheck = await rateLimitService.checkRateLimit(formData.email);
+    if (!rateLimitCheck.allowed) {
+      setRateLimitInfo({
+        isLocked: true,
+        remainingSeconds: rateLimitCheck.remainingSeconds,
+        remainingAttempts: 0,
+      });
+      setErrors({
+        email: `Too many failed attempts. Please try again in ${rateLimitService.formatRemainingTime(rateLimitCheck.remainingSeconds)}.`,
+      });
+      return;
+    }
+
     setIsLoading(true);
     setErrors({});
 
     try {
       // authService.initialize() is not needed with Supabase
       const { user } = await authService.signIn(formData.email, formData.password);
-      
+
+      // Record successful attempt (clears rate limit)
+      await rateLimitService.recordAttempt(formData.email, true);
+
       // Load trial data for the user
       // await trialService.loadUsageData(user.id);
-      
+
       trackEvent('auth_sign_in', { method: 'email' });
-      
+
       // Navigate to main app
       router.replace('/');
     } catch (error) {
-      setErrors({
-        email: formatErrorMessage(error),
-      });
+      // Record failed attempt
+      const result = await rateLimitService.recordAttempt(formData.email, false);
+
+      if (!result.allowed) {
+        setRateLimitInfo({
+          isLocked: true,
+          remainingSeconds: result.remainingSeconds,
+          remainingAttempts: 0,
+        });
+        setErrors({
+          email: `Too many failed attempts. Please try again in ${rateLimitService.formatRemainingTime(result.remainingSeconds)}.`,
+        });
+      } else {
+        setRateLimitInfo(prev => ({
+          ...prev,
+          remainingAttempts: result.remainingAttempts,
+        }));
+        setErrors({
+          email: formatErrorMessage(error),
+        });
+      }
       errorLogger.log(error, { context: 'signIn' });
     } finally {
       setIsLoading(false);
@@ -130,11 +188,20 @@ export default function SignInScreen() {
               </Text>
             </View>
 
+            {/* Rate Limit Warning */}
+            {rateLimitInfo.isLocked && rateLimitInfo.remainingSeconds > 0 && (
+              <View style={styles.rateLimitWarning}>
+                <Text style={styles.rateLimitText}>
+                  Account temporarily locked. Try again in {rateLimitService.formatRemainingTime(rateLimitInfo.remainingSeconds)}
+                </Text>
+              </View>
+            )}
+
             {/* Sign In Button */}
             <Button
-              title="Sign In"
+              title={rateLimitInfo.isLocked ? `Locked (${rateLimitService.formatRemainingTime(rateLimitInfo.remainingSeconds)})` : 'Sign In'}
               onPress={handleSignIn}
-              disabled={isLoading}
+              disabled={isLoading || rateLimitInfo.isLocked}
               style={styles.button}
             />
 
@@ -216,5 +283,19 @@ const styles = StyleSheet.create({
     fontWeight: '600',
     color: COLORS.accentPrimary,
     fontFamily: FONTS.body,
+  },
+  rateLimitWarning: {
+    backgroundColor: '#FEF2F2',
+    borderRadius: RADIUS.md,
+    padding: SPACING.md,
+    marginBottom: SPACING.lg,
+    borderWidth: 1,
+    borderColor: '#FECACA',
+  },
+  rateLimitText: {
+    color: '#DC2626',
+    fontSize: 14,
+    fontFamily: FONTS.body,
+    textAlign: 'center',
   },
 });

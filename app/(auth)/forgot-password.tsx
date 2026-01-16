@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { View, StyleSheet, ScrollView, KeyboardAvoidingView, Platform, Alert } from 'react-native';
 import { useRouter, Stack } from 'expo-router';
 import { StatusBar } from 'expo-status-bar';
@@ -10,12 +10,34 @@ import { authService } from '../services/authService';
 import { validateEmail } from '../utils/validation';
 import { formatErrorMessage } from '../utils/errorMessages';
 import { errorLogger } from '../services/errorLogger';
+import { rateLimitService } from '../services/rateLimitService';
 
 export default function ForgotPasswordScreen() {
   const router = useRouter();
   const [isLoading, setIsLoading] = useState(false);
   const [email, setEmail] = useState('');
   const [error, setError] = useState('');
+  const [rateLimitInfo, setRateLimitInfo] = useState<{
+    isLocked: boolean;
+    remainingSeconds: number;
+  }>({ isLocked: false, remainingSeconds: 0 });
+
+  // Countdown timer for rate limit lockout
+  useEffect(() => {
+    if (rateLimitInfo.remainingSeconds <= 0) return;
+
+    const timer = setInterval(() => {
+      setRateLimitInfo(prev => {
+        const newSeconds = prev.remainingSeconds - 1;
+        if (newSeconds <= 0) {
+          return { isLocked: false, remainingSeconds: 0 };
+        }
+        return { ...prev, remainingSeconds: newSeconds };
+      });
+    }, 1000);
+
+    return () => clearInterval(timer);
+  }, [rateLimitInfo.remainingSeconds]);
   
   const validateForm = (): boolean => {
     if (!email || !email.trim()) {
@@ -38,13 +60,28 @@ export default function ForgotPasswordScreen() {
       return;
     }
 
+    // Check rate limit before attempting
+    const resetKey = `reset:${email}`;
+    const rateLimitCheck = await rateLimitService.checkRateLimit(resetKey);
+    if (!rateLimitCheck.allowed) {
+      setRateLimitInfo({
+        isLocked: true,
+        remainingSeconds: rateLimitCheck.remainingSeconds,
+      });
+      setError(`Too many reset attempts. Please try again in ${rateLimitService.formatRemainingTime(rateLimitCheck.remainingSeconds)}.`);
+      return;
+    }
+
     setIsLoading(true);
     setError('');
 
     try {
       // authService.initialize() is not needed with Supabase
       await authService.resetPassword(email);
-      
+
+      // Record successful attempt
+      await rateLimitService.recordAttempt(resetKey, true);
+
       Alert.alert(
         'Check Your Email',
         'We sent a password reset link to your email address.',
@@ -56,7 +93,18 @@ export default function ForgotPasswordScreen() {
         ]
       );
     } catch (error) {
-      setError(formatErrorMessage(error));
+      // Record failed attempt
+      const result = await rateLimitService.recordAttempt(resetKey, false);
+
+      if (!result.allowed) {
+        setRateLimitInfo({
+          isLocked: true,
+          remainingSeconds: result.remainingSeconds,
+        });
+        setError(`Too many reset attempts. Please try again in ${rateLimitService.formatRemainingTime(result.remainingSeconds)}.`);
+      } else {
+        setError(formatErrorMessage(error));
+      }
       errorLogger.log(error, { context: 'forgotPassword' });
     } finally {
       setIsLoading(false);
@@ -101,11 +149,20 @@ export default function ForgotPasswordScreen() {
               />
             </View>
 
+            {/* Rate Limit Warning */}
+            {rateLimitInfo.isLocked && rateLimitInfo.remainingSeconds > 0 && (
+              <View style={styles.rateLimitWarning}>
+                <Text style={styles.rateLimitText}>
+                  Too many attempts. Try again in {rateLimitService.formatRemainingTime(rateLimitInfo.remainingSeconds)}
+                </Text>
+              </View>
+            )}
+
             {/* Submit Button */}
             <Button
-              title="Send Reset Link"
+              title={rateLimitInfo.isLocked ? `Locked (${rateLimitService.formatRemainingTime(rateLimitInfo.remainingSeconds)})` : 'Send Reset Link'}
               onPress={handleResetPassword}
-              disabled={isLoading}
+              disabled={isLoading || rateLimitInfo.isLocked}
               style={styles.button}
             />
 
@@ -169,5 +226,19 @@ const styles = StyleSheet.create({
     fontWeight: '600',
     color: COLORS.accentPrimary,
     fontFamily: FONTS.body,
+  },
+  rateLimitWarning: {
+    backgroundColor: '#FEF2F2',
+    borderRadius: RADIUS.md,
+    padding: SPACING.md,
+    marginBottom: SPACING.lg,
+    borderWidth: 1,
+    borderColor: '#FECACA',
+  },
+  rateLimitText: {
+    color: '#DC2626',
+    fontSize: 14,
+    fontFamily: FONTS.body,
+    textAlign: 'center',
   },
 });

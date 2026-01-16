@@ -1,5 +1,6 @@
 import type { Recipient } from '../types/recipient';
 import { SYSTEM_PROMPT } from './system.prompt';
+import { sanitizeForPrompt, sanitizeArrayForPrompt } from '../utils/validation';
 
 /**
  * Holiday Prompt Template
@@ -14,26 +15,33 @@ export function generateHolidayPrompt(recipient: Recipient, requestCount: number
       })
     : 'Not specified';
 
-  const interestsList = recipient.interests.join(', ') || 'Not specified';
-  const pastGiftsList = recipient.pastGifts?.join(', ') || 'None';
+  // Sanitize all user-provided inputs to prevent prompt injection
+  const name = sanitizeForPrompt(recipient.name, 100);
+  const relationship = sanitizeForPrompt(recipient.relationship, 50);
+  const ageRange = sanitizeForPrompt(recipient.ageRange, 30);
+  const gender = sanitizeForPrompt(recipient.gender, 30);
+  const interestsList = sanitizeArrayForPrompt(recipient.interests, 100).join(', ') || 'Not specified';
+  const dislikes = sanitizeForPrompt(recipient.dislikes, 300) || 'None';
+  const pastGiftsList = sanitizeArrayForPrompt(recipient.pastGifts, 100).join(', ') || 'None';
+  const notes = sanitizeForPrompt(recipient.notes, 500) || 'None';
 
   return `I need ${requestCount} holiday gift suggestions for:
 
 **Recipient Details:**
-- Name: ${recipient.name}
-- Relationship: ${recipient.relationship}
-- Age: ${recipient.ageRange || 'Not specified'}
-- Gender: ${recipient.gender || 'Not specified'}
+- Name: ${name}
+- Relationship: ${relationship}
+- Age: ${ageRange || 'Not specified'}
+- Gender: ${gender || 'Not specified'}
 
 **Interests:** ${interestsList}
-**Dislikes/Allergies:** ${recipient.dislikes || 'None'}
+**Dislikes/Allergies:** ${dislikes}
 
 **Budget:** ${recipient.budget.currency} ${recipient.budget.minimum} - ${recipient.budget.maximum}
 
 **Holiday Date:** ${formattedDate}
 
 **Past Gifts:** ${pastGiftsList}
-**Additional Notes:** ${recipient.notes || 'None'}
+**Additional Notes:** ${notes}
 
 **SPECIAL HOLIDAY CONSIDERATIONS:**
 - Festive, cheer-giving gifts that capture holiday spirit

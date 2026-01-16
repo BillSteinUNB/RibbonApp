@@ -8,6 +8,7 @@ import { useRecipientStore } from '../store/recipientStore';
 import { useGiftStore } from '../store/giftStore';
 import { useAuthStore } from '../store/authStore';
 import { logger } from '../utils/logger';
+import { sanitizeForPrompt, sanitizeArrayForPrompt } from '../utils/validation';
 
 /**
  * Gift Generation Service
@@ -284,7 +285,15 @@ class GiftService {
     userInstructions: string,
     count: number
   ): string {
-    const interestsList = recipient.interests.join(', ') || 'Not specified';
+    // Sanitize all user-provided inputs to prevent prompt injection
+    const name = sanitizeForPrompt(recipient.name, 100);
+    const relationship = sanitizeForPrompt(recipient.relationship, 50);
+    const ageRange = sanitizeForPrompt(recipient.ageRange, 30);
+    const gender = sanitizeForPrompt(recipient.gender, 30);
+    const interestsList = sanitizeArrayForPrompt(recipient.interests, 100).join(', ') || 'Not specified';
+    const dislikes = sanitizeForPrompt(recipient.dislikes, 300) || 'None';
+    const sanitizedInstructions = sanitizeForPrompt(userInstructions, 500) || 'Please suggest better alternatives based on my feedback.';
+    const occasionCustomName = sanitizeForPrompt(recipient.occasion.customName, 100);
 
     // Format liked gifts
     const likedGiftsText = likedGifts.length > 0
@@ -303,14 +312,14 @@ class GiftService {
     return `I need ${count} REFINED gift suggestions based on previous recommendations that didn't quite fit.
 
 **Recipient Context:**
-- Name: ${recipient.name}
-- Relationship: ${recipient.relationship}
-- Age: ${recipient.ageRange || 'Not specified'}
-- Gender: ${recipient.gender || 'Not specified'}
+- Name: ${name}
+- Relationship: ${relationship}
+- Age: ${ageRange || 'Not specified'}
+- Gender: ${gender || 'Not specified'}
 - Interests: ${interestsList}
-- Dislikes/Allergies: ${recipient.dislikes || 'None'}
+- Dislikes/Allergies: ${dislikes}
 - Budget: ${recipient.budget.currency} ${recipient.budget.minimum} - ${recipient.budget.maximum}
-- Occasion: ${recipient.occasion.type}${recipient.occasion.customName ? ` (${recipient.occasion.customName})` : ''}
+- Occasion: ${recipient.occasion.type}${occasionCustomName ? ` (${occasionCustomName})` : ''}
 
 **GIFTS THE USER LIKED:**
 ${likedGiftsText}
@@ -319,7 +328,7 @@ ${likedGiftsText}
 ${dislikedGiftsText}
 
 **USER'S REFINEMENT INSTRUCTIONS:**
-"${userInstructions || 'Please suggest better alternatives based on my feedback.'}"
+"${sanitizedInstructions}"
 
 **REFINEMENT REQUIREMENTS:**
 1. Generate ${count} COMPLETELY NEW gift ideas (DO NOT repeat any gifts from above)

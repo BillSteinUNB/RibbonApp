@@ -1,12 +1,13 @@
 import type { Recipient } from '../types/recipient';
 import { SYSTEM_PROMPT } from './system.prompt';
+import { sanitizeForPrompt, sanitizeArrayForPrompt } from '../utils/validation';
 
 /**
  * Custom Occasion Prompt Template
  * Generates gift suggestions for custom occasions (e.g., Housewarming, Graduation, Retirement, etc.)
  */
 export function generateCustomPrompt(recipient: Recipient, requestCount: number = 5): string {
-  const occasionName = recipient.occasion.customName || 'Special Occasion';
+  const occasionName = sanitizeForPrompt(recipient.occasion.customName, 100) || 'Special Occasion';
   const formattedDate = recipient.occasion.date
     ? new Date(recipient.occasion.date).toLocaleDateString('en-US', {
         month: 'long',
@@ -15,26 +16,33 @@ export function generateCustomPrompt(recipient: Recipient, requestCount: number 
       })
     : 'Not specified';
 
-  const interestsList = recipient.interests.join(', ') || 'Not specified';
-  const pastGiftsList = recipient.pastGifts?.join(', ') || 'None';
+  // Sanitize all user-provided inputs to prevent prompt injection
+  const name = sanitizeForPrompt(recipient.name, 100);
+  const relationship = sanitizeForPrompt(recipient.relationship, 50);
+  const ageRange = sanitizeForPrompt(recipient.ageRange, 30);
+  const gender = sanitizeForPrompt(recipient.gender, 30);
+  const interestsList = sanitizeArrayForPrompt(recipient.interests, 100).join(', ') || 'Not specified';
+  const dislikes = sanitizeForPrompt(recipient.dislikes, 300) || 'None';
+  const pastGiftsList = sanitizeArrayForPrompt(recipient.pastGifts, 100).join(', ') || 'None';
+  const notes = sanitizeForPrompt(recipient.notes, 500) || 'None';
 
   return `I need ${requestCount} ${occasionName} gift suggestions for:
 
 **Recipient Details:**
-- Name: ${recipient.name}
-- Relationship: ${recipient.relationship}
-- Age: ${recipient.ageRange || 'Not specified'}
-- Gender: ${recipient.gender || 'Not specified'}
+- Name: ${name}
+- Relationship: ${relationship}
+- Age: ${ageRange || 'Not specified'}
+- Gender: ${gender || 'Not specified'}
 
 **Interests:** ${interestsList}
-**Dislikes/Allergies:** ${recipient.dislikes || 'None'}
+**Dislikes/Allergies:** ${dislikes}
 
 **Budget:** ${recipient.budget.currency} ${recipient.budget.minimum} - ${recipient.budget.maximum}
 
 **${occasionName} Date:** ${formattedDate}
 
 **Past Gifts:** ${pastGiftsList}
-**Additional Notes:** ${recipient.notes || 'None'}
+**Additional Notes:** ${notes}
 
 **SPECIAL ${occasionName.toUpperCase()} CONSIDERATIONS:**
 - Create thoughtful, meaningful gifts that honor this special celebration

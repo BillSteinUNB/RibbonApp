@@ -2,6 +2,7 @@ import type { GiftIdea } from '../types/recipient';
 import { z } from 'zod';
 import { generateId, getTimestamp } from '../utils/helpers';
 import { errorLogger } from './errorLogger';
+import { safeJSONParse } from '../utils/validation';
 
 /**
  * Raw Gift Idea Schema (from AI response)
@@ -36,8 +37,14 @@ class GiftParser {
   async parseResponse(response: string, recipientId: string): Promise<GiftIdea[]> {
     try {
       const cleanedResponse = this.cleanResponse(response);
-      const jsonContent = JSON.parse(cleanedResponse);
-      const validatedGifts = giftArraySchema.parse(jsonContent);
+
+      // Use safe JSON parsing with size and depth limits
+      const parseResult = safeJSONParse(cleanedResponse, 512 * 1024, 10); // 512KB max, 10 depth max
+      if (!parseResult.success) {
+        throw new Error(parseResult.error);
+      }
+
+      const validatedGifts = giftArraySchema.parse(parseResult.data);
       return this.transformToGiftIdeas(validatedGifts, recipientId);
     } catch (error) {
       throw new Error(`Failed to parse AI response: ${error instanceof Error ? error.message : 'Unknown error'}`);

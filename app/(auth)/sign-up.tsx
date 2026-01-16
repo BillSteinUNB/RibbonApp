@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { View, StyleSheet, ScrollView, KeyboardAvoidingView, Platform } from 'react-native';
 import { useRouter, Stack } from 'expo-router';
 import { StatusBar } from 'expo-status-bar';
@@ -8,10 +8,11 @@ import { Button } from '../components/Button';
 import { Input } from '../components/Input';
 import { authService } from '../services/authService';
 import type { RegistrationData } from '../types/user';
-import { validateEmail, composeValidators, validateRequired } from '../utils/validation';
+import { validateEmail, validatePassword } from '../utils/validation';
 import { formatErrorMessage } from '../utils/errorMessages';
 import { errorLogger } from '../services/errorLogger';
 import { trackEvent } from '../utils/analytics';
+import { rateLimitService } from '../services/rateLimitService';
 
 export default function SignUpScreen() {
   const router = useRouter();
@@ -22,6 +23,27 @@ export default function SignUpScreen() {
     name: '',
   });
   const [errors, setErrors] = useState<Partial<Record<keyof RegistrationData, string>>>({});
+  const [rateLimitInfo, setRateLimitInfo] = useState<{
+    isLocked: boolean;
+    remainingSeconds: number;
+  }>({ isLocked: false, remainingSeconds: 0 });
+
+  // Countdown timer for rate limit lockout
+  useEffect(() => {
+    if (rateLimitInfo.remainingSeconds <= 0) return;
+
+    const timer = setInterval(() => {
+      setRateLimitInfo(prev => {
+        const newSeconds = prev.remainingSeconds - 1;
+        if (newSeconds <= 0) {
+          return { isLocked: false, remainingSeconds: 0 };
+        }
+        return { ...prev, remainingSeconds: newSeconds };
+      });
+    }, 1000);
+
+    return () => clearInterval(timer);
+  }, [rateLimitInfo.remainingSeconds]);
 
   const validateForm = (): boolean => {
     const newErrors: Partial<Record<keyof RegistrationData, string>> = {};
@@ -43,11 +65,10 @@ export default function SignUpScreen() {
       newErrors.name = 'Name must be at least 2 characters';
     }
 
-    // Validate password
-    if (!formData.password) {
-      newErrors.password = 'Password is required';
-    } else if (formData.password.length < 6) {
-      newErrors.password = 'Password must be at least 6 characters';
+    // Validate password with strong requirements
+    const passwordValidation = validatePassword(formData.password);
+    if (!passwordValidation.valid) {
+      newErrors.password = passwordValidation.error;
     }
 
     setErrors(newErrors);
@@ -59,24 +80,54 @@ export default function SignUpScreen() {
       return;
     }
 
+    // Check rate limit before attempting (uses same key prefix for sign-up attempts)
+    const signUpKey = `signup:${formData.email}`;
+    const rateLimitCheck = await rateLimitService.checkRateLimit(signUpKey);
+    if (!rateLimitCheck.allowed) {
+      setRateLimitInfo({
+        isLocked: true,
+        remainingSeconds: rateLimitCheck.remainingSeconds,
+      });
+      setErrors({
+        email: `Too many sign-up attempts. Please try again in ${rateLimitService.formatRemainingTime(rateLimitCheck.remainingSeconds)}.`,
+      });
+      return;
+    }
+
     setIsLoading(true);
     setErrors({});
 
     try {
       // authService.initialize() is not needed with Supabase
       const { user } = await authService.signUp(formData.email, formData.password);
-      
+
+      // Record successful attempt (clears rate limit)
+      await rateLimitService.recordAttempt(signUpKey, true);
+
       // Initialize trial data for the new user
       // await trialService.loadUsageData(user.id);
-      
+
       trackEvent('auth_sign_up', { method: 'email' });
-      
+
       // Navigate to onboarding or main app
       router.replace('/onboarding');
     } catch (error) {
-      setErrors({
-        email: formatErrorMessage(error),
-      });
+      // Record failed attempt
+      const result = await rateLimitService.recordAttempt(signUpKey, false);
+
+      if (!result.allowed) {
+        setRateLimitInfo({
+          isLocked: true,
+          remainingSeconds: result.remainingSeconds,
+        });
+        setErrors({
+          email: `Too many sign-up attempts. Please try again in ${rateLimitService.formatRemainingTime(result.remainingSeconds)}.`,
+        });
+      } else {
+        setErrors({
+          email: formatErrorMessage(error),
+        });
+      }
       errorLogger.log(error, { context: 'signUp' });
     } finally {
       setIsLoading(false);
@@ -139,11 +190,20 @@ export default function SignUpScreen() {
               />
             </View>
 
+            {/* Rate Limit Warning */}
+            {rateLimitInfo.isLocked && rateLimitInfo.remainingSeconds > 0 && (
+              <View style={styles.rateLimitWarning}>
+                <Text style={styles.rateLimitText}>
+                  Too many attempts. Try again in {rateLimitService.formatRemainingTime(rateLimitInfo.remainingSeconds)}
+                </Text>
+              </View>
+            )}
+
             {/* Sign Up Button */}
             <Button
-              title="Create Account"
+              title={rateLimitInfo.isLocked ? `Locked (${rateLimitService.formatRemainingTime(rateLimitInfo.remainingSeconds)})` : 'Create Account'}
               onPress={handleSignUp}
-              disabled={isLoading}
+              disabled={isLoading || rateLimitInfo.isLocked}
               style={styles.button}
             />
 
@@ -216,5 +276,19 @@ const styles = StyleSheet.create({
     fontWeight: '600',
     color: COLORS.accentPrimary,
     fontFamily: FONTS.body,
+  },
+  rateLimitWarning: {
+    backgroundColor: '#FEF2F2',
+    borderRadius: RADIUS.md,
+    padding: SPACING.md,
+    marginBottom: SPACING.lg,
+    borderWidth: 1,
+    borderColor: '#FECACA',
+  },
+  rateLimitText: {
+    color: '#DC2626',
+    fontSize: 14,
+    fontFamily: FONTS.body,
+    textAlign: 'center',
   },
 });
