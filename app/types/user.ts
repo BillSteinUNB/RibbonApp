@@ -45,6 +45,11 @@ export const userSchema = z.object({
         occasionReminders: z.boolean(),
         weeklyDigest: z.boolean(),
       }),
+      analytics: z.object({
+        enabled: z.boolean(),
+        consentGiven: z.boolean(),
+        consentDate: z.string().optional(),
+      }),
       language: z.string(),
       currency: z.string(),
     }).optional(),
@@ -62,6 +67,11 @@ export const userPreferencesSchema: z.ZodType<UserPreferences> = z.object({
     marketing: z.boolean(),
     occasionReminders: z.boolean(),
     weeklyDigest: z.boolean(),
+  }),
+  analytics: z.object({
+    enabled: z.boolean(),
+    consentGiven: z.boolean(),
+    consentDate: z.string().optional(),
   }),
   language: z.string(),
   currency: z.string(),

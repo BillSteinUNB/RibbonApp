@@ -7,6 +7,11 @@ export interface UserPreferences {
     occasionReminders: boolean;
     weeklyDigest: boolean;
   };
+  analytics: {
+    enabled: boolean;
+    consentGiven: boolean;
+    consentDate?: string;
+  };
   language: string;
   currency: string;
 }
@@ -27,6 +32,10 @@ export const DEFAULT_PREFERENCES: UserPreferences = {
     marketing: false,
     occasionReminders: true,
     weeklyDigest: true
+  },
+  analytics: {
+    enabled: false,
+    consentGiven: false,
   },
   language: 'en',
   currency: 'USD'

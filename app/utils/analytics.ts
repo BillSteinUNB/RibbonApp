@@ -1,8 +1,56 @@
 /**
  * Analytics tracking helpers
+ * GDPR Compliant: All tracking requires explicit user consent
  */
 
 import { logger } from './logger';
+import { storage } from '../services/storage';
+import { DEFAULT_PREFERENCES } from '../types/settings';
+
+// Key for storing analytics consent separately (accessible without auth)
+const ANALYTICS_CONSENT_KEY = 'analytics_consent';
+
+interface AnalyticsConsent {
+  enabled: boolean;
+  consentGiven: boolean;
+  consentDate?: string;
+}
+
+/**
+ * Check if analytics is enabled (user has given consent)
+ */
+export async function isAnalyticsEnabled(): Promise<boolean> {
+  try {
+    const consent = await storage.getItem<AnalyticsConsent>(ANALYTICS_CONSENT_KEY);
+    return consent?.enabled === true && consent?.consentGiven === true;
+  } catch {
+    return false;
+  }
+}
+
+/**
+ * Set analytics consent
+ */
+export async function setAnalyticsConsent(enabled: boolean): Promise<void> {
+  const consent: AnalyticsConsent = {
+    enabled,
+    consentGiven: enabled,
+    consentDate: enabled ? new Date().toISOString() : undefined,
+  };
+  await storage.setItem(ANALYTICS_CONSENT_KEY, consent);
+}
+
+/**
+ * Get current analytics consent status
+ */
+export async function getAnalyticsConsent(): Promise<AnalyticsConsent> {
+  try {
+    const consent = await storage.getItem<AnalyticsConsent>(ANALYTICS_CONSENT_KEY);
+    return consent || { enabled: false, consentGiven: false };
+  } catch {
+    return { enabled: false, consentGiven: false };
+  }
+}
 
 /**
  * Analytics event types
@@ -41,12 +89,17 @@ export interface AnalyticsPayload {
 }
 
 /**
- * Track an analytics event
+ * Track an analytics event (only if user has consented)
  */
-export function trackEvent(eventName: AnalyticsEvent, properties?: Record<string, any>): void {
+export async function trackEvent(eventName: AnalyticsEvent, properties?: Record<string, any>): Promise<void> {
+  // Check if user has given consent before tracking
+  const enabled = await isAnalyticsEnabled();
+  if (!enabled) {
+    return;
+  }
+
   // In production, this would send to your analytics provider
   // For now, we'll just log in development mode
-
   logger.log('[Analytics]', {
     event_name: eventName,
     properties,
@@ -196,3 +249,12 @@ class AnalyticsBatcher {
 }
 
 export const analyticsBatcher = new AnalyticsBatcher();
+
+/**
+ * Clear all analytics data (right to be forgotten - GDPR compliance)
+ */
+export async function clearAnalyticsData(): Promise<void> {
+  analyticsBatcher.clear();
+  await storage.removeItem(ANALYTICS_CONSENT_KEY);
+  logger.log('[Analytics] All analytics data cleared');
+}

@@ -1,16 +1,56 @@
-import React from 'react';
+import React, { useState, useEffect } from 'react';
 import { View, Text, ScrollView, TouchableOpacity, StyleSheet, Switch, Alert, Linking } from 'react-native';
 import { useRouter } from 'expo-router';
-import { User, Bell, Shield, CircleHelp as HelpCircle, LogOut, ChevronRight, CreditCard, FileText } from 'lucide-react-native';
+import { User, Bell, Shield, CircleHelp as HelpCircle, LogOut, ChevronRight, CreditCard, FileText, BarChart3 } from 'lucide-react-native';
 import { useAuthStore, selectUser, selectUserPreferences } from '../store/authStore';
 import { subscriptionService } from '../services/subscriptionService';
 import { LEGAL_CONFIG } from '../config/app.config';
 import { biometricAuthService } from '../services/biometricAuthService';
+import { getAnalyticsConsent, setAnalyticsConsent, clearAnalyticsData } from '../utils/analytics';
 
 export default function SettingsScreen() {
   const router = useRouter();
   const { user, logout, updateUserPreferences } = useAuthStore();
   const preferences = user?.profile?.preferences;
+  const [analyticsEnabled, setAnalyticsEnabled] = useState(false);
+
+  useEffect(() => {
+    // Load analytics consent on mount
+    getAnalyticsConsent().then(consent => {
+      setAnalyticsEnabled(consent.enabled);
+    });
+  }, []);
+
+  const toggleAnalytics = async (value: boolean) => {
+    setAnalyticsEnabled(value);
+    await setAnalyticsConsent(value);
+    updateUserPreferences({
+      analytics: {
+        enabled: value,
+        consentGiven: value,
+        consentDate: value ? new Date().toISOString() : undefined,
+      }
+    });
+  };
+
+  const handleClearAnalyticsData = () => {
+    Alert.alert(
+      'Clear Analytics Data',
+      'This will delete all collected analytics data. This action cannot be undone.',
+      [
+        { text: 'Cancel', style: 'cancel' },
+        {
+          text: 'Clear Data',
+          style: 'destructive',
+          onPress: async () => {
+            await clearAnalyticsData();
+            setAnalyticsEnabled(false);
+            Alert.alert('Success', 'Analytics data has been cleared.');
+          }
+        }
+      ]
+    );
+  };
 
   const handleLogout = async () => {
     Alert.alert(
@@ -140,12 +180,37 @@ export default function SettingsScreen() {
             <Bell size={22} color="#6B7280" />
             <Text style={styles.rowLabel}>Weekly Digest</Text>
           </View>
-          <Switch 
+          <Switch
             value={preferences?.notifications?.weeklyDigest}
             onValueChange={() => toggleNotification('weeklyDigest')}
             trackColor={{ false: '#D1D5DB', true: '#FF4B4B' }}
           />
         </View>
+      </View>
+
+      <View style={styles.section}>
+        <Text style={styles.sectionTitle}>Privacy</Text>
+        <View style={styles.row}>
+          <View style={styles.rowLeft}>
+            {/* @ts-ignore */}
+            <BarChart3 size={22} color="#6B7280" />
+            <Text style={styles.rowLabel}>Analytics</Text>
+          </View>
+          <Switch
+            value={analyticsEnabled}
+            onValueChange={toggleAnalytics}
+            trackColor={{ false: '#D1D5DB', true: '#FF4B4B' }}
+          />
+        </View>
+        <TouchableOpacity style={styles.row} onPress={handleClearAnalyticsData}>
+          <View style={styles.rowLeft}>
+            {/* @ts-ignore */}
+            <Shield size={22} color="#6B7280" />
+            <Text style={styles.rowLabel}>Clear Analytics Data</Text>
+          </View>
+          {/* @ts-ignore */}
+          <ChevronRight size={20} color="#9CA3AF" />
+        </TouchableOpacity>
       </View>
 
       <View style={styles.section}>
