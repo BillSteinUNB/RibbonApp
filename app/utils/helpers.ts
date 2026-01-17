@@ -1,22 +1,9 @@
 /**
  * General helper utility functions
  * 
- * CRITICAL: No static imports of native modules (expo-crypto, etc.)
- * Uses dynamic imports to prevent crashes at bundle load time.
+ * CRITICAL: No static imports or require() of native modules (expo-crypto, etc.)
+ * Uses ONLY Math.random() fallback to prevent any chance of native module crashes.
  */
-
-let CryptoModule: typeof import('expo-crypto') | null = null;
-
-async function getCrypto() {
-  if (CryptoModule) return CryptoModule;
-  try {
-    CryptoModule = await import('expo-crypto');
-    return CryptoModule;
-  } catch (e) {
-    console.warn('[Helpers] expo-crypto not available:', e);
-    return null;
-  }
-}
 
 function fallbackRandomBytes(length: number): Uint8Array {
   const bytes = new Uint8Array(length);
@@ -28,18 +15,10 @@ function fallbackRandomBytes(length: number): Uint8Array {
 
 /**
  * Generate a unique ID (UUID v4 format)
- * Uses expo-crypto for secure random byte generation when available
- * Falls back to Math.random() if native module unavailable
+ * Uses Math.random() - not cryptographically secure but safe for IDs
  */
 export function generateId(): string {
-  let bytes: Uint8Array;
-  
-  try {
-    const Crypto = require('expo-crypto');
-    bytes = Crypto.getRandomBytes(16);
-  } catch {
-    bytes = fallbackRandomBytes(16);
-  }
+  const bytes = fallbackRandomBytes(16);
 
   bytes[6] = (bytes[6] & 0x0f) | 0x40;
   bytes[8] = (bytes[8] & 0x3f) | 0x80;
@@ -52,18 +31,11 @@ export function generateId(): string {
 }
 
 /**
- * Generate a secure session ID
- * Format: prefix_timestamp_secureRandom
+ * Generate a session ID
+ * Format: prefix_timestamp_random
  */
 export function generateSecureSessionId(prefix: string = 'session'): string {
-  let bytes: Uint8Array;
-  
-  try {
-    const Crypto = require('expo-crypto');
-    bytes = Crypto.getRandomBytes(12);
-  } catch {
-    bytes = fallbackRandomBytes(12);
-  }
+  const bytes = fallbackRandomBytes(12);
   
   const randomPart = Array.from(bytes)
     .map(b => b.toString(16).padStart(2, '0'))

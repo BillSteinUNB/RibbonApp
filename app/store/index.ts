@@ -1,5 +1,6 @@
 import { create } from 'zustand';
 import { persist, createJSONStorage } from 'zustand/middleware';
+import { getSafeStorage } from '../lib/safeStorage';
 
 export interface StoreState<T> {
   data: T | null;
@@ -31,7 +32,7 @@ export function createStore<T>(
       }),
       {
         name,
-        storage: createJSONStorage(() => require('@react-native-async-storage/async-storage').default),
+        storage: createJSONStorage(() => getSafeStorage()),
       }
     )
   );
