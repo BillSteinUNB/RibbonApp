@@ -1,21 +1,33 @@
 /**
  * RevenueCat Service
  * Handles all RevenueCat SDK interactions for subscriptions and in-app purchases
+ * 
+ * IMPORTANT: This file uses ONLY dynamic imports for native modules to prevent
+ * crashes at JavaScript bundle load time. DO NOT add static imports for:
+ * - @sentry/react-native
+ * - react-native-purchases
+ * - @revenuecat/purchases-typescript-internal
  */
 
 import { Platform } from 'react-native';
-import * as Sentry from '@sentry/react-native';
-import Purchases, {
-  LOG_LEVEL,
+import { Sentry } from '../sentry';
+import { REVENUECAT_CONFIG, isProduction } from '../config/env';
+import { logger } from '../utils/logger';
+import type {
   CustomerInfo,
   PurchasesOffering,
   PurchasesPackage,
-  PURCHASES_ERROR_CODE,
   PurchasesError,
 } from 'react-native-purchases';
-import RevenueCatUI, { PAYWALL_RESULT } from 'react-native-purchases-ui';
-import { REVENUECAT_CONFIG, isProduction } from '../config/env';
-import { logger } from '../utils/logger';
+
+const PURCHASE_ERROR_CODES = {
+  PURCHASE_CANCELLED_ERROR: 1,
+  STORE_PROBLEM_ERROR: 2,
+  PURCHASE_NOT_ALLOWED_ERROR: 3,
+  PURCHASE_INVALID_ERROR: 4,
+  PRODUCT_NOT_AVAILABLE_FOR_PURCHASE_ERROR: 5,
+  NETWORK_ERROR: 10,
+} as const;
 
 // Types
 export interface RevenueCatState {
@@ -38,6 +50,36 @@ const activeListeners = new Map<number, {
 let listenerIdCounter = 0;
 const MAX_LISTENERS = 50;
 
+type PurchasesModule = typeof import('react-native-purchases');
+type PurchasesUiModule = typeof import('react-native-purchases-ui');
+
+let purchasesModule: PurchasesModule | null = null;
+let purchasesUiModule: PurchasesUiModule | null = null;
+
+async function loadPurchasesModule(): Promise<PurchasesModule> {
+  if (purchasesModule) return purchasesModule;
+  try {
+    purchasesModule = await import('react-native-purchases');
+    return purchasesModule;
+  } catch (error) {
+    logger.error('[RevenueCat] Failed to load react-native-purchases:', error);
+    Sentry.captureException(error);
+    throw error;
+  }
+}
+
+async function loadPurchasesUiModule(): Promise<PurchasesUiModule> {
+  if (purchasesUiModule) return purchasesUiModule;
+  try {
+    purchasesUiModule = await import('react-native-purchases-ui');
+    return purchasesUiModule;
+  } catch (error) {
+    logger.error('[RevenueCat] Failed to load react-native-purchases-ui:', error);
+    Sentry.captureException(error);
+    throw error;
+  }
+}
+
 /**
  * Initialize RevenueCat SDK
  * Should be called once on app startup
@@ -49,6 +91,8 @@ export async function initializeRevenueCat(): Promise<void> {
   }
 
   try {
+    const { default: Purchases, LOG_LEVEL } = await loadPurchasesModule();
+
     // Validate API key is not a test key in production
     if (isProduction()) {
       const apiKey = REVENUECAT_CONFIG.apiKey;
@@ -88,6 +132,7 @@ export async function initializeRevenueCat(): Promise<void> {
  */
 export async function identifyUser(userId: string): Promise<CustomerInfo> {
   try {
+    const { default: Purchases } = await loadPurchasesModule();
     const { customerInfo } = await Purchases.logIn(userId);
     logger.log('[RevenueCat] User identified:', userId);
     return customerInfo;
@@ -103,6 +148,7 @@ export async function identifyUser(userId: string): Promise<CustomerInfo> {
  */
 export async function logOutUser(): Promise<CustomerInfo> {
   try {
+    const { default: Purchases } = await loadPurchasesModule();
     const customerInfo = await Purchases.logOut();
     logger.log('[RevenueCat] User logged out');
 
@@ -121,6 +167,7 @@ export async function logOutUser(): Promise<CustomerInfo> {
  */
 export async function getCustomerInfo(): Promise<CustomerInfo> {
   try {
+    const { default: Purchases } = await loadPurchasesModule();
     const customerInfo = await Purchases.getCustomerInfo();
     return customerInfo;
   } catch (error) {
@@ -134,6 +181,7 @@ export async function getCustomerInfo(): Promise<CustomerInfo> {
  */
 export async function checkProAccess(): Promise<boolean> {
   try {
+    const { default: Purchases } = await loadPurchasesModule();
     const customerInfo = await Purchases.getCustomerInfo();
     const entitlement = customerInfo.entitlements.active[REVENUECAT_CONFIG.entitlementId];
     return entitlement !== undefined;
@@ -148,6 +196,7 @@ export async function checkProAccess(): Promise<boolean> {
  */
 export async function getOfferings(): Promise<PurchasesOffering | null> {
   try {
+    const { default: Purchases } = await loadPurchasesModule();
     const offerings = await Purchases.getOfferings();
     return offerings.current;
   } catch (error) {
@@ -161,14 +210,13 @@ export async function getOfferings(): Promise<PurchasesOffering | null> {
  */
 export async function purchasePackage(pkg: PurchasesPackage): Promise<CustomerInfo> {
   try {
+    const { default: Purchases } = await loadPurchasesModule();
     const { customerInfo } = await Purchases.purchasePackage(pkg);
     logger.log('[RevenueCat] Purchase successful');
     return customerInfo;
   } catch (error) {
-    const purchaseError = error as PurchasesError;
-
-    // User cancelled - not a real error
-    if (purchaseError.code === PURCHASES_ERROR_CODE.PURCHASE_CANCELLED_ERROR) {
+    // User cancelled - not a real error (code 1 = PURCHASE_CANCELLED_ERROR)
+    if (hasErrorCode(error) && error.code === PURCHASE_ERROR_CODES.PURCHASE_CANCELLED_ERROR) {
       logger.log('[RevenueCat] Purchase cancelled by user');
       throw error;
     }
@@ -183,6 +231,7 @@ export async function purchasePackage(pkg: PurchasesPackage): Promise<CustomerIn
  */
 export async function restorePurchases(): Promise<CustomerInfo> {
   try {
+    const { default: Purchases } = await loadPurchasesModule();
     const customerInfo = await Purchases.restorePurchases();
     logger.log('[RevenueCat] Purchases restored');
     return customerInfo;
@@ -198,6 +247,7 @@ export async function restorePurchases(): Promise<CustomerInfo> {
  */
 export async function presentPaywall(offering?: PurchasesOffering): Promise<PaywallResultType> {
   try {
+    const { default: RevenueCatUI, PAYWALL_RESULT } = await loadPurchasesUiModule();
     const paywallResult = await RevenueCatUI.presentPaywall(
       offering ? { offering } : undefined
     );
@@ -227,6 +277,7 @@ export async function presentPaywall(offering?: PurchasesOffering): Promise<Payw
  */
 export async function presentPaywallIfNeeded(): Promise<boolean> {
   try {
+    const { default: RevenueCatUI, PAYWALL_RESULT } = await loadPurchasesUiModule();
     const paywallResult = await RevenueCatUI.presentPaywallIfNeeded({
       requiredEntitlementIdentifier: REVENUECAT_CONFIG.entitlementId,
     });
@@ -253,6 +304,7 @@ export async function presentCustomerCenter(
   onSubscriptionChanged?: (customerInfo: CustomerInfo) => void
 ): Promise<void> {
   try {
+    const { default: RevenueCatUI } = await loadPurchasesUiModule();
     await RevenueCatUI.presentCustomerCenter({
       callbacks: {
         onFeedbackSurveyCompleted: (param) => {
@@ -323,7 +375,14 @@ export function addCustomerInfoListener(
 ): () => void {
   // The SDK's addCustomerInfoUpdateListener stores the listener internally
   // We use a wrapper approach since the TypeScript types show it returns void
-  Purchases.addCustomerInfoUpdateListener(listener);
+  loadPurchasesModule()
+    .then(({ default: Purchases }) => {
+      Purchases.addCustomerInfoUpdateListener(listener);
+    })
+    .catch((error) => {
+      logger.error('[RevenueCat] Failed to add customer info listener:', error);
+      Sentry.captureException(error);
+    });
 
   // Check if we have exceeded max listener limit
   // The SDK will handle cleanup when the app is unmounted
@@ -346,11 +405,11 @@ export function clearAllListeners(): void {
 /**
  * Check if an error has a code property (like PurchasesError)
  */
-function hasErrorCode(error: unknown): error is Error & { code: PURCHASES_ERROR_CODE } {
+function hasErrorCode(error: unknown): error is Error & { code: number } {
   return (
     error instanceof Error &&
     'code' in error &&
-    (error as { code: unknown }).code !== undefined
+    typeof (error as { code: unknown }).code === 'number'
   );
 }
 
@@ -360,17 +419,17 @@ function hasErrorCode(error: unknown): error is Error & { code: PURCHASES_ERROR_
 export function getErrorMessage(error: unknown): string {
   if (hasErrorCode(error)) {
     switch (error.code) {
-      case PURCHASES_ERROR_CODE.PURCHASE_CANCELLED_ERROR:
+      case PURCHASE_ERROR_CODES.PURCHASE_CANCELLED_ERROR:
         return 'Purchase was cancelled';
-      case PURCHASES_ERROR_CODE.STORE_PROBLEM_ERROR:
+      case PURCHASE_ERROR_CODES.STORE_PROBLEM_ERROR:
         return 'There was a problem with the app store. Please try again later.';
-      case PURCHASES_ERROR_CODE.PURCHASE_NOT_ALLOWED_ERROR:
+      case PURCHASE_ERROR_CODES.PURCHASE_NOT_ALLOWED_ERROR:
         return 'Purchases are not allowed on this device.';
-      case PURCHASES_ERROR_CODE.PURCHASE_INVALID_ERROR:
+      case PURCHASE_ERROR_CODES.PURCHASE_INVALID_ERROR:
         return 'The purchase was invalid. Please try again.';
-      case PURCHASES_ERROR_CODE.PRODUCT_NOT_AVAILABLE_FOR_PURCHASE_ERROR:
+      case PURCHASE_ERROR_CODES.PRODUCT_NOT_AVAILABLE_FOR_PURCHASE_ERROR:
         return 'This product is not available for purchase.';
-      case PURCHASES_ERROR_CODE.NETWORK_ERROR:
+      case PURCHASE_ERROR_CODES.NETWORK_ERROR:
         return 'Network error. Please check your connection and try again.';
       default:
         return error.message || 'An unexpected error occurred';
@@ -387,7 +446,7 @@ export function getErrorMessage(error: unknown): string {
  */
 export function isUserCancellation(error: unknown): boolean {
   if (hasErrorCode(error)) {
-    return error.code === PURCHASES_ERROR_CODE.PURCHASE_CANCELLED_ERROR;
+    return error.code === PURCHASE_ERROR_CODES.PURCHASE_CANCELLED_ERROR;
   }
   return false;
 }

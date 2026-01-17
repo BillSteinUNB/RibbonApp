@@ -92,7 +92,7 @@ export default function EditRecipientScreen() {
 
       // Set custom interests (those not in COMMON_INTERESTS)
       const custom = recipient.interests.filter(
-        i => !COMMON_INTERESTS.includes(i)
+        (interest) => !COMMON_INTERESTS.includes(interest as (typeof COMMON_INTERESTS)[number])
       );
       setCustomInterests(custom);
 

@@ -1,108 +1,108 @@
-// CRITICAL: Import Sentry FIRST - it has try-catch protection
-import './sentry';
-import { Sentry } from './sentry';
+/**
+ * Root Layout - Safe Boot Implementation
+ * 
+ * CRITICAL: This file must NOT import any native modules at the top level.
+ * All native module initialization is deferred to useEffect to prevent
+ * crashes at JavaScript bundle load time.
+ * 
+ * Safe imports only:
+ * - React and React Native core components
+ * - expo-router (Slot)
+ * - react-native-safe-area-context
+ */
 
-import { useEffect, useState } from 'react';
-import { View, Text, StyleSheet } from 'react-native';
-import { Stack } from 'expo-router';
-import { StatusBar } from 'expo-status-bar';
+import React, { useEffect, useState } from 'react';
+import { View, Text, StyleSheet, ActivityIndicator } from 'react-native';
+import { Slot } from 'expo-router';
+import { SafeAreaProvider } from 'react-native-safe-area-context';
 
-// Wrap entire app in error boundary
+type InitState = 'loading' | 'ready' | 'error';
+
+interface InitError {
+  stage: string;
+  message: string;
+}
+
 function RootLayout() {
-  const [isReady, setIsReady] = useState(false);
-  const [error, setError] = useState<string | null>(null);
+  const [initState, setInitState] = useState<InitState>('loading');
+  const [error, setError] = useState<InitError | null>(null);
 
   useEffect(() => {
-    // Simple initialization - no external services
-    const init = async () => {
+    let isMounted = true;
+
+    async function initialize() {
       try {
-        console.log('[Layout] Starting initialization...');
-        
-        // Test Sentry is working
-        Sentry.addBreadcrumb({
-          category: 'app',
-          message: 'App initialization started',
-          level: 'info',
-        });
-
-        // Delay to allow native modules to settle
-        await new Promise(resolve => setTimeout(resolve, 100));
-
-        // Try to load auth store (common crash point)
+        // Stage 1: Initialize Sentry (optional - won't block if it fails)
         try {
-          console.log('[Layout] Loading auth store...');
-          const authModule = await import('./store/authStore');
-          console.log('[Layout] Auth store loaded successfully');
-        } catch (authError) {
-          console.error('[Layout] Auth store failed:', authError);
-          Sentry.captureException(authError);
-          // Continue anyway
+          const { initSentry } = await import('./sentry');
+          initSentry();
+        } catch (e) {
+          console.warn('[RootLayout] Sentry init skipped:', e);
         }
 
-        // Try to load RevenueCat (another common crash point)  
+        // Stage 2: Initialize RevenueCat (optional - won't block if it fails)
         try {
-          console.log('[Layout] Loading RevenueCat...');
-          const rcModule = await import('./services/revenueCatService');
-          console.log('[Layout] RevenueCat module loaded');
-          
-          // Don't initialize RevenueCat yet - just load the module
-        } catch (rcError) {
-          console.error('[Layout] RevenueCat failed:', rcError);
-          Sentry.captureException(rcError);
-          // Continue anyway
+          const { initializeRevenueCat } = await import('./services/revenueCatService');
+          await initializeRevenueCat();
+        } catch (e) {
+          console.warn('[RootLayout] RevenueCat init skipped:', e);
         }
 
-        console.log('[Layout] Initialization complete');
-        setIsReady(true);
-      } catch (err) {
-        console.error('[Layout] Fatal error:', err);
-        Sentry.captureException(err);
-        setError(err instanceof Error ? err.message : String(err));
-        setIsReady(true); // Show error screen
+        // Stage 3: Cleanup any failed logout state
+        try {
+          const { useAuthStore } = await import('./store/authStore');
+          const cleanupFailedLogout = useAuthStore.getState().cleanupFailedLogout;
+          await cleanupFailedLogout();
+        } catch (e) {
+          console.warn('[RootLayout] Auth cleanup skipped:', e);
+        }
+
+        if (isMounted) {
+          setInitState('ready');
+        }
+      } catch (e) {
+        console.error('[RootLayout] Initialization failed:', e);
+        if (isMounted) {
+          setError({
+            stage: 'initialization',
+            message: e instanceof Error ? e.message : String(e),
+          });
+          setInitState('error');
+        }
       }
-    };
+    }
 
-    init();
+    initialize();
+
+    return () => {
+      isMounted = false;
+    };
   }, []);
 
-  // Loading screen
-  if (!isReady) {
+  if (initState === 'error' && error) {
     return (
       <View style={styles.container}>
-        <StatusBar style="dark" />
-        <Text style={styles.text}>Loading...</Text>
+        <Text style={styles.errorTitle}>Startup Error</Text>
+        <Text style={styles.errorText}>Stage: {error.stage}</Text>
+        <Text style={styles.errorMessage}>{error.message}</Text>
+        <Text style={styles.hint}>Please restart the app or contact support.</Text>
       </View>
     );
   }
 
-  // Error screen
-  if (error) {
+  if (initState === 'loading') {
     return (
       <View style={styles.container}>
-        <StatusBar style="dark" />
-        <Text style={styles.title}>Error</Text>
-        <Text style={styles.text}>{error}</Text>
+        <ActivityIndicator size="large" color="#E85D75" />
+        <Text style={styles.loadingText}>Loading Ribbon...</Text>
       </View>
     );
   }
 
-  // Main app
   return (
-    <>
-      <StatusBar style="dark" />
-      <Stack screenOptions={{ headerShown: false, animation: 'fade' }}>
-        <Stack.Screen name="(tabs)" />
-        <Stack.Screen name="(auth)/sign-up" />
-        <Stack.Screen name="(auth)/sign-in" />
-        <Stack.Screen name="(auth)/forgot-password" />
-        <Stack.Screen name="index" />
-        <Stack.Screen name="onboarding" />
-        <Stack.Screen name="recipients/new" options={{ presentation: 'modal' }} />
-        <Stack.Screen name="recipients/[id]" />
-        <Stack.Screen name="recipients/[id]/ideas" />
-        <Stack.Screen name="recipients/[id]/edit" options={{ presentation: 'modal' }} />
-      </Stack>
-    </>
+    <SafeAreaProvider>
+      <Slot />
+    </SafeAreaProvider>
   );
 }
 
@@ -114,17 +114,34 @@ const styles = StyleSheet.create({
     backgroundColor: '#FAFAFA',
     padding: 20,
   },
-  title: {
+  loadingText: {
+    marginTop: 16,
+    fontSize: 16,
+    color: '#666',
+  },
+  errorTitle: {
     fontSize: 20,
     fontWeight: 'bold',
-    marginBottom: 10,
-    color: '#333',
+    color: '#EF4444',
+    marginBottom: 12,
   },
-  text: {
-    fontSize: 16,
+  errorText: {
+    fontSize: 14,
+    color: '#666',
+    marginBottom: 4,
+  },
+  errorMessage: {
+    fontSize: 12,
+    color: '#999',
+    textAlign: 'center',
+    marginBottom: 16,
+    fontFamily: 'monospace',
+  },
+  hint: {
+    fontSize: 14,
     color: '#666',
     textAlign: 'center',
   },
 });
 
-export default Sentry.wrap(RootLayout);
+export default RootLayout;

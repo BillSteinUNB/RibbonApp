@@ -44,13 +44,6 @@
           "icon": "./assets/icon.png",
           "color": "#FF4B4B"
         }
-      ],
-      [
-        "@sentry/react-native",
-        {
-          "organization": "bill-stein",
-          "project": "react-native"
-        }
       ]
     ],
     "extra": {

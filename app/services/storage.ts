@@ -1,11 +1,22 @@
 import AsyncStorage from '@react-native-async-storage/async-storage';
-import { STORAGE_KEYS, STORAGE_VERSION } from '../constants/storageKeys';
+import {
+  STORAGE_KEYS,
+  STORAGE_KEY_SENSITIVITY,
+  STORAGE_VERSION,
+  type StorageKeySensitivity,
+} from '../constants/storageKeys';
 import { StorageError, StorageParseError } from '../types/errors';
 
 import { logger } from '../utils/logger';
 import { errorLogger } from './errorLogger';
 import { encryptedStorage } from './encryptedStorage';
-import { STORAGE_KEY_SENSITIVITY } from '../constants/storageKeys';
+
+const STORAGE_KEY_SENSITIVITY_BY_VALUE: Record<string, StorageKeySensitivity> =
+  Object.entries(STORAGE_KEYS).reduce((acc, [keyName, value]) => {
+    const name = keyName as keyof typeof STORAGE_KEYS;
+    acc[value] = STORAGE_KEY_SENSITIVITY[name];
+    return acc;
+  }, {} as Record<string, StorageKeySensitivity>);
 
 /**
  * Type-safe storage service with error handling
@@ -130,13 +141,9 @@ class StorageService {
           let parsedValue = JSON.parse(jsonValue) as T;
 
           // Decrypt if this is a sensitive key
-          if (STORAGE_KEYS[key as keyof typeof STORAGE_KEYS]) {
-            const sensitivity = STORAGE_KEYS[key as keyof typeof STORAGE_KEYS];
-            const keySensitivity = STORAGE_KEY_SENSITIVITY[sensitivity];
-
-            if (keySensitivity === 'SENSITIVE') {
-              parsedValue = await encryptedStorage.decryptValue(key, parsedValue);
-            }
+          const keySensitivity = STORAGE_KEY_SENSITIVITY_BY_VALUE[key];
+          if (keySensitivity === 'SENSITIVE') {
+            parsedValue = await encryptedStorage.decryptValue(key, parsedValue);
           }
 
           return parsedValue;
@@ -163,13 +170,9 @@ class StorageService {
       // Encrypt if this is a sensitive key
       let finalValue = value;
 
-      if (STORAGE_KEYS[key as keyof typeof STORAGE_KEYS]) {
-        const sensitivity = STORAGE_KEYS[key as keyof typeof STORAGE_KEYS];
-        const keySensitivity = STORAGE_KEY_SENSITIVITY[sensitivity];
-
-        if (keySensitivity === 'SENSITIVE') {
-          finalValue = await encryptedStorage.encryptValue(key, value) as T;
-        }
+      const keySensitivity = STORAGE_KEY_SENSITIVITY_BY_VALUE[key];
+      if (keySensitivity === 'SENSITIVE') {
+        finalValue = await encryptedStorage.encryptValue(key, value) as T;
       }
 
       const jsonValue = JSON.stringify(finalValue);

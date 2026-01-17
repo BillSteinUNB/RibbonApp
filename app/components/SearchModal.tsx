@@ -1,5 +1,5 @@
 import React, { useEffect, useRef, useState } from 'react';
-import { View, StyleSheet, Modal, TextInput, TouchableOpacity, TouchableWithoutFeedback, Animated, Keyboard, KeyboardAvoidingView, Platform } from 'react-native';
+import { View, StyleSheet, Modal, TextInput, TouchableOpacity, TouchableWithoutFeedback, Animated, Keyboard, KeyboardAvoidingView, Platform, Text } from 'react-native';
 import { X, Search as SearchIcon } from 'lucide-react-native';
 import { COLORS, SPACING, RADIUS, FONTS } from '../constants';
 

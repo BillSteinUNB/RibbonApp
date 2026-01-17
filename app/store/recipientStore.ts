@@ -1,5 +1,6 @@
 import { create } from 'zustand';
 import { persist, createJSONStorage } from 'zustand/middleware';
+import { getSafeStorage } from '../lib/safeStorage';
 
 export interface Recipient {
   id: string;
@@ -114,7 +115,7 @@ export const useRecipientStore = create<RecipientState & RecipientActions>()(
     }),
     {
       name: 'recipient-storage',
-      storage: createJSONStorage(() => require('@react-native-async-storage/async-storage').default),
+      storage: createJSONStorage(() => getSafeStorage()),
     }
   )
 );

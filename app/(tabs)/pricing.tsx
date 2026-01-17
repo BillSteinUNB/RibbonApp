@@ -7,7 +7,7 @@ import { subscriptionService } from '../services/subscriptionService';
 import { biometricAuthService } from '../services/biometricAuthService';
 import * as revenueCat from '../services/revenueCatService';
 import { PRICING_PLANS, PricingPlan } from '../types/subscription';
-import { PurchasesPackage } from 'react-native-purchases';
+import type { PurchasesPackage } from 'react-native-purchases';
 
 // Map plan ID to RevenueCat product identifiers (as configured in RevenueCat dashboard)
 // Also includes package type fallbacks for standard RevenueCat package slots

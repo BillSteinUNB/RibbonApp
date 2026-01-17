@@ -1,19 +1,26 @@
-import { getEnvVar } from '../config/env';
 import { errorLogger } from './errorLogger';
 
 /**
  * AI Service Configuration
  * Now routes through Supabase Edge Function to keep API key secure
  */
-const AI_CONFIG = {
-  // Supabase Edge Function URL
-  functionUrl: `${getEnvVar('EXPO_PUBLIC_SUPABASE_URL')}/functions/v1/generate-gifts`,
-  supabaseAnonKey: getEnvVar('EXPO_PUBLIC_SUPABASE_ANON_KEY'),
+const DEFAULT_AI_CONFIG = {
   maxTokens: 1000,
   temperature: 0.7,
   topP: 0.95,
   requestCount: 5,
 } as const;
+
+function getRuntimeConfig() {
+  const supabaseUrl = process.env.EXPO_PUBLIC_SUPABASE_URL;
+  const supabaseAnonKey = process.env.EXPO_PUBLIC_SUPABASE_ANON_KEY;
+
+  return {
+    functionUrl: supabaseUrl ? `${supabaseUrl}/functions/v1/generate-gifts` : '',
+    supabaseAnonKey: supabaseAnonKey || '',
+    ...DEFAULT_AI_CONFIG,
+  } as const;
+}
 
 /**
  * AI Service
@@ -29,7 +36,9 @@ class AIService {
   initialize(): void {
     if (this.isInitialized) return;
 
-    if (!AI_CONFIG.functionUrl || !AI_CONFIG.supabaseAnonKey) {
+    const config = getRuntimeConfig();
+
+    if (!config.functionUrl || !config.supabaseAnonKey) {
       throw new Error('Supabase configuration is not set');
     }
 
@@ -48,12 +57,13 @@ class AIService {
     }
 
     try {
-      const response = await fetch(AI_CONFIG.functionUrl, {
+      const config = getRuntimeConfig();
+      const response = await fetch(config.functionUrl, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
-          'Authorization': `Bearer ${AI_CONFIG.supabaseAnonKey}`,
-          'apikey': AI_CONFIG.supabaseAnonKey || '',
+          'Authorization': `Bearer ${config.supabaseAnonKey}`,
+          'apikey': config.supabaseAnonKey || '',
         },
         body: JSON.stringify({
           systemPrompt,
@@ -78,7 +88,8 @@ class AIService {
    * Check if AI service is available
    */
   isAvailable(): boolean {
-    return !!(AI_CONFIG.functionUrl && AI_CONFIG.supabaseAnonKey);
+    const config = getRuntimeConfig();
+    return !!(config.functionUrl && config.supabaseAnonKey);
   }
 
   /**
@@ -86,10 +97,10 @@ class AIService {
    */
   getConfig() {
     return {
-      maxTokens: AI_CONFIG.maxTokens,
-      temperature: AI_CONFIG.temperature,
-      topP: AI_CONFIG.topP,
-      requestCount: AI_CONFIG.requestCount,
+      maxTokens: DEFAULT_AI_CONFIG.maxTokens,
+      temperature: DEFAULT_AI_CONFIG.temperature,
+      topP: DEFAULT_AI_CONFIG.topP,
+      requestCount: DEFAULT_AI_CONFIG.requestCount,
     };
   }
 }

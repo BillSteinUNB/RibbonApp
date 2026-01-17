@@ -1,5 +1,6 @@
 import { create } from 'zustand';
 import { persist, createJSONStorage } from 'zustand/middleware';
+import { getSafeStorage } from '../lib/safeStorage';
 
 export type ModalType = 'none' | 'upgrade' | 'deleteRecipient' | 'signOut' | 'settings';
 
@@ -62,7 +63,7 @@ export const useUIStore = create<UIState & UIActions>()(
     }),
     {
       name: 'ui-storage',
-      storage: createJSONStorage(() => require('@react-native-async-storage/async-storage').default),
+      storage: createJSONStorage(() => getSafeStorage()),
     }
   )
 );

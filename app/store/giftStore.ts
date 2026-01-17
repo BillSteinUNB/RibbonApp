@@ -3,6 +3,7 @@ import { persist, createJSONStorage } from 'zustand/middleware';
 import type { GiftIdea } from './recipientStore';
 import type { GenerationSession } from '../types/recipient';
 import { generateSecureSessionId } from '../utils/helpers';
+import { getSafeStorage } from '../lib/safeStorage';
 
 interface GiftState {
   allGifts: GiftIdea[];
@@ -197,7 +198,7 @@ export const useGiftStore = create<GiftState & GiftActions>()(
     }),
     {
       name: 'gift-storage',
-      storage: createJSONStorage(() => require('@react-native-async-storage/async-storage').default),
+      storage: createJSONStorage(() => getSafeStorage()),
     }
   )
 );

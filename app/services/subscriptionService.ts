@@ -7,7 +7,7 @@ import { Subscription, PRICING_PLANS } from '../types/subscription';
 import { storage } from './storage';
 import { errorLogger } from './errorLogger';
 import * as revenueCat from './revenueCatService';
-import { CustomerInfo } from 'react-native-purchases';
+import type { CustomerInfo } from 'react-native-purchases';
 
 // Local cache key for subscription state
 const SUBSCRIPTION_KEY = 'user_subscription';

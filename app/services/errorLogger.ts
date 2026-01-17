@@ -158,12 +158,17 @@ class ErrorLogger {
    * Get device info for error reporting
    */
   private getDeviceInfo(): any {
+    const constants = Platform.constants as {
+      Model?: string;
+      systemName?: string;
+      systemVersion?: string;
+    };
     return {
       platform: Platform.OS,
       version: Platform.Version,
-      model: Platform.constants?.Model,
-      systemName: Platform.constants?.systemName,
-      systemVersion: Platform.constants?.systemVersion,
+      model: constants?.Model,
+      systemName: constants?.systemName,
+      systemVersion: constants?.systemVersion,
     };
   }
 

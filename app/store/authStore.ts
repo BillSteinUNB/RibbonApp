@@ -5,9 +5,10 @@ import { UserPreferences, DEFAULT_PREFERENCES } from '../types/settings';
 import { authService } from '../services/authService';
 import { errorLogger } from '../services/errorLogger';
 import { logger } from '../utils/logger';
-import { CustomerInfo } from 'react-native-purchases';
+import type { CustomerInfo } from 'react-native-purchases';
 import { REVENUECAT_CONFIG } from '../config/env';
 import * as revenueCatService from '../services/revenueCatService';
+import { getSafeStorage } from '../lib/safeStorage';
 
 export interface User {
   id: string;
@@ -290,7 +291,8 @@ export const useAuthStore = create<AuthState & AuthActions>()(
 
           // Store failed logout timestamp for cleanup
           try {
-            await require('@react-native-async-storage/async-storage').default.setItem(
+            const storage = getSafeStorage();
+            await storage.setItem(
               '@ribbon/failed-logout-timestamp',
               Date.now().toString()
             );
@@ -302,8 +304,8 @@ export const useAuthStore = create<AuthState & AuthActions>()(
       clearError: () => set({ error: null }),
       cleanupFailedLogout: async () => {
         try {
-          const AsyncStorage = require('@react-native-async-storage/async-storage').default;
-          const failedLogoutTimestamp = await AsyncStorage.getItem('@ribbon/failed-logout-timestamp');
+          const storage = getSafeStorage();
+          const failedLogoutTimestamp = await storage.getItem('@ribbon/failed-logout-timestamp');
 
           if (!failedLogoutTimestamp) {
             return; // No failed logout to clean up
@@ -315,7 +317,7 @@ export const useAuthStore = create<AuthState & AuthActions>()(
           if (hoursSinceFailure > 24) {
             // Force clear state if failed for more than 24 hours
             console.log('[Auth] Force clearing stale logout state after 24 hours');
-            await AsyncStorage.removeItem('@ribbon/failed-logout-timestamp');
+            await storage.removeItem('@ribbon/failed-logout-timestamp');
             set({
               user: null,
               isAuthenticated: false,
@@ -332,8 +334,8 @@ export const useAuthStore = create<AuthState & AuthActions>()(
           console.warn('[Auth] Failed to cleanup logout state:', error);
           // If cleanup fails, remove the timestamp to prevent stuck state
           try {
-            const AsyncStorage = require('@react-native-async-storage/async-storage').default;
-            await AsyncStorage.removeItem('@ribbon/failed-logout-timestamp');
+            const storage = getSafeStorage();
+            await storage.removeItem('@ribbon/failed-logout-timestamp');
           } catch {
             // Ignore storage errors
           }
@@ -342,7 +344,7 @@ export const useAuthStore = create<AuthState & AuthActions>()(
     }),
     {
       name: 'auth-storage',
-      storage: createJSONStorage(() => require('@react-native-async-storage/async-storage').default),
+      storage: createJSONStorage(() => getSafeStorage()),
     }
   )
 );
