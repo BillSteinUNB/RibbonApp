@@ -1,17 +1,37 @@
-import * as Notifications from 'expo-notifications';
-import { Platform } from 'react-native';
+/**
+ * Notification Service
+ * Handles push notifications and local notifications
+ * 
+ * CRITICAL: No static imports of native modules - uses dynamic imports.
+ */
 
+import { Platform } from 'react-native';
 import { errorLogger } from './errorLogger';
 import { logger } from '../utils/logger';
 
-// Flag to track if notification handler is set up
+type NotificationsModule = typeof import('expo-notifications');
+
+let NotificationsModuleCache: NotificationsModule | null = null;
 let isNotificationHandlerConfigured = false;
 
-// Configure notification behavior - call this function before using notifications
-export function configureNotificationHandler() {
+async function getNotifications(): Promise<NotificationsModule | null> {
+  if (NotificationsModuleCache) return NotificationsModuleCache;
+  try {
+    NotificationsModuleCache = await import('expo-notifications');
+    return NotificationsModuleCache;
+  } catch (e) {
+    console.warn('[Notifications] expo-notifications not available:', e);
+    return null;
+  }
+}
+
+export async function configureNotificationHandler() {
   if (isNotificationHandlerConfigured) return;
   
   try {
+    const Notifications = await getNotifications();
+    if (!Notifications) return;
+    
     Notifications.setNotificationHandler({
       handleNotification: async () => ({
         shouldShowAlert: true,
@@ -31,6 +51,9 @@ export function configureNotificationHandler() {
 export const notificationService = {
   registerForPushNotifications: async (): Promise<string | undefined> => {
     try {
+      const Notifications = await getNotifications();
+      if (!Notifications) return undefined;
+      
       if (Platform.OS === 'android') {
         await Notifications.setNotificationChannelAsync('default', {
           name: 'default',
@@ -53,9 +76,6 @@ export const notificationService = {
         return;
       }
       
-      // In a real app we would get the token and send to backend
-      // const token = (await Notifications.getExpoPushTokenAsync()).data;
-      // return token;
       return 'mock-push-token';
     } catch (error) {
       errorLogger.log(error, { context: 'registerForPushNotifications' });
@@ -69,35 +89,48 @@ export const notificationService = {
     date: Date, 
     daysBefore: number = 3
   ) => {
-    const triggerDate = new Date(date);
-    triggerDate.setDate(triggerDate.getDate() - daysBefore);
-    triggerDate.setHours(10, 0, 0, 0); // 10 AM
+    try {
+      const Notifications = await getNotifications();
+      if (!Notifications) return;
+      
+      const triggerDate = new Date(date);
+      triggerDate.setDate(triggerDate.getDate() - daysBefore);
+      triggerDate.setHours(10, 0, 0, 0);
 
-    if (triggerDate <= new Date()) return; // Don't schedule in past
+      if (triggerDate <= new Date()) return;
 
-    await Notifications.scheduleNotificationAsync({
-      content: {
-        title: `Upcoming Occasion: ${recipientName}`,
-        body: `${recipientName}'s ${occasion} is in ${daysBefore} days! Tap to find a gift.`,
-        data: { type: 'occasion_reminder' },
-      },
-      trigger: triggerDate,
-    } as any);
+      await Notifications.scheduleNotificationAsync({
+        content: {
+          title: `Upcoming Occasion: ${recipientName}`,
+          body: `${recipientName}'s ${occasion} is in ${daysBefore} days! Tap to find a gift.`,
+          data: { type: 'occasion_reminder' },
+        },
+        trigger: triggerDate,
+      } as any);
+    } catch (error) {
+      errorLogger.log(error, { context: 'scheduleOccasionReminder' });
+    }
   },
 
   scheduleWeeklyDigest: async () => {
-    // Schedule for next Friday at 5 PM
-    await Notifications.scheduleNotificationAsync({
-      content: {
-        title: 'Weekly Gift Ideas',
-        body: 'Check out new trending gifts for your upcoming occasions!',
-      },
-      trigger: {
-        weekday: 6, // Friday
-        hour: 17,
-        minute: 0,
-        repeats: true,
-      } as any,
-    });
+    try {
+      const Notifications = await getNotifications();
+      if (!Notifications) return;
+      
+      await Notifications.scheduleNotificationAsync({
+        content: {
+          title: 'Weekly Gift Ideas',
+          body: 'Check out new trending gifts for your upcoming occasions!',
+        },
+        trigger: {
+          weekday: 6,
+          hour: 17,
+          minute: 0,
+          repeats: true,
+        } as any,
+      });
+    } catch (error) {
+      errorLogger.log(error, { context: 'scheduleWeeklyDigest' });
+    }
   }
 };

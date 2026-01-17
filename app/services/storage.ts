@@ -1,4 +1,10 @@
-import AsyncStorage from '@react-native-async-storage/async-storage';
+/**
+ * Type-safe storage service with error handling
+ * 
+ * CRITICAL: No static imports of native modules - uses dynamic imports via safeStorage.
+ */
+
+import { getSafeStorage } from '../lib/safeStorage';
 import {
   STORAGE_KEYS,
   STORAGE_KEY_SENSITIVITY,
@@ -6,7 +12,6 @@ import {
   type StorageKeySensitivity,
 } from '../constants/storageKeys';
 import { StorageError, StorageParseError } from '../types/errors';
-
 import { logger } from '../utils/logger';
 import { errorLogger } from './errorLogger';
 import { encryptedStorage } from './encryptedStorage';
@@ -18,14 +23,12 @@ const STORAGE_KEY_SENSITIVITY_BY_VALUE: Record<string, StorageKeySensitivity> =
     return acc;
   }, {} as Record<string, StorageKeySensitivity>);
 
-/**
- * Type-safe storage service with error handling
- */
 class StorageService {
   private static instance: StorageService;
+  private initialized = false;
 
   private constructor() {
-    this.initializeStorage();
+    // Defer initialization
   }
 
   public static getInstance(): StorageService {
@@ -35,75 +38,62 @@ class StorageService {
     return StorageService.instance;
   }
 
-  /**
-   * Initialize storage and check version for migrations
-   */
+  private async ensureInitialized(): Promise<void> {
+    if (this.initialized) return;
+    await this.initializeStorage();
+  }
+
   private async initializeStorage(): Promise<void> {
     try {
       const currentVersion = await this.getItem<string>(STORAGE_KEYS.STORAGE_VERSION);
       
       if (currentVersion !== STORAGE_VERSION) {
-        // Run migrations if version has changed
         await this.runMigrations(currentVersion);
         await this.setItem(STORAGE_KEYS.STORAGE_VERSION, STORAGE_VERSION);
       }
+      this.initialized = true;
     } catch (error) {
       logger.warn('Failed to initialize storage:', error);
+      this.initialized = true;
     }
   }
 
-  /**
-   * Run storage migrations when schema version changes
-   */
   private async runMigrations(fromVersion: string | null): Promise<void> {
     logger.log('Running storage migrations from:', fromVersion);
 
-    // Migration to v1.1.0: Encrypt sensitive data
     if (fromVersion && fromVersion < '1.1.0') {
       logger.log('[Migration] Encrypting existing sensitive data...');
       await this.encryptSensitiveData();
     }
 
-    // Add migration logic here as needed
-    // Example: if (!fromVersion) { /* first install setup */ }
-
     try {
-      // Clear any deprecated keys
       await this.clearDeprecatedKeys();
     } catch (error) {
       logger.warn('Migration failed:', error);
     }
   }
 
-  /**
-   * Migrate existing sensitive data to encryption (v1.1.0 migration)
-   */
   private async encryptSensitiveData(): Promise<void> {
     try {
       const keys = Object.keys(STORAGE_KEYS);
       let migratedCount = 0;
 
       for (const key of keys) {
-        // Check if this key is sensitive
         const sensitivity = STORAGE_KEYS[key as keyof typeof STORAGE_KEYS];
         if (!sensitivity) continue;
 
-        // Get current value
         const value = await this.getItem(sensitivity);
 
-        // Skip if null or already encrypted
         if (!value) continue;
 
-        // Check if value is already encrypted (has 'data', 'iv', 'version' properties)
         if (typeof value === 'object' && 'data' in value && 'iv' in value && 'version' in value) {
           continue;
         }
 
-        // Encrypt the value
         const encrypted = await encryptedStorage.encryptValue(sensitivity, value);
         if (encrypted !== value) {
-          // Save encrypted value
-          await AsyncStorage.setItem(sensitivity, JSON.stringify(encrypted));
+          const storage = getSafeStorage();
+          await storage.setItem(sensitivity, JSON.stringify(encrypted));
           migratedCount++;
         }
       }
@@ -111,13 +101,9 @@ class StorageService {
       logger.log(`[Migration] Encrypted ${migratedCount} sensitive keys`);
     } catch (error) {
       logger.error('[Migration] Failed to encrypt sensitive data:', error);
-      // Don't throw - we don't want to block the app on migration failure
     }
   }
 
-  /**
-   * Clear deprecated storage keys
-   */
   private async clearDeprecatedKeys(): Promise<void> {
     const deprecatedKeys: string[] = [];
     
@@ -130,17 +116,14 @@ class StorageService {
     }
   }
 
-  /**
-   * Get an item from storage (with automatic decryption for sensitive keys)
-   */
   async getItem<T>(key: string): Promise<T | null> {
     try {
-      const jsonValue = await AsyncStorage.getItem(key);
+      const storage = getSafeStorage();
+      const jsonValue = await storage.getItem(key);
       if (jsonValue !== null) {
         try {
-          let parsedValue = JSON.parse(jsonValue) as T;
+          let parsedValue = JSON.parse(jsonValue as string) as T;
 
-          // Decrypt if this is a sensitive key
           const keySensitivity = STORAGE_KEY_SENSITIVITY_BY_VALUE[key];
           if (keySensitivity === 'SENSITIVE') {
             parsedValue = await encryptedStorage.decryptValue(key, parsedValue);
@@ -162,12 +145,8 @@ class StorageService {
     }
   }
 
-  /**
-   * Set an item in storage (with automatic encryption for sensitive keys)
-   */
   async setItem<T>(key: string, value: T): Promise<void> {
     try {
-      // Encrypt if this is a sensitive key
       let finalValue = value;
 
       const keySensitivity = STORAGE_KEY_SENSITIVITY_BY_VALUE[key];
@@ -176,128 +155,91 @@ class StorageService {
       }
 
       const jsonValue = JSON.stringify(finalValue);
-      await AsyncStorage.setItem(key, jsonValue);
+      const storage = getSafeStorage();
+      await storage.setItem(key, jsonValue);
     } catch (error) {
       throw new StorageError(`Failed to set item for key: ${key}`, 'STORAGE_ERROR', undefined, { originalError: error as Error });
     }
   }
 
-  /**
-   * Remove an item from storage
-   */
   async removeItem(key: string): Promise<void> {
     try {
-      await AsyncStorage.removeItem(key);
+      const storage = getSafeStorage();
+      await storage.removeItem(key);
     } catch (error) {
       throw new StorageError(`Failed to remove item for key: ${key}`, 'STORAGE_ERROR', undefined, { originalError: error as Error });
     }
   }
 
-  /**
-   * Get multiple items from storage
-   */
   async getItems<T>(keys: string[]): Promise<Map<string, T>> {
-    try {
-      const items = await AsyncStorage.multiGet(keys);
-      const result = new Map<string, T>();
-
-      items.forEach(([key, value]) => {
+    const result = new Map<string, T>();
+    
+    for (const key of keys) {
+      try {
+        const value = await this.getItem<T>(key);
         if (value !== null) {
-          try {
-            result.set(key, JSON.parse(value) as T);
-          } catch (parseError) {
-            const error = new StorageParseError(`Invalid JSON in storage key: ${key}`);
-            errorLogger.log(error, { key, value });
-            throw error;
-          }
+          result.set(key, value);
         }
-      });
-
-      return result;
-    } catch (error) {
-      if (error instanceof StorageParseError) {
-        throw error;
+      } catch (error) {
+        logger.warn(`Failed to get item for key ${key}:`, error);
       }
-      throw new StorageError('Failed to get multiple items', 'STORAGE_ERROR', undefined, { originalError: error as Error });
     }
+
+    return result;
   }
 
-  /**
-   * Set multiple items in storage
-   */
   async setItems<T>(entries: Map<string, T>): Promise<void> {
-    try {
-      const keyValuePairPairs: [string, string][] = [];
-      
-      entries.forEach((value, key) => {
-        keyValuePairPairs.push([key, JSON.stringify(value)]);
-      });
-      
-      await AsyncStorage.multiSet(keyValuePairPairs);
-    } catch (error) {
-      throw new StorageError('Failed to set multiple items', 'STORAGE_ERROR', undefined, { originalError: error as Error });
+    for (const [key, value] of entries) {
+      await this.setItem(key, value);
     }
   }
 
-  /**
-   * Clear all stored data (use with caution)
-   */
   async clear(): Promise<void> {
     try {
-      await AsyncStorage.clear();
+      const keys = await this.getAllKeys();
+      for (const key of keys) {
+        await this.removeItem(key);
+      }
     } catch (error) {
       throw new StorageError('Failed to clear storage', 'STORAGE_ERROR', undefined, { originalError: error as Error });
     }
   }
 
-  /**
-   * Get all keys from storage
-   */
   async getAllKeys(): Promise<readonly string[]> {
-    try {
-      return await AsyncStorage.getAllKeys();
-    } catch (error) {
-      throw new StorageError('Failed to get all keys', 'STORAGE_ERROR', undefined, { originalError: error as Error });
-    }
+    return Object.values(STORAGE_KEYS);
   }
 
-  /**
-   * Remove multiple items from storage
-   */
   async removeItems(keys: string[]): Promise<void> {
-    try {
-      await AsyncStorage.multiRemove(keys);
-    } catch (error) {
-      throw new StorageError('Failed to remove multiple items', 'STORAGE_ERROR', undefined, { originalError: error as Error });
+    for (const key of keys) {
+      await this.removeItem(key);
     }
   }
 
-  /**
-   * Check if a key exists in storage
-   */
   async hasKey(key: string): Promise<boolean> {
     try {
-      const value = await AsyncStorage.getItem(key);
+      const value = await this.getItem(key);
       return value !== null;
     } catch (error) {
       throw new StorageError(`Failed to check key existence: ${key}`, 'STORAGE_ERROR', undefined, { originalError: error as Error });
     }
   }
 
-  /**
-   * Get storage size (estimated)
-   */
   async getStorageSize(): Promise<{ keys: number; approxSizeMb: number }> {
     try {
       const keys = await this.getAllKeys();
-      const items = await AsyncStorage.multiGet(keys);
-
       let totalSize = 0;
-      items.forEach(([key, value]) => {
-        if (value) {
-          totalSize += key.length + value.length;
+      
+      for (const key of keys) {
+        try {
+          const storage = getSafeStorage();
+          const value = await storage.getItem(key);
+          if (value) {
+            totalSize += key.length + (value as string).length;
+          }
+        } catch {
+          // Skip keys we can't read
         }
-      });
+      }
 
       return {
         keys: keys.length,
@@ -309,5 +251,4 @@ class StorageService {
   }
 }
 
-// Export singleton instance
 export const storage = StorageService.getInstance();

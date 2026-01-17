@@ -1,22 +1,39 @@
-import * as LocalAuthentication from 'expo-local-authentication';
+/**
+ * Biometric Authentication Service
+ * Handles Face ID, Touch ID, and biometric authentication
+ * 
+ * CRITICAL: No static imports of native modules - uses dynamic imports.
+ */
+
 import { AppError } from '../types/errors';
 import { errorLogger } from './errorLogger';
 import { storage } from './storage';
 import { STORAGE_KEYS } from '../constants/storageKeys';
 
-/**
- * Biometric Authentication Service
- * Handles Face ID, Touch ID, and biometric authentication
- */
+type LocalAuthModule = typeof import('expo-local-authentication');
+
+let LocalAuthenticationModule: LocalAuthModule | null = null;
+
+async function getLocalAuthentication(): Promise<LocalAuthModule | null> {
+  if (LocalAuthenticationModule) return LocalAuthenticationModule;
+  try {
+    LocalAuthenticationModule = await import('expo-local-authentication');
+    return LocalAuthenticationModule;
+  } catch (e) {
+    console.warn('[BiometricAuth] expo-local-authentication not available:', e);
+    return null;
+  }
+}
+
 class BiometricAuthService {
   private isAvailableCache: boolean | null = null;
   private isEnabled: boolean = false;
 
-  /**
-   * Check if biometric authentication is available on the device
-   */
   async checkAvailability(): Promise<boolean> {
     try {
+      const LocalAuthentication = await getLocalAuthentication();
+      if (!LocalAuthentication) return false;
+      
       const hasHardware = await LocalAuthentication.hasHardwareAsync();
       const isEnrolled = await LocalAuthentication.isEnrolledAsync();
       const supportedTypes = await LocalAuthentication.supportedAuthenticationTypesAsync();
@@ -31,9 +48,6 @@ class BiometricAuthService {
     }
   }
 
-  /**
-   * Get the type of biometric authentication supported
-   */
   async getAuthenticationType(): Promise<string | null> {
     try {
       if (this.isAvailableCache === null) {
@@ -44,9 +58,11 @@ class BiometricAuthService {
         return null;
       }
 
+      const LocalAuthentication = await getLocalAuthentication();
+      if (!LocalAuthentication) return null;
+      
       const supportedTypes = await LocalAuthentication.supportedAuthenticationTypesAsync();
       
-      // Return the first supported type
       if (supportedTypes.includes(LocalAuthentication.AuthenticationType.FACIAL_RECOGNITION)) {
         return 'Face ID';
       } else if (supportedTypes.includes(LocalAuthentication.AuthenticationType.FINGERPRINT)) {
@@ -62,11 +78,11 @@ class BiometricAuthService {
     }
   }
 
-  /**
-   * Authenticate user with biometrics
-   */
   async authenticate(promptMessage: string = 'Authenticate to continue'): Promise<boolean> {
     try {
+      const LocalAuthentication = await getLocalAuthentication();
+      if (!LocalAuthentication) return false;
+      
       const result = await LocalAuthentication.authenticateAsync({
         promptMessage,
         fallbackLabel: 'Use password',
@@ -76,7 +92,6 @@ class BiometricAuthService {
 
       return result.success;
     } catch (error: any) {
-      // User cancelled or authentication failed
       if (error.code === 'USER_CANCEL' || error.code === 'NOT_ENROLLED') {
         return false;
       }
@@ -86,9 +101,6 @@ class BiometricAuthService {
     }
   }
 
-  /**
-   * Check if user has enabled biometric authentication
-   */
   async isBiometricEnabled(): Promise<boolean> {
     try {
       const enabled = await storage.getItem<boolean>(STORAGE_KEYS.AUTH_TOKEN + '_biometric_enabled');
@@ -100,24 +112,18 @@ class BiometricAuthService {
     }
   }
 
-  /**
-   * Enable biometric authentication for the user
-   */
   async enableBiometric(): Promise<boolean> {
     try {
-      // First, verify biometric is available
       const isAvailable = await this.checkAvailability();
       if (!isAvailable) {
         throw new AppError('Biometric authentication is not available');
       }
 
-      // Prompt user to authenticate to confirm they want to enable biometrics
       const authenticated = await this.authenticate('Enable biometric login?');
       if (!authenticated) {
         return false;
       }
 
-      // Save preference
       await storage.setItem(STORAGE_KEYS.AUTH_TOKEN + '_biometric_enabled', true);
       this.isEnabled = true;
 
@@ -128,9 +134,6 @@ class BiometricAuthService {
     }
   }
 
-  /**
-   * Disable biometric authentication
-   */
   async disableBiometric(): Promise<void> {
     try {
       await storage.setItem(STORAGE_KEYS.AUTH_TOKEN + '_biometric_enabled', false);
@@ -141,14 +144,10 @@ class BiometricAuthService {
     }
   }
 
-  /**
-   * Get user-friendly authentication type name
-   */
   async getAuthenticationTypeName(): Promise<string> {
     const type = await this.getAuthenticationType();
     return type || 'Biometric';
   }
 }
 
-// Export singleton instance
 export const biometricAuthService = new BiometricAuthService();

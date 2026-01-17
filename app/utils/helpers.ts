@@ -1,19 +1,48 @@
-import * as Crypto from 'expo-crypto';
-
 /**
  * General helper utility functions
+ * 
+ * CRITICAL: No static imports of native modules (expo-crypto, etc.)
+ * Uses dynamic imports to prevent crashes at bundle load time.
  */
+
+let CryptoModule: typeof import('expo-crypto') | null = null;
+
+async function getCrypto() {
+  if (CryptoModule) return CryptoModule;
+  try {
+    CryptoModule = await import('expo-crypto');
+    return CryptoModule;
+  } catch (e) {
+    console.warn('[Helpers] expo-crypto not available:', e);
+    return null;
+  }
+}
+
+function fallbackRandomBytes(length: number): Uint8Array {
+  const bytes = new Uint8Array(length);
+  for (let i = 0; i < length; i++) {
+    bytes[i] = Math.floor(Math.random() * 256);
+  }
+  return bytes;
+}
 
 /**
- * Generate a cryptographically secure unique ID (UUID v4 format)
- * Uses expo-crypto for secure random byte generation
+ * Generate a unique ID (UUID v4 format)
+ * Uses expo-crypto for secure random byte generation when available
+ * Falls back to Math.random() if native module unavailable
  */
 export function generateId(): string {
-  const bytes = Crypto.getRandomBytes(16);
+  let bytes: Uint8Array;
+  
+  try {
+    const Crypto = require('expo-crypto');
+    bytes = Crypto.getRandomBytes(16);
+  } catch {
+    bytes = fallbackRandomBytes(16);
+  }
 
-  // Set version (4) and variant (RFC4122)
-  bytes[6] = (bytes[6] & 0x0f) | 0x40; // Version 4
-  bytes[8] = (bytes[8] & 0x3f) | 0x80; // Variant RFC4122
+  bytes[6] = (bytes[6] & 0x0f) | 0x40;
+  bytes[8] = (bytes[8] & 0x3f) | 0x80;
 
   const hex = Array.from(bytes)
     .map(b => b.toString(16).padStart(2, '0'))
@@ -23,11 +52,19 @@ export function generateId(): string {
 }
 
 /**
- * Generate a cryptographically secure session ID
+ * Generate a secure session ID
  * Format: prefix_timestamp_secureRandom
  */
 export function generateSecureSessionId(prefix: string = 'session'): string {
-  const bytes = Crypto.getRandomBytes(12);
+  let bytes: Uint8Array;
+  
+  try {
+    const Crypto = require('expo-crypto');
+    bytes = Crypto.getRandomBytes(12);
+  } catch {
+    bytes = fallbackRandomBytes(12);
+  }
+  
   const randomPart = Array.from(bytes)
     .map(b => b.toString(16).padStart(2, '0'))
     .join('');

@@ -3,6 +3,8 @@
  * 
  * Provides a fallback-safe wrapper around AsyncStorage that won't crash
  * if the native module fails to load. Uses in-memory storage as fallback.
+ * 
+ * CRITICAL: Uses dynamic imports only - no static native module imports.
  */
 
 interface StorageAdapter {
@@ -19,49 +21,70 @@ const memoryStorageAdapter: StorageAdapter = {
   removeItem: (key: string) => { delete memoryStorage[key]; },
 };
 
-let asyncStorageModule: StorageAdapter | null = null;
+let asyncStorageModule: any = null;
 let loadAttempted = false;
+let loadPromise: Promise<any> | null = null;
 
-function getAsyncStorage(): StorageAdapter {
-  if (loadAttempted) {
-    return asyncStorageModule ?? memoryStorageAdapter;
-  }
-
-  loadAttempted = true;
-
-  try {
-    const AsyncStorage = require('@react-native-async-storage/async-storage').default;
-    if (AsyncStorage && typeof AsyncStorage.getItem === 'function') {
-      asyncStorageModule = AsyncStorage;
-      return AsyncStorage;
+async function loadAsyncStorage(): Promise<any> {
+  if (asyncStorageModule) return asyncStorageModule;
+  if (loadPromise) return loadPromise;
+  
+  loadPromise = (async () => {
+    try {
+      const module = await import('@react-native-async-storage/async-storage');
+      if (module?.default && typeof module.default.getItem === 'function') {
+        asyncStorageModule = module.default;
+        return asyncStorageModule;
+      }
+    } catch (e) {
+      console.warn('[SafeStorage] AsyncStorage not available, using memory fallback:', e);
     }
-  } catch (e) {
-    console.warn('[SafeStorage] AsyncStorage not available, using memory fallback:', e);
-  }
+    return null;
+  })();
+  
+  return loadPromise;
+}
 
+function getStorageSync(): StorageAdapter {
+  if (asyncStorageModule) return asyncStorageModule;
   return memoryStorageAdapter;
 }
 
 export const safeStorage: StorageAdapter = {
-  getItem: (key: string) => {
+  getItem: async (key: string) => {
     try {
-      return getAsyncStorage().getItem(key);
+      if (!loadAttempted) {
+        loadAttempted = true;
+        await loadAsyncStorage();
+      }
+      const storage = getStorageSync();
+      return await storage.getItem(key);
     } catch (e) {
       console.warn('[SafeStorage] getItem failed, using memory:', e);
       return memoryStorageAdapter.getItem(key);
     }
   },
-  setItem: (key: string, value: string) => {
+  setItem: async (key: string, value: string) => {
     try {
-      return getAsyncStorage().setItem(key, value);
+      if (!loadAttempted) {
+        loadAttempted = true;
+        await loadAsyncStorage();
+      }
+      const storage = getStorageSync();
+      return await storage.setItem(key, value);
     } catch (e) {
       console.warn('[SafeStorage] setItem failed, using memory:', e);
       return memoryStorageAdapter.setItem(key, value);
     }
   },
-  removeItem: (key: string) => {
+  removeItem: async (key: string) => {
     try {
-      return getAsyncStorage().removeItem(key);
+      if (!loadAttempted) {
+        loadAttempted = true;
+        await loadAsyncStorage();
+      }
+      const storage = getStorageSync();
+      return await storage.removeItem(key);
     } catch (e) {
       console.warn('[SafeStorage] removeItem failed, using memory:', e);
       return memoryStorageAdapter.removeItem(key);

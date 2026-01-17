@@ -1,52 +1,102 @@
-import * as SecureStore from 'expo-secure-store';
-import AsyncStorage from '@react-native-async-storage/async-storage';
+/**
+ * Secure Storage Adapter for Supabase Auth
+ * 
+ * CRITICAL: This file uses ONLY dynamic imports for native modules to prevent
+ * crashes at JavaScript bundle load time on TestFlight/Production builds.
+ */
+
 import { Platform } from 'react-native';
 
-const SECURE_STORE_OPTIONS: SecureStore.SecureStoreOptions = {
-  keychainAccessible: SecureStore.WHEN_UNLOCKED,
-};
+interface StorageAdapter {
+  getItem: (key: string) => Promise<string | null>;
+  setItem: (key: string, value: string) => Promise<void>;
+  removeItem: (key: string) => Promise<void>;
+}
+
+let SecureStoreModule: typeof import('expo-secure-store') | null = null;
+let AsyncStorageModule: { default: any } | null = null;
+
+async function getSecureStore() {
+  if (SecureStoreModule) return SecureStoreModule;
+  try {
+    SecureStoreModule = await import('expo-secure-store');
+    return SecureStoreModule;
+  } catch (e) {
+    console.warn('[SecureStorage] expo-secure-store not available:', e);
+    return null;
+  }
+}
+
+async function getAsyncStorage() {
+  if (AsyncStorageModule) return AsyncStorageModule.default;
+  try {
+    AsyncStorageModule = await import('@react-native-async-storage/async-storage');
+    return AsyncStorageModule.default;
+  } catch (e) {
+    console.warn('[SecureStorage] AsyncStorage not available:', e);
+    return null;
+  }
+}
 
 function isSecureStoreAvailable(): boolean {
   return Platform.OS === 'ios' || Platform.OS === 'android';
 }
 
-/**
- * Supabase-compatible storage adapter that uses SecureStore for auth tokens
- * Simplified version without security tracking to avoid crashes
- */
-export const secureStorage = {
+export const secureStorage: StorageAdapter = {
   async getItem(key: string): Promise<string | null> {
     try {
       if (isSecureStoreAvailable()) {
-        const value = await SecureStore.getItemAsync(key, SECURE_STORE_OPTIONS);
-        if (value !== null) {
-          return value;
+        const SecureStore = await getSecureStore();
+        if (SecureStore) {
+          const value = await SecureStore.getItemAsync(key, {
+            keychainAccessible: SecureStore.WHEN_UNLOCKED,
+          });
+          if (value !== null) {
+            return value;
+          }
         }
       }
-      // Fallback to AsyncStorage
-      return await AsyncStorage.getItem(key);
+      const AsyncStorage = await getAsyncStorage();
+      if (AsyncStorage) {
+        return await AsyncStorage.getItem(key);
+      }
+      return null;
     } catch (error) {
       console.warn(`[SecureStorage] getItem error for "${key}":`, error);
       try {
-        return await AsyncStorage.getItem(key);
+        const AsyncStorage = await getAsyncStorage();
+        if (AsyncStorage) {
+          return await AsyncStorage.getItem(key);
+        }
       } catch {
-        return null;
+        // Silent fail
       }
+      return null;
     }
   },
 
   async setItem(key: string, value: string): Promise<void> {
     try {
       if (isSecureStoreAvailable()) {
-        await SecureStore.setItemAsync(key, value, SECURE_STORE_OPTIONS);
-        return;
+        const SecureStore = await getSecureStore();
+        if (SecureStore) {
+          await SecureStore.setItemAsync(key, value, {
+            keychainAccessible: SecureStore.WHEN_UNLOCKED,
+          });
+          return;
+        }
       }
-      await AsyncStorage.setItem(key, value);
+      const AsyncStorage = await getAsyncStorage();
+      if (AsyncStorage) {
+        await AsyncStorage.setItem(key, value);
+      }
     } catch (error) {
       console.warn(`[SecureStorage] setItem error for "${key}":`, error);
-      // Fallback to AsyncStorage
       try {
-        await AsyncStorage.setItem(key, value);
+        const AsyncStorage = await getAsyncStorage();
+        if (AsyncStorage) {
+          await AsyncStorage.setItem(key, value);
+        }
       } catch (fallbackError) {
         console.error(`[SecureStorage] AsyncStorage fallback also failed:`, fallbackError);
       }
@@ -56,13 +106,21 @@ export const secureStorage = {
   async removeItem(key: string): Promise<void> {
     try {
       if (isSecureStoreAvailable()) {
-        await SecureStore.deleteItemAsync(key, SECURE_STORE_OPTIONS);
+        const SecureStore = await getSecureStore();
+        if (SecureStore) {
+          await SecureStore.deleteItemAsync(key, {
+            keychainAccessible: SecureStore.WHEN_UNLOCKED,
+          });
+        }
       }
     } catch {
       // Ignore SecureStore errors
     }
     try {
-      await AsyncStorage.removeItem(key);
+      const AsyncStorage = await getAsyncStorage();
+      if (AsyncStorage) {
+        await AsyncStorage.removeItem(key);
+      }
     } catch {
       // Ignore AsyncStorage errors
     }

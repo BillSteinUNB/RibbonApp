@@ -1,21 +1,23 @@
-import AsyncStorage from '@react-native-async-storage/async-storage';
-
 /**
  * Rate Limiting Service
  * Tracks authentication attempts and enforces rate limits to prevent brute force attacks
+ * 
+ * CRITICAL: No static imports of native modules - uses dynamic imports.
  */
+
+import { getSafeStorage } from '../lib/safeStorage';
 
 const STORAGE_KEY = '@ribbon/rate_limit_data';
 const GENERATION_STORAGE_KEY = '@ribbon/generation_limits';
 const MAX_ATTEMPTS = 5;
-const LOCKOUT_DURATION_MS = 15 * 60 * 1000; // 15 minutes
-const ATTEMPT_WINDOW_MS = 60 * 60 * 1000; // 1 hour window for tracking attempts
+const LOCKOUT_DURATION_MS = 15 * 60 * 1000;
+const ATTEMPT_WINDOW_MS = 60 * 60 * 1000;
 
 const GENERATION_CONFIG = {
   FREE_DAILY_LIMIT: 5,
   PREMIUM_DAILY_LIMIT: 50,
-  WINDOW_MS: 24 * 60 * 60 * 1000, // 24 hours
-  REFINEMENT_DAILY_LIMIT: 25, // Premium only
+  WINDOW_MS: 24 * 60 * 60 * 1000,
+  REFINEMENT_DAILY_LIMIT: 25,
 };
 
 interface AttemptRecord {
@@ -56,45 +58,36 @@ class RateLimitService {
   private initialized = false;
   private generationInitialized = false;
 
-  /**
-   * Initialize the service by loading data from storage
-   */
   async initialize(): Promise<void> {
     if (this.initialized) return;
 
     try {
-      const data = await AsyncStorage.getItem(STORAGE_KEY);
+      const storage = getSafeStorage();
+      const data = await storage.getItem(STORAGE_KEY);
       if (data) {
-        this.cache = JSON.parse(data);
+        this.cache = JSON.parse(data as string);
         this.cleanupExpiredRecords();
       }
       this.initialized = true;
     } catch (error) {
-      // If loading fails, start with empty cache
       this.cache = {};
       this.initialized = true;
     }
   }
 
-  /**
-   * Save current state to storage
-   */
   private async persist(): Promise<void> {
     try {
-      await AsyncStorage.setItem(STORAGE_KEY, JSON.stringify(this.cache));
+      const storage = getSafeStorage();
+      await storage.setItem(STORAGE_KEY, JSON.stringify(this.cache));
     } catch (error) {
-      // Silently fail - rate limiting will still work in-memory
+      // Silently fail
     }
   }
 
-  /**
-   * Clean up expired records to prevent storage bloat
-   */
   private cleanupExpiredRecords(): void {
     const now = Date.now();
     for (const email of Object.keys(this.cache)) {
       const record = this.cache[email];
-      // Remove records that are no longer locked and attempts have expired
       if (
         (!record.lockedUntil || record.lockedUntil < now) &&
         record.firstAttemptAt + ATTEMPT_WINDOW_MS < now
@@ -104,9 +97,6 @@ class RateLimitService {
     }
   }
 
-  /**
-   * Get or create an attempt record for an email
-   */
   private getRecord(email: string): AttemptRecord {
     const normalizedEmail = email.toLowerCase().trim();
     if (!this.cache[normalizedEmail]) {
@@ -120,16 +110,12 @@ class RateLimitService {
     return this.cache[normalizedEmail];
   }
 
-  /**
-   * Check if an email is rate limited
-   */
   async checkRateLimit(email: string): Promise<RateLimitCheckResult> {
     await this.initialize();
     const normalizedEmail = email.toLowerCase().trim();
     const record = this.getRecord(normalizedEmail);
     const now = Date.now();
 
-    // Check if currently locked
     if (record.lockedUntil && record.lockedUntil > now) {
       const remainingSeconds = Math.ceil((record.lockedUntil - now) / 1000);
       return {
@@ -140,12 +126,10 @@ class RateLimitService {
       };
     }
 
-    // Reset if lockout has expired
     if (record.lockedUntil && record.lockedUntil <= now) {
       record.lockedUntil = null;
     }
 
-    // Reset attempts if window has expired
     if (record.firstAttemptAt + ATTEMPT_WINDOW_MS < now) {
       record.attempts = 0;
       record.firstAttemptAt = now;
@@ -162,11 +146,6 @@ class RateLimitService {
     };
   }
 
-  /**
-   * Record an authentication attempt
-   * @param email - The email being used for auth
-   * @param success - Whether the attempt was successful
-   */
   async recordAttempt(email: string, success: boolean): Promise<RateLimitCheckResult> {
     await this.initialize();
     const normalizedEmail = email.toLowerCase().trim();
@@ -174,7 +153,6 @@ class RateLimitService {
     const now = Date.now();
 
     if (success) {
-      // Reset on successful auth
       record.attempts = 0;
       record.firstAttemptAt = now;
       record.lockedUntil = null;
@@ -188,17 +166,14 @@ class RateLimitService {
       };
     }
 
-    // Failed attempt
     record.attempts++;
 
-    // Check if we should lock
     if (record.attempts >= MAX_ATTEMPTS) {
       record.consecutiveLockouts++;
-      // Exponential backoff: 15min, 30min, 60min, etc.
       const lockoutMultiplier = Math.min(record.consecutiveLockouts, 4);
       const lockoutDuration = LOCKOUT_DURATION_MS * lockoutMultiplier;
       record.lockedUntil = now + lockoutDuration;
-      record.attempts = 0; // Reset attempts for next lockout period
+      record.attempts = 0;
       record.firstAttemptAt = now;
 
       await this.persist();
@@ -221,9 +196,6 @@ class RateLimitService {
     };
   }
 
-  /**
-   * Format remaining time for display
-   */
   formatRemainingTime(seconds: number): string {
     if (seconds <= 0) return '';
     const minutes = Math.floor(seconds / 60);
@@ -234,9 +206,6 @@ class RateLimitService {
     return `${remainingSeconds}s`;
   }
 
-  /**
-   * Clear rate limit data for testing or account recovery
-   */
   async clearRateLimitData(email?: string): Promise<void> {
     await this.initialize();
     if (email) {
@@ -247,16 +216,14 @@ class RateLimitService {
     await this.persist();
   }
 
-  /**
-   * Initialize the generation cache by loading data from storage
-   */
   private async initializeGenerationCache(): Promise<void> {
     if (this.generationInitialized) return;
 
     try {
-      const data = await AsyncStorage.getItem(GENERATION_STORAGE_KEY);
+      const storage = getSafeStorage();
+      const data = await storage.getItem(GENERATION_STORAGE_KEY);
       if (data) {
-        this.generationCache = JSON.parse(data);
+        this.generationCache = JSON.parse(data as string);
         this.cleanupExpiredGenerationRecords();
       }
       this.generationInitialized = true;
@@ -266,19 +233,14 @@ class RateLimitService {
     }
   }
 
-  /**
-   * Save current generation state to storage
-   */
   private async persistGenerationCache(): Promise<void> {
     try {
-      await AsyncStorage.setItem(GENERATION_STORAGE_KEY, JSON.stringify(this.generationCache));
+      const storage = getSafeStorage();
+      await storage.setItem(GENERATION_STORAGE_KEY, JSON.stringify(this.generationCache));
     } catch (error) {
     }
   }
 
-  /**
-   * Clean up expired generation records
-   */
   private cleanupExpiredGenerationRecords(): void {
     const now = Date.now();
     for (const userId of Object.keys(this.generationCache)) {
@@ -289,9 +251,6 @@ class RateLimitService {
     }
   }
 
-  /**
-   * Get or create a generation record for a user
-   */
   private getGenerationRecord(userId: string): GenerationRecord {
     if (!this.generationCache[userId]) {
       this.generationCache[userId] = {
@@ -304,9 +263,6 @@ class RateLimitService {
     return this.generationCache[userId];
   }
 
-  /**
-   * Check if user can generate gifts
-   */
   async checkGenerationLimit(userId: string, isPremium: boolean): Promise<GenerationLimitCheckResult> {
     await this.initializeGenerationCache();
 
@@ -330,9 +286,6 @@ class RateLimitService {
     };
   }
 
-  /**
-   * Check if user can refine gifts (premium only)
-   */
   async checkRefinementLimit(userId: string, isPremium: boolean): Promise<GenerationLimitCheckResult> {
     if (!isPremium) {
       return {
@@ -363,9 +316,6 @@ class RateLimitService {
     };
   }
 
-  /**
-   * Record a gift generation
-   */
   async recordGeneration(userId: string): Promise<void> {
     await this.initializeGenerationCache();
     const record = this.getGenerationRecord(userId);
@@ -373,9 +323,6 @@ class RateLimitService {
     await this.persistGenerationCache();
   }
 
-  /**
-   * Record a refinement
-   */
   async recordRefinement(userId: string): Promise<void> {
     await this.initializeGenerationCache();
     const record = this.getGenerationRecord(userId);
@@ -383,9 +330,6 @@ class RateLimitService {
     await this.persistGenerationCache();
   }
 
-  /**
-   * Check and record generation (atomic)
-   */
   async checkAndRecordGeneration(userId: string, isPremium: boolean): Promise<GenerationLimitCheckResult> {
     const check = await this.checkGenerationLimit(userId, isPremium);
     if (check.allowed) {
@@ -394,9 +338,6 @@ class RateLimitService {
     return check;
   }
 
-  /**
-   * Check and record refinement (atomic)
-   */
   async checkAndRecordRefinement(userId: string, isPremium: boolean): Promise<GenerationLimitCheckResult> {
     const check = await this.checkRefinementLimit(userId, isPremium);
     if (check.allowed) {
@@ -405,9 +346,6 @@ class RateLimitService {
     return check;
   }
 
-  /**
-   * Get current generation stats for a user
-   */
   async getGenerationStats(userId: string, isPremium: boolean): Promise<{
     generationsUsed: number;
     generationsRemaining: number;
@@ -441,9 +379,6 @@ class RateLimitService {
     };
   }
 
-  /**
-   * Clear generation data for testing or account recovery
-   */
   async clearGenerationData(userId?: string): Promise<void> {
     await this.initializeGenerationCache();
     if (userId) {
