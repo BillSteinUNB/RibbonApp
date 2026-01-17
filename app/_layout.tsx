@@ -40,15 +40,7 @@ function RootLayout() {
           console.warn('[RootLayout] Sentry init skipped:', e);
         }
 
-        // Stage 2: Initialize RevenueCat (optional - won't block if it fails)
-        try {
-          const { initializeRevenueCat } = await import('./services/revenueCatService');
-          await initializeRevenueCat();
-        } catch (e) {
-          console.warn('[RootLayout] RevenueCat init skipped:', e);
-        }
-
-        // Stage 3: Cleanup any failed logout state
+        // Stage 2: Cleanup any failed logout state
         try {
           const { useAuthStore } = await import('./store/authStore');
           const cleanupFailedLogout = useAuthStore.getState().cleanupFailedLogout;

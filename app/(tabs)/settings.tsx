@@ -7,7 +7,7 @@ import { subscriptionService } from '../services/subscriptionService';
 import { LEGAL_CONFIG } from '../config/app.config';
 import { biometricAuthService } from '../services/biometricAuthService';
 import { getAnalyticsConsent, setAnalyticsConsent, clearAnalyticsData } from '../utils/analytics';
-import * as revenueCat from '../services/revenueCatService';
+
 
 export default function SettingsScreen() {
   const router = useRouter();
@@ -151,7 +151,7 @@ export default function SettingsScreen() {
           <>
             <TouchableOpacity
               style={styles.row}
-              onPress={() => subscriptionService.openCustomerCenter(user.id, setSubscription)}
+              onPress={() => subscriptionService.openCustomerCenter()}
             >
               <View style={styles.rowLeft}>
                 {/* @ts-ignore */}
@@ -172,16 +172,14 @@ export default function SettingsScreen() {
                     Alert.alert('Info', 'No additional purchases found');
                   }
                 } catch (error) {
-                  Alert.alert('Error', revenueCat.getErrorMessage(error));
+                  Alert.alert('Error', 'Failed to restore purchases. Please try again.');
                 }
               }}
             >
               <View style={styles.rowLeft}>
-                {/* @ts-ignore */}
                 <RefreshCw size={22} color="#6B7280" />
                 <Text style={styles.rowLabel}>Restore Purchases</Text>
               </View>
-              {/* @ts-ignore */}
               <ChevronRight size={20} color="#9CA3AF" />
             </TouchableOpacity>
           </>
@@ -192,35 +190,10 @@ export default function SettingsScreen() {
               onPress={() => router.push('/pricing')}
             >
               <View style={styles.rowLeft}>
-                {/* @ts-ignore */}
                 <Crown size={22} color="#FF4B4B" />
                 <Text style={[styles.rowLabel, { color: '#FF4B4B' }]}>Upgrade to Pro</Text>
               </View>
-              {/* @ts-ignore */}
               <ChevronRight size={20} color="#FF4B4B" />
-            </TouchableOpacity>
-            <TouchableOpacity
-              style={styles.row}
-              onPress={async () => {
-                try {
-                  const subscription = await subscriptionService.restorePurchases(user.id);
-                  if (subscription) {
-                    Alert.alert('Success', 'Purchases restored successfully');
-                  } else {
-                    Alert.alert('Info', 'No purchases found to restore');
-                  }
-                } catch (error) {
-                  Alert.alert('Error', revenueCat.getErrorMessage(error));
-                }
-              }}
-            >
-              <View style={styles.rowLeft}>
-                {/* @ts-ignore */}
-                <RefreshCw size={22} color="#6B7280" />
-                <Text style={styles.rowLabel}>Restore Purchases</Text>
-              </View>
-              {/* @ts-ignore */}
-              <ChevronRight size={20} color="#9CA3AF" />
             </TouchableOpacity>
           </>
         )}

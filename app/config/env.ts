@@ -3,12 +3,8 @@
  * Provides type-safe access to environment variables with validation
  */
 
-/**
- * Environment interface
- */
 interface EnvVars {
   EXPO_PUBLIC_API_KEY?: string;
-  // Note: AI API key is now stored in Supabase secrets, not client-side
   EXPO_PUBLIC_SUPABASE_URL?: string;
   EXPO_PUBLIC_SUPABASE_ANON_KEY?: string;
   EXPO_PUBLIC_FIREBASE_API_KEY?: string;
@@ -19,12 +15,8 @@ interface EnvVars {
   EXPO_PUBLIC_FIREBASE_APP_ID?: string;
   EXPO_PUBLIC_FIREBASE_MEASUREMENT_ID?: string;
   EXPO_PUBLIC_ANALYTICS_ID?: string;
-  EXPO_PUBLIC_REVENUECAT_API_KEY?: string;
 }
 
-/**
- * Get environment variable with optional validation
- */
 export function getEnvVar(name: keyof EnvVars): string | undefined {
   const value = process.env[name];
 
@@ -35,34 +27,23 @@ export function getEnvVar(name: keyof EnvVars): string | undefined {
   return value;
 }
 
-/**
- * Check if environment variable is required
- */
 function isEnvVarRequired(name: keyof EnvVars): boolean {
   const requiredVars: (keyof EnvVars)[] = [
     'EXPO_PUBLIC_SUPABASE_URL',
     'EXPO_PUBLIC_SUPABASE_ANON_KEY',
-    'EXPO_PUBLIC_REVENUECAT_API_KEY',
   ];
 
   return requiredVars.includes(name);
 }
 
-/**
- * Get all environment variables
- */
 export function getAllEnvVars(): EnvVars {
   return process.env as unknown as EnvVars;
 }
 
-/**
- * Validate all required environment variables
- */
 export function validateEnvVars(): { valid: boolean; missing: string[] } {
   const requiredVars: (keyof EnvVars)[] = [
     'EXPO_PUBLIC_SUPABASE_URL',
     'EXPO_PUBLIC_SUPABASE_ANON_KEY',
-    'EXPO_PUBLIC_REVENUECAT_API_KEY',
   ];
 
   const missing: string[] = [];
@@ -79,49 +60,14 @@ export function validateEnvVars(): { valid: boolean; missing: string[] } {
   };
 }
 
-/**
- * Check if running in development mode
- */
 export function isDevelopment(): boolean {
   return __DEV__;
 }
 
-/**
- * Check if running in production mode
- */
 export function isProduction(): boolean {
   return !__DEV__;
 }
 
-/**
- * Get current environment name
- */
 export function getEnvironmentName(): 'development' | 'production' {
   return isDevelopment() ? 'development' : 'production';
 }
-
-/**
- * RevenueCat Configuration
- */
-export const REVENUECAT_CONFIG = {
-  // Use fallback test key to prevent crash on startup - will be validated at runtime
-  get apiKey(): string {
-    const apiKey = process.env.EXPO_PUBLIC_REVENUECAT_API_KEY;
-    if (!apiKey) {
-      // In production, this should never happen - but don't crash, just warn
-      console.warn(
-        '[RevenueCat] EXPO_PUBLIC_REVENUECAT_API_KEY is not set. Using test key.'
-      );
-      return 'test_placeholder_key';
-    }
-    return apiKey;
-  },
-  entitlementId: 'Ribbon Pro',
-  // Product identifiers matching RevenueCat dashboard configuration
-  products: {
-    weekly: 'weekly',
-    monthly: 'monthly',
-    yearly: 'yearly',
-    consumable: 'consumable',
-  },
-} as const;
