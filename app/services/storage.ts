@@ -89,7 +89,7 @@ class StorageService {
         }
 
         // Encrypt the value
-        const encrypted = await encryptedStorage.EncryptedStorageService.encryptValue(sensitivity, value);
+        const encrypted = await encryptedStorage.encryptValue(sensitivity, value);
         if (encrypted !== value) {
           // Save encrypted value
           await AsyncStorage.setItem(sensitivity, JSON.stringify(encrypted));
@@ -135,7 +135,7 @@ class StorageService {
             const keySensitivity = STORAGE_KEY_SENSITIVITY[sensitivity];
 
             if (keySensitivity === 'SENSITIVE') {
-              parsedValue = await encryptedStorage.EncryptedStorageService.decryptValue(key, parsedValue);
+              parsedValue = await encryptedStorage.decryptValue(key, parsedValue);
             }
           }
 
@@ -168,7 +168,7 @@ class StorageService {
         const keySensitivity = STORAGE_KEY_SENSITIVITY[sensitivity];
 
         if (keySensitivity === 'SENSITIVE') {
-          finalValue = await encryptedStorage.EncryptedStorageService.encryptValue(key, value) as T;
+          finalValue = await encryptedStorage.encryptValue(key, value) as T;
         }
       }
 
