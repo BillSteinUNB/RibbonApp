@@ -1,0 +1,71 @@
+name: iOS TestFlight
+
+on:
+  workflow_dispatch:
+  push:
+    branches:
+      - main
+
+jobs:
+  testflight:
+    runs-on: macos-latest
+    env:
+      CI: true
+      APP_IDENTIFIER: com.ribbon.app
+      IOS_SCHEME: Ribbon
+      IOS_WORKSPACE: ios/Ribbon.xcworkspace
+      IOS_PROJECT: ios/Ribbon.xcodeproj
+      BUILD_NUMBER: ${{ github.run_number }}
+      EXPO_PUBLIC_SUPABASE_URL: ${{ secrets.EXPO_PUBLIC_SUPABASE_URL }}
+      EXPO_PUBLIC_SUPABASE_ANON_KEY: ${{ secrets.EXPO_PUBLIC_SUPABASE_ANON_KEY }}
+      APP_STORE_CONNECT_API_KEY_ID: ${{ secrets.APP_STORE_CONNECT_API_KEY_ID }}
+      APP_STORE_CONNECT_API_ISSUER_ID: ${{ secrets.APP_STORE_CONNECT_API_ISSUER_ID }}
+      APP_STORE_CONNECT_API_KEY_PATH: fastlane/AuthKey.p8
+      APP_STORE_CONNECT_API_KEY_BASE64: ${{ secrets.APP_STORE_CONNECT_API_KEY_BASE64 }}
+      MATCH_GIT_URL: ${{ secrets.MATCH_GIT_URL }}
+      MATCH_PASSWORD: ${{ secrets.MATCH_PASSWORD }}
+      MATCH_GIT_BASIC_AUTHORIZATION: ${{ secrets.MATCH_GIT_BASIC_AUTHORIZATION }}
+      MATCH_GIT_PRIVATE_KEY: ${{ secrets.MATCH_GIT_PRIVATE_KEY }}
+      FASTLANE_DISABLE_COLORS: "1"
+      FASTLANE_SKIP_UPDATE_CHECK: "1"
+      EXPO_NO_TELEMETRY: "1"
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup Node
+        uses: actions/setup-node@v4
+        with:
+          node-version: 20
+          cache: npm
+
+      - name: Setup Ruby
+        uses: ruby/setup-ruby@v1
+        with:
+          ruby-version: "3.2"
+          bundler-cache: true
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Write App Store Connect API key
+        if: ${{ env.APP_STORE_CONNECT_API_KEY_BASE64 != '' }}
+        run: |
+          python3 - <<'PY'
+          import base64
+          import os
+          from pathlib import Path
+
+          data = os.environ["APP_STORE_CONNECT_API_KEY_BASE64"]
+          Path("fastlane/AuthKey.p8").write_bytes(base64.b64decode(data))
+          PY
+
+      - name: Expo prebuild (iOS)
+        run: npx expo prebuild --platform ios --clean --no-install
+
+      - name: Install CocoaPods
+        run: bundle exec pod install --project-directory=ios
+
+      - name: Build and upload TestFlight
+        run: bundle exec fastlane ios testflight

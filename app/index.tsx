@@ -1,10 +1,9 @@
-import React from 'react';
-import { View, Text, StyleSheet } from 'react-native';
+import { StyleSheet, Text, View } from 'react-native';
 
 export default function Index() {
   return (
     <View style={styles.container}>
-      <Text style={styles.text}>App Index Loaded!</Text>
+      <Text style={styles.text}>Ribbon App Works!</Text>
     </View>
   );
 }
@@ -17,7 +16,8 @@ const styles = StyleSheet.create({
     backgroundColor: '#FAFAFA',
   },
   text: {
-    fontSize: 20,
+    fontSize: 24,
+    fontWeight: 'bold',
     color: '#E85D75',
   },
 });

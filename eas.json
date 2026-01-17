@@ -15,19 +15,6 @@
         "EXPO_PUBLIC_SUPABASE_ANON_KEY": "${EXPO_PUBLIC_SUPABASE_ANON_KEY}"
       }
     },
-    "preview": {
-      "distribution": "internal",
-      "ios": {
-        "resourceClass": "m-medium"
-      },
-      "android": {
-        "buildType": "apk"
-      },
-      "env": {
-        "EXPO_PUBLIC_SUPABASE_URL": "${EXPO_PUBLIC_SUPABASE_URL}",
-        "EXPO_PUBLIC_SUPABASE_ANON_KEY": "${EXPO_PUBLIC_SUPABASE_ANON_KEY}"
-      }
-    },
     "testflight": {
       "distribution": "store",
       "autoIncrement": true,
@@ -36,17 +23,13 @@
       },
       "env": {
         "EXPO_PUBLIC_SUPABASE_URL": "${EXPO_PUBLIC_SUPABASE_URL}",
-        "EXPO_PUBLIC_SUPABASE_ANON_KEY": "${EXPO_PUBLIC_SUPABASE_ANON_KEY}",
-        "SENTRY_DISABLE_AUTO_UPLOAD": "true"
+        "EXPO_PUBLIC_SUPABASE_ANON_KEY": "${EXPO_PUBLIC_SUPABASE_ANON_KEY}"
       }
     },
     "production": {
       "autoIncrement": true,
       "ios": {
         "resourceClass": "m-medium"
-      },
-      "android": {
-        "buildType": "app-bundle"
       },
       "env": {
         "EXPO_PUBLIC_SUPABASE_URL": "${EXPO_PUBLIC_SUPABASE_URL}",
@@ -69,10 +52,6 @@
         "ascApiKeyPath": "./AuthKey_WY8PV47DWJ.p8",
         "ascApiKeyIssuerId": "6ec43bb1-8c3c-43f2-8a90-cb35865f0226",
         "ascApiKeyId": "WY8PV47DWJ"
-      },
-      "android": {
-        "serviceAccountKeyPath": "./google-services.json",
-        "track": "internal"
       }
     }
   }

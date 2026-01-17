@@ -7,6 +7,7 @@
     "icon": "./assets/icon.png",
     "userInterfaceStyle": "light",
     "newArchEnabled": false,
+    "scheme": "ribbon",
     "splash": {
       "image": "./assets/splash-icon.png",
       "resizeMode": "contain",
@@ -15,35 +16,25 @@
     "ios": {
       "supportsTablet": true,
       "bundleIdentifier": "com.ribbon.app",
-      "buildNumber": "1",
       "infoPlist": {
-        "NSFaceIDUsageDescription": "Ribbon uses Face ID to securely authenticate you.",
-        "NSUserNotificationsUsageDescription": "Ribbon uses notifications to remind you about upcoming occasions and gift ideas.",
         "ITSAppUsesNonExemptEncryption": false
       }
     },
     "android": {
       "package": "com.ribbon.app",
-      "versionCode": 1,
       "adaptiveIcon": {
         "foregroundImage": "./assets/adaptive-icon.png",
         "backgroundColor": "#FAFAFA"
-      },
-      "edgeToEdgeEnabled": true,
-      "predictiveBackGestureEnabled": false
-    },
-    "web": {
-      "favicon": "./assets/favicon.png"
+      }
     },
     "plugins": [
       "expo-router",
       "expo-secure-store"
     ],
     "extra": {
-      "privacyPolicyUrl": "https://billsteinunb.github.io/RibbonApp/privacy-policy.html",
-      "termsOfServiceUrl": "https://billsteinunb.github.io/RibbonApp/terms-of-service.html",
-      "supportEmail": "Contact@Billstein.dev",
-      "router": {},
+      "router": {
+        "origin": false
+      },
       "eas": {
         "projectId": "b70a8ab8-6acf-45e5-b506-76747f430c86"
       }
