@@ -32,15 +32,7 @@ function RootLayout() {
 
     async function initialize() {
       try {
-        // Stage 1: Initialize Sentry (optional - won't block if it fails)
-        try {
-          const { initSentry } = await import('./sentry');
-          initSentry();
-        } catch (e) {
-          console.warn('[RootLayout] Sentry init skipped:', e);
-        }
-
-        // Stage 2: Cleanup any failed logout state
+        // Cleanup any failed logout state
         try {
           const { useAuthStore } = await import('./store/authStore');
           const cleanupFailedLogout = useAuthStore.getState().cleanupFailedLogout;

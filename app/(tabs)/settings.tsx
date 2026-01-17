@@ -1,22 +1,18 @@
 import React, { useState, useEffect } from 'react';
 import { View, Text, ScrollView, TouchableOpacity, StyleSheet, Switch, Alert, Linking } from 'react-native';
 import { useRouter } from 'expo-router';
-import { User, Bell, Shield, CircleHelp as HelpCircle, LogOut, ChevronRight, CreditCard, FileText, BarChart3, Crown, RefreshCw } from 'lucide-react-native';
-import { useAuthStore, selectUser, selectUserPreferences } from '../store/authStore';
+import { Shield, CircleHelp as HelpCircle, LogOut, ChevronRight, CreditCard, FileText, BarChart3, Crown, RefreshCw } from 'lucide-react-native';
+import { useAuthStore } from '../store/authStore';
 import { subscriptionService } from '../services/subscriptionService';
 import { LEGAL_CONFIG } from '../config/app.config';
-import { biometricAuthService } from '../services/biometricAuthService';
 import { getAnalyticsConsent, setAnalyticsConsent, clearAnalyticsData } from '../utils/analytics';
-
 
 export default function SettingsScreen() {
   const router = useRouter();
-  const { user, logout, updateUserPreferences, setSubscription } = useAuthStore();
-  const preferences = user?.profile?.preferences;
+  const { user, logout, updateUserPreferences } = useAuthStore();
   const [analyticsEnabled, setAnalyticsEnabled] = useState(false);
 
   useEffect(() => {
-    // Load analytics consent on mount
     getAnalyticsConsent().then(consent => {
       setAnalyticsEnabled(consent.enabled);
     });
@@ -63,38 +59,12 @@ export default function SettingsScreen() {
           text: 'Sign Out',
           style: 'destructive',
           onPress: async () => {
-            // Check if biometric is enabled and available
-            const biometricEnabled = await biometricAuthService.isBiometricEnabled();
-            const biometricAvailable = await biometricAuthService.checkAvailability();
-
-            if (biometricEnabled && biometricAvailable) {
-              // Require biometric authentication before logout
-              const authenticated = await biometricAuthService.authenticate('Authenticate to sign out');
-              if (!authenticated) {
-                Alert.alert('Authentication Required', 'Biometric authentication is required to sign out.');
-                return;
-              }
-            }
-
             logout();
             router.replace('/(auth)/sign-in');
           }
         }
       ]
     );
-  };
-
-  const toggleNotification = (key: any) => {
-    // @ts-ignore
-    if (!preferences?.notifications) return;
-    updateUserPreferences({
-      notifications: {
-        // @ts-ignore
-        ...preferences.notifications,
-        // @ts-ignore
-        [key]: !preferences.notifications[key]
-      }
-    });
   };
 
   const openPrivacyPolicy = async () => {
@@ -154,11 +124,9 @@ export default function SettingsScreen() {
               onPress={() => subscriptionService.openCustomerCenter()}
             >
               <View style={styles.rowLeft}>
-                {/* @ts-ignore */}
                 <CreditCard size={22} color="#6B7280" />
                 <Text style={styles.rowLabel}>Manage Subscription</Text>
               </View>
-              {/* @ts-ignore */}
               <ChevronRight size={20} color="#9CA3AF" />
             </TouchableOpacity>
             <TouchableOpacity
@@ -184,54 +152,23 @@ export default function SettingsScreen() {
             </TouchableOpacity>
           </>
         ) : (
-          <>
-            <TouchableOpacity
-              style={styles.row}
-              onPress={() => router.push('/pricing')}
-            >
-              <View style={styles.rowLeft}>
-                <Crown size={22} color="#FF4B4B" />
-                <Text style={[styles.rowLabel, { color: '#FF4B4B' }]}>Upgrade to Pro</Text>
-              </View>
-              <ChevronRight size={20} color="#FF4B4B" />
-            </TouchableOpacity>
-          </>
+          <TouchableOpacity
+            style={styles.row}
+            onPress={() => router.push('/pricing')}
+          >
+            <View style={styles.rowLeft}>
+              <Crown size={22} color="#FF4B4B" />
+              <Text style={[styles.rowLabel, { color: '#FF4B4B' }]}>Upgrade to Pro</Text>
+            </View>
+            <ChevronRight size={20} color="#FF4B4B" />
+          </TouchableOpacity>
         )}
-      </View>
-
-      <View style={styles.section}>
-        <Text style={styles.sectionTitle}>Notifications</Text>
-        <View style={styles.row}>
-          <View style={styles.rowLeft}>
-            {/* @ts-ignore */}
-            <Bell size={22} color="#6B7280" />
-            <Text style={styles.rowLabel}>Occasion Reminders</Text>
-          </View>
-          <Switch 
-            value={preferences?.notifications?.occasionReminders}
-            onValueChange={() => toggleNotification('occasionReminders')}
-            trackColor={{ false: '#D1D5DB', true: '#FF4B4B' }}
-          />
-        </View>
-        <View style={styles.row}>
-          <View style={styles.rowLeft}>
-            {/* @ts-ignore */}
-            <Bell size={22} color="#6B7280" />
-            <Text style={styles.rowLabel}>Weekly Digest</Text>
-          </View>
-          <Switch
-            value={preferences?.notifications?.weeklyDigest}
-            onValueChange={() => toggleNotification('weeklyDigest')}
-            trackColor={{ false: '#D1D5DB', true: '#FF4B4B' }}
-          />
-        </View>
       </View>
 
       <View style={styles.section}>
         <Text style={styles.sectionTitle}>Privacy</Text>
         <View style={styles.row}>
           <View style={styles.rowLeft}>
-            {/* @ts-ignore */}
             <BarChart3 size={22} color="#6B7280" />
             <Text style={styles.rowLabel}>Analytics</Text>
           </View>
@@ -243,11 +180,9 @@ export default function SettingsScreen() {
         </View>
         <TouchableOpacity style={styles.row} onPress={handleClearAnalyticsData}>
           <View style={styles.rowLeft}>
-            {/* @ts-ignore */}
             <Shield size={22} color="#6B7280" />
             <Text style={styles.rowLabel}>Clear Analytics Data</Text>
           </View>
-          {/* @ts-ignore */}
           <ChevronRight size={20} color="#9CA3AF" />
         </TouchableOpacity>
       </View>
@@ -256,29 +191,23 @@ export default function SettingsScreen() {
         <Text style={styles.sectionTitle}>Support</Text>
         <TouchableOpacity style={styles.row} onPress={() => router.push('/help')}>
           <View style={styles.rowLeft}>
-            {/* @ts-ignore */}
             <HelpCircle size={22} color="#6B7280" />
             <Text style={styles.rowLabel}>Help Center</Text>
           </View>
-          {/* @ts-ignore */}
           <ChevronRight size={20} color="#9CA3AF" />
         </TouchableOpacity>
         <TouchableOpacity style={styles.row} onPress={openPrivacyPolicy}>
           <View style={styles.rowLeft}>
-            {/* @ts-ignore */}
             <Shield size={22} color="#6B7280" />
             <Text style={styles.rowLabel}>Privacy Policy</Text>
           </View>
-          {/* @ts-ignore */}
           <ChevronRight size={20} color="#9CA3AF" />
         </TouchableOpacity>
         <TouchableOpacity style={styles.row} onPress={openTermsOfService}>
           <View style={styles.rowLeft}>
-            {/* @ts-ignore */}
             <FileText size={22} color="#6B7280" />
             <Text style={styles.rowLabel}>Terms of Service</Text>
           </View>
-          {/* @ts-ignore */}
           <ChevronRight size={20} color="#9CA3AF" />
         </TouchableOpacity>
       </View>
@@ -288,13 +217,12 @@ export default function SettingsScreen() {
         onPress={handleLogout}
       >
         <View style={styles.rowLeft}>
-          {/* @ts-ignore */}
           <LogOut size={22} color="#EF4444" />
           <Text style={[styles.rowLabel, styles.logoutText]}>Sign Out</Text>
         </View>
       </TouchableOpacity>
 
-      <Text style={styles.version}>Version 1.0.0 (Build 100)</Text>
+      <Text style={styles.version}>Version 1.0.0</Text>
     </ScrollView>
   );
 }

@@ -37,21 +37,7 @@
     },
     "plugins": [
       "expo-router",
-      "expo-secure-store",
-      [
-        "expo-notifications",
-        {
-          "icon": "./assets/icon.png",
-          "color": "#FF4B4B"
-        }
-      ],
-      [
-        "@sentry/react-native/expo",
-        {
-          "organization": "bill-stein",
-          "project": "react-native"
-        }
-      ]
+      "expo-secure-store"
     ],
     "extra": {
       "privacyPolicyUrl": "https://billsteinunb.github.io/RibbonApp/privacy-policy.html",

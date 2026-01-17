@@ -1,6 +1,5 @@
 import React, { Component, ReactNode } from 'react';
 import { View, Text, StyleSheet, TouchableOpacity, ScrollView } from 'react-native';
-import { Sentry } from '../sentry';
 import { errorLogger } from '../services/errorLogger';
 import { AppError } from '../types/errors';
 
@@ -39,8 +38,6 @@ class ErrorBoundary extends Component<Props, State> {
       componentStack: errorInfo.componentStack,
       digest: errorInfo.digest,
     });
-
-    Sentry.captureException(error);
   }
 
   handleRetry = () => {
