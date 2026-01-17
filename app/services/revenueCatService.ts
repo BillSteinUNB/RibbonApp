@@ -1,18 +1,49 @@
 /**
- * RevenueCat Service
+ * RevenueCat Service - Safe Lazy Initialization
  * Handles all RevenueCat SDK interactions for subscriptions and in-app purchases
- * 
- * IMPORTANT: This file uses ONLY dynamic imports for native modules to prevent
- * crashes at JavaScript bundle load time. DO NOT add static imports for:
+ *
+ * CRITICAL: This file uses ONLY dynamic imports to prevent crashes
+ * at JavaScript bundle load time on TestFlight/Production builds.
+ *
+ * DO NOT add static imports for:
  * - @sentry/react-native
  * - react-native-purchases
  * - @revenuecat/purchases-typescript-internal
+ * - ../sentry (depends on native Sentry module)
+ * - ../config/env (REVENUECAT_CONFIG)
  */
 
 import { Platform } from 'react-native';
-import { Sentry } from '../sentry';
-import { REVENUECAT_CONFIG, isProduction } from '../config/env';
 import { logger } from '../utils/logger';
+
+// Lazy module loaders - do NOT import these statically
+let _sentryModule: typeof import('../sentry') | null = null;
+let _envModule: typeof import('../config/env') | null = null;
+
+async function getSentry() {
+  if (!_sentryModule) {
+    try {
+      _sentryModule = await import('../sentry');
+    } catch (e) {
+      console.warn('[RevenueCat] Sentry not available:', e);
+      return null;
+    }
+  }
+  return _sentryModule?.Sentry;
+}
+
+async function getEnvConfig() {
+  if (!_envModule) {
+    _envModule = await import('../config/env');
+  }
+  return _envModule;
+}
+
+// Synchronous safe capture that doesn't block
+function captureExceptionSafe(error: any) {
+  getSentry().then(sentry => sentry?.captureException(error)).catch(() => {});
+  console.error('[RevenueCat] Error:', error);
+}
 import type {
   CustomerInfo,
   PurchasesOffering,
@@ -63,7 +94,7 @@ async function loadPurchasesModule(): Promise<PurchasesModule> {
     return purchasesModule;
   } catch (error) {
     logger.error('[RevenueCat] Failed to load react-native-purchases:', error);
-    Sentry.captureException(error);
+    captureExceptionSafe(error);
     throw error;
   }
 }
@@ -75,7 +106,7 @@ async function loadPurchasesUiModule(): Promise<PurchasesUiModule> {
     return purchasesUiModule;
   } catch (error) {
     logger.error('[RevenueCat] Failed to load react-native-purchases-ui:', error);
-    Sentry.captureException(error);
+    captureExceptionSafe(error);
     throw error;
   }
 }
@@ -92,6 +123,8 @@ export async function initializeRevenueCat(): Promise<void> {
 
   try {
     const { default: Purchases, LOG_LEVEL } = await loadPurchasesModule();
+    const envConfig = await getEnvConfig();
+    const { REVENUECAT_CONFIG, isProduction } = envConfig;
 
     // Validate API key is not a test key in production
     if (isProduction()) {
@@ -102,7 +135,7 @@ export async function initializeRevenueCat(): Promise<void> {
           'This will break payments. Please set EXPO_PUBLIC_REVENUECAT_API_KEY.'
         );
         logger.error('[RevenueCat]', error);
-        Sentry.captureException(error);
+        captureExceptionSafe(error);
         throw error;
       }
     }
@@ -121,7 +154,7 @@ export async function initializeRevenueCat(): Promise<void> {
     logger.log('[RevenueCat] Initialized successfully');
   } catch (error) {
     logger.error('[RevenueCat] Initialization failed:', error);
-    Sentry.captureException(error);
+    captureExceptionSafe(error);
     throw error;
   }
 }
@@ -182,6 +215,8 @@ export async function getCustomerInfo(): Promise<CustomerInfo> {
 export async function checkProAccess(): Promise<boolean> {
   try {
     const { default: Purchases } = await loadPurchasesModule();
+    const envConfig = await getEnvConfig();
+    const { REVENUECAT_CONFIG } = envConfig;
     const customerInfo = await Purchases.getCustomerInfo();
     const entitlement = customerInfo.entitlements.active[REVENUECAT_CONFIG.entitlementId];
     return entitlement !== undefined;
@@ -278,6 +313,7 @@ export async function presentPaywall(offering?: PurchasesOffering): Promise<Payw
 export async function presentPaywallIfNeeded(): Promise<boolean> {
   try {
     const { default: RevenueCatUI, PAYWALL_RESULT } = await loadPurchasesUiModule();
+    const { REVENUECAT_CONFIG } = await getEnvConfig();
     const paywallResult = await RevenueCatUI.presentPaywallIfNeeded({
       requiredEntitlementIdentifier: REVENUECAT_CONFIG.entitlementId,
     });
@@ -381,7 +417,7 @@ export function addCustomerInfoListener(
     })
     .catch((error) => {
       logger.error('[RevenueCat] Failed to add customer info listener:', error);
-      Sentry.captureException(error);
+      captureExceptionSafe(error);
     });
 
   // Check if we have exceeded max listener limit
@@ -451,5 +487,8 @@ export function isUserCancellation(error: unknown): boolean {
   return false;
 }
 
-// Export config for external use
-export { REVENUECAT_CONFIG };
+// Export config getter for external use (async to maintain lazy loading)
+export async function getRevenueCatConfig() {
+  const { REVENUECAT_CONFIG } = await getEnvConfig();
+  return REVENUECAT_CONFIG;
+}

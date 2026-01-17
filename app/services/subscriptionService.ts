@@ -15,11 +15,12 @@ const SUBSCRIPTION_KEY = 'user_subscription';
 /**
  * Convert RevenueCat CustomerInfo to our Subscription type
  */
-function customerInfoToSubscription(
+async function customerInfoToSubscription(
   userId: string,
   customerInfo: CustomerInfo
-): Subscription {
-  const entitlement = customerInfo.entitlements.active[revenueCat.REVENUECAT_CONFIG.entitlementId];
+): Promise<Subscription> {
+  const REVENUECAT_CONFIG = await revenueCat.getRevenueCatConfig();
+  const entitlement = customerInfo.entitlements.active[REVENUECAT_CONFIG.entitlementId];
 
   if (!entitlement) {
     return {
@@ -74,7 +75,7 @@ export const subscriptionService = {
   getSubscription: async (userId: string): Promise<Subscription | null> => {
     try {
       const customerInfo = await revenueCat.getCustomerInfo();
-      const subscription = customerInfoToSubscription(userId, customerInfo);
+      const subscription = await customerInfoToSubscription(userId, customerInfo);
 
       // Cache locally for offline access
       await storage.setItem(SUBSCRIPTION_KEY, subscription);
@@ -115,7 +116,7 @@ export const subscriptionService = {
     if (result === 'purchased' || result === 'restored') {
       // Get updated customer info
       const customerInfo = await revenueCat.getCustomerInfo();
-      const subscription = customerInfoToSubscription(userId, customerInfo);
+      const subscription = await customerInfoToSubscription(userId, customerInfo);
 
       // Cache locally
       await storage.setItem(SUBSCRIPTION_KEY, subscription);
@@ -139,7 +140,7 @@ export const subscriptionService = {
     try {
       // Open Customer Center for subscription management with sync callback
       await revenueCat.presentCustomerCenter(async (customerInfo) => {
-        const subscription = customerInfoToSubscription(userId, customerInfo);
+        const subscription = await customerInfoToSubscription(userId, customerInfo);
         await storage.setItem(SUBSCRIPTION_KEY, subscription);
         if (onSubscriptionChanged) {
           onSubscriptionChanged(subscription);
@@ -157,7 +158,7 @@ export const subscriptionService = {
   restorePurchases: async (userId: string): Promise<Subscription | null> => {
     try {
       const customerInfo = await revenueCat.restorePurchases();
-      const subscription = customerInfoToSubscription(userId, customerInfo);
+      const subscription = await customerInfoToSubscription(userId, customerInfo);
 
       // Cache locally
       await storage.setItem(SUBSCRIPTION_KEY, subscription);
@@ -211,7 +212,7 @@ export const subscriptionService = {
    */
   openCustomerCenter: async (userId?: string, onSubscriptionChanged?: (subscription: Subscription) => void): Promise<void> => {
     await revenueCat.presentCustomerCenter(userId ? async (customerInfo) => {
-      const subscription = customerInfoToSubscription(userId, customerInfo);
+      const subscription = await customerInfoToSubscription(userId, customerInfo);
       await storage.setItem(SUBSCRIPTION_KEY, subscription);
       if (onSubscriptionChanged) {
         onSubscriptionChanged(subscription);

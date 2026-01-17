@@ -1,7 +1,8 @@
 /**
  * Type-safe storage service with error handling
  * 
- * CRITICAL: No static imports of native modules - uses dynamic imports via safeStorage.
+ * CRITICAL: No static imports of native modules or services that depend on them.
+ * Uses dynamic imports to prevent crashes at bundle load time.
  */
 
 import { getSafeStorage } from '../lib/safeStorage';
@@ -13,8 +14,29 @@ import {
 } from '../constants/storageKeys';
 import { StorageError, StorageParseError } from '../types/errors';
 import { logger } from '../utils/logger';
-import { errorLogger } from './errorLogger';
-import { encryptedStorage } from './encryptedStorage';
+
+// Lazy module loaders - do NOT import these statically
+let _errorLoggerModule: typeof import('./errorLogger') | null = null;
+let _encryptedStorageModule: typeof import('./encryptedStorage') | null = null;
+
+async function getErrorLogger() {
+  if (!_errorLoggerModule) {
+    _errorLoggerModule = await import('./errorLogger');
+  }
+  return _errorLoggerModule.errorLogger;
+}
+
+async function getEncryptedStorage() {
+  if (!_encryptedStorageModule) {
+    _encryptedStorageModule = await import('./encryptedStorage');
+  }
+  return _encryptedStorageModule.encryptedStorage;
+}
+
+function logError(error: any, context: any) {
+  getErrorLogger().then(el => el?.log(error, context)).catch(() => {});
+  console.error('[Storage]', context, error);
+}
 
 const STORAGE_KEY_SENSITIVITY_BY_VALUE: Record<string, StorageKeySensitivity> =
   Object.entries(STORAGE_KEYS).reduce((acc, [keyName, value]) => {
@@ -90,7 +112,8 @@ class StorageService {
           continue;
         }
 
-        const encrypted = await encryptedStorage.encryptValue(sensitivity, value);
+        const encStorage = await getEncryptedStorage();
+        const encrypted = await encStorage.encryptValue(sensitivity, value);
         if (encrypted !== value) {
           const storage = getSafeStorage();
           await storage.setItem(sensitivity, JSON.stringify(encrypted));
@@ -126,13 +149,14 @@ class StorageService {
 
           const keySensitivity = STORAGE_KEY_SENSITIVITY_BY_VALUE[key];
           if (keySensitivity === 'SENSITIVE') {
-            parsedValue = await encryptedStorage.decryptValue(key, parsedValue);
+            const encStorage = await getEncryptedStorage();
+            parsedValue = await encStorage.decryptValue(key, parsedValue);
           }
 
           return parsedValue;
         } catch (parseError) {
           const error = new StorageParseError(`Invalid JSON in storage key: ${key}`);
-          errorLogger.log(error, { key, value: jsonValue });
+          logError(error, { key, value: jsonValue });
           throw error;
         }
       }
@@ -151,7 +175,8 @@ class StorageService {
 
       const keySensitivity = STORAGE_KEY_SENSITIVITY_BY_VALUE[key];
       if (keySensitivity === 'SENSITIVE') {
-        finalValue = await encryptedStorage.encryptValue(key, value) as T;
+        const encStorage = await getEncryptedStorage();
+        finalValue = await encStorage.encryptValue(key, value) as T;
       }
 
       const jsonValue = JSON.stringify(finalValue);

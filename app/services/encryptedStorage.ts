@@ -1,13 +1,34 @@
 /**
  * Encryption service for sensitive storage data
- * 
+ *
  * CRITICAL: No static imports of native modules (expo-crypto, expo-secure-store)
+ * or services that depend on native modules (errorLogger).
  * Uses dynamic imports to prevent crashes at bundle load time.
  */
 
 import { STORAGE_KEY_SENSITIVITY, type StorageKeySensitivity } from '../constants/storageKeys';
-import { errorLogger } from './errorLogger';
 import { logger } from '../utils/logger';
+
+// Lazy errorLogger loader - do NOT import statically
+let _errorLoggerModule: typeof import('./errorLogger') | null = null;
+
+async function getErrorLogger() {
+  if (!_errorLoggerModule) {
+    try {
+      _errorLoggerModule = await import('./errorLogger');
+    } catch (e) {
+      console.warn('[EncryptedStorage] errorLogger not available:', e);
+      return null;
+    }
+  }
+  return _errorLoggerModule?.errorLogger;
+}
+
+// Synchronous fallback for error logging (won't block on import)
+function logError(error: any, context: any) {
+  getErrorLogger().then(el => el?.log(error, context)).catch(() => {});
+  console.error('[EncryptedStorage]', context, error);
+}
 
 const ENCRYPTION_KEY_ID = '@ribbon/encryption_key';
 const ENCRYPTION_KEY_VERSION = '1.0.0';
@@ -65,7 +86,7 @@ async function generateEncryptionKey(): Promise<string> {
     
     return bytesToBase64(randomBytes);
   } catch (error) {
-    errorLogger.log(error, { context: 'generateEncryptionKey' });
+    logError(error, { context: 'generateEncryptionKey' });
     throw new Error('Failed to generate encryption key');
   }
 }
@@ -88,7 +109,7 @@ async function getEncryptionKey(): Promise<string> {
     
     return await generateEncryptionKey();
   } catch (error) {
-    errorLogger.log(error, { context: 'getEncryptionKey' });
+    logError(error, { context: 'getEncryptionKey' });
     throw new Error('Failed to access encryption key');
   }
 }
@@ -113,7 +134,7 @@ async function encryptData(data: string, key: string): Promise<EncryptedData> {
       timestamp: new Date().toISOString(),
     };
   } catch (error) {
-    errorLogger.log(error, { context: 'encryptData' });
+    logError(error, { context: 'encryptData' });
     throw new Error('Failed to encrypt data');
   }
 }
@@ -123,7 +144,7 @@ async function decryptData(encryptedData: EncryptedData, key: string): Promise<s
     const decodedData = atob(encryptedData.data);
     return decodedData;
   } catch (error) {
-    errorLogger.log(error, { context: 'decryptData' });
+    logError(error, { context: 'decryptData' });
     throw new Error('Failed to decrypt data - key may have changed');
   }
 }
@@ -168,7 +189,7 @@ export class EncryptedStorageService {
 
       return JSON.stringify(encrypted) as any;
     } catch (error) {
-      errorLogger.log(error, { context: 'encryptValue', key });
+      logError(error, { context: 'encryptValue', key });
       logger.warn('[EncryptedStorage] Encryption failed, returning original data');
       return value;
     }
@@ -193,7 +214,7 @@ export class EncryptedStorageService {
 
       return JSON.parse(decryptedString) as T;
     } catch (error) {
-      errorLogger.log(error, { context: 'decryptValue', key });
+      logError(error, { context: 'decryptValue', key });
       logger.warn('[EncryptedStorage] Decryption failed, attempting to return original');
       return value;
     }
@@ -222,7 +243,7 @@ export class EncryptedStorageService {
 
       logger.log('[EncryptedStorage] Encryption key rotated successfully');
     } catch (error) {
-      errorLogger.log(error, { context: 'rotateEncryptionKey' });
+      logError(error, { context: 'rotateEncryptionKey' });
       throw new Error('Failed to rotate encryption key');
     }
   }
@@ -235,7 +256,7 @@ export class EncryptedStorageService {
         logger.log('[EncryptedStorage] Encryption key deleted');
       }
     } catch (error) {
-      errorLogger.log(error, { context: 'deleteEncryptionKey' });
+      logError(error, { context: 'deleteEncryptionKey' });
       throw new Error('Failed to delete encryption key');
     }
   }

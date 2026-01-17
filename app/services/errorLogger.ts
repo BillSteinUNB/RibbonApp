@@ -1,23 +1,52 @@
+/**
+ * Error Logger Service - Safe Lazy Initialization
+ *
+ * CRITICAL: This file defers all initialization to prevent crashes
+ * at JavaScript bundle load time on TestFlight/Production builds.
+ *
+ * The singleton is NOT instantiated at module level - it uses a lazy proxy.
+ */
+
 import { AppError } from '../types/errors';
 import { logger } from '../utils/logger';
-import { supabase } from '../lib/supabase';
 import { Platform } from 'react-native';
+
+// Lazy supabase loader - do NOT import statically
+let _supabaseModule: typeof import('../lib/supabase') | null = null;
+
+async function getSupabase() {
+  if (!_supabaseModule) {
+    _supabaseModule = await import('../lib/supabase');
+  }
+  return _supabaseModule.supabase;
+}
 
 /**
  * Error Logger Service for tracking and reporting errors to backend
  * Implements Issue #53 - Error Reporting to Backend
  */
 class ErrorLogger {
-  private static instance: ErrorLogger;
+  private static instance: ErrorLogger | null = null;
   private errors: AppError[] = [];
   private maxErrors: number = 100;
   private errorQueue: any[] = [];
   private isReporting = false;
   private reportIntervalMinutes = 5;
   private maxQueueSize = 50;
-  private reportTimer: NodeJS.Timeout | null = null;
+  private reportTimer: ReturnType<typeof setInterval> | null = null;
+  private isInitialized = false;
 
   private constructor() {
+    // DO NOT start anything in constructor - defer to initialize()
+  }
+
+  /**
+   * Initialize the error logger (called lazily on first use)
+   */
+  private initialize(): void {
+    if (this.isInitialized) return;
+    this.isInitialized = true;
+
     // Delay periodic reporting to avoid issues during app startup
     setTimeout(() => {
       try {
@@ -25,7 +54,7 @@ class ErrorLogger {
       } catch (error) {
         console.warn('[ErrorLogger] Failed to start periodic reporting:', error);
       }
-    }, 5000); // Wait 5 seconds before starting
+    }, 10000); // Wait 10 seconds before starting (increased from 5)
   }
 
   public static getInstance(): ErrorLogger {
@@ -39,6 +68,9 @@ class ErrorLogger {
    * Log an error (and queue for backend reporting)
    */
   log(error: AppError | Error | any, context?: any): void {
+    // Ensure initialization on first use
+    this.initialize();
+
     const appError = this.normalizeError(error);
 
     // Add context to error details
@@ -118,6 +150,7 @@ class ErrorLogger {
     this.isReporting = true;
 
     try {
+      const supabase = await getSupabase();
       const errorsToReport = [...this.errorQueue];
       this.errorQueue = []; // Clear queue
 
@@ -252,6 +285,7 @@ class ErrorLogger {
    */
   async getBackendErrorLogs(limit: number = 100): Promise<any[]> {
     try {
+      const supabase = await getSupabase();
       const { data, error } = await supabase.rpc('get_user_error_logs', {
         p_limit: limit,
         p_offset: 0,
@@ -274,6 +308,7 @@ class ErrorLogger {
    */
   async markErrorResolved(errorId: string): Promise<boolean> {
     try {
+      const supabase = await getSupabase();
       const { data, error } = await supabase.rpc('mark_error_resolved', {
         p_error_id: errorId,
       });
@@ -309,5 +344,33 @@ class ErrorLogger {
   }
 }
 
-// Export singleton instance
-export const errorLogger = ErrorLogger.getInstance();
+// DO NOT instantiate at module level!
+// Use lazy proxy instead for backward compatibility
+let _errorLoggerInstance: ErrorLogger | null = null;
+
+function getErrorLoggerInstance(): ErrorLogger {
+  if (!_errorLoggerInstance) {
+    _errorLoggerInstance = ErrorLogger.getInstance();
+  }
+  return _errorLoggerInstance;
+}
+
+/**
+ * Lazy proxy that defers instantiation until first method call
+ * This prevents any code from running at module evaluation time
+ */
+export const errorLogger = new Proxy({} as ErrorLogger, {
+  get(_, prop) {
+    const instance = getErrorLoggerInstance();
+    const value = (instance as any)[prop];
+
+    if (typeof value === 'function') {
+      return value.bind(instance);
+    }
+
+    return value;
+  },
+});
+
+// Also export the getter for explicit lazy loading
+export { getErrorLoggerInstance };

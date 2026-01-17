@@ -1,14 +1,63 @@
+/**
+ * Auth Store - Safe Lazy Initialization
+ *
+ * CRITICAL: This file uses ONLY dynamic imports for services that depend on
+ * native modules to prevent crashes at JavaScript bundle load time.
+ *
+ * DO NOT add static imports for:
+ * - authService (depends on supabase which has URL polyfill)
+ * - revenueCatService (depends on native RevenueCat module)
+ * - errorLogger (depends on supabase)
+ * - REVENUECAT_CONFIG from env
+ */
+
 import { create } from 'zustand';
 import { persist, createJSONStorage } from 'zustand/middleware';
 import { Subscription } from '../types/subscription';
 import { UserPreferences, DEFAULT_PREFERENCES } from '../types/settings';
-import { authService } from '../services/authService';
-import { errorLogger } from '../services/errorLogger';
 import { logger } from '../utils/logger';
 import type { CustomerInfo } from 'react-native-purchases';
-import { REVENUECAT_CONFIG } from '../config/env';
-import * as revenueCatService from '../services/revenueCatService';
 import { getSafeStorage } from '../lib/safeStorage';
+
+// Lazy module loaders - do NOT import these statically
+let _authServiceModule: typeof import('../services/authService') | null = null;
+let _errorLoggerModule: typeof import('../services/errorLogger') | null = null;
+let _revenueCatServiceModule: typeof import('../services/revenueCatService') | null = null;
+let _envModule: typeof import('../config/env') | null = null;
+
+async function getAuthService() {
+  if (!_authServiceModule) {
+    _authServiceModule = await import('../services/authService');
+  }
+  return _authServiceModule.authService;
+}
+
+async function getErrorLogger() {
+  if (!_errorLoggerModule) {
+    _errorLoggerModule = await import('../services/errorLogger');
+  }
+  return _errorLoggerModule.errorLogger;
+}
+
+async function getRevenueCatService() {
+  if (!_revenueCatServiceModule) {
+    _revenueCatServiceModule = await import('../services/revenueCatService');
+  }
+  return _revenueCatServiceModule;
+}
+
+async function getRevenueCatConfig() {
+  if (!_envModule) {
+    _envModule = await import('../config/env');
+  }
+  return _envModule.REVENUECAT_CONFIG;
+}
+
+// Sync error logger for non-blocking error logging
+function logErrorSync(error: any, context: any) {
+  getErrorLogger().then(el => el?.log(error, context)).catch(() => {});
+  console.error('[AuthStore]', context, error);
+}
 
 export interface User {
   id: string;
@@ -140,68 +189,73 @@ export const useAuthStore = create<AuthState & AuthActions>()(
         }
       },
 
-      syncFromRevenueCat: (customerInfo: CustomerInfo) => {
+      syncFromRevenueCat: async (customerInfo: CustomerInfo) => {
         const { user } = get();
         if (!user) return;
 
-        const entitlement = customerInfo.entitlements.active[REVENUECAT_CONFIG.entitlementId];
-        const isPremium = entitlement !== undefined;
+        try {
+          const REVENUECAT_CONFIG = await getRevenueCatConfig();
+          const entitlement = customerInfo.entitlements.active[REVENUECAT_CONFIG.entitlementId];
+          const isPremium = entitlement !== undefined;
 
-        if (isPremium && entitlement) {
-          // Determine plan type from product identifier
-          let plan: 'free' | 'weekly' | 'monthly' | 'yearly' = 'monthly';
-          const productId = entitlement.productIdentifier;
+          if (isPremium && entitlement) {
+            // Determine plan type from product identifier
+            let plan: 'free' | 'weekly' | 'monthly' | 'yearly' = 'monthly';
+            const productId = entitlement.productIdentifier;
 
-          if (productId.includes('yearly') || productId.includes('annual')) {
-            plan = 'yearly';
-          } else if (productId.includes('weekly')) {
-            plan = 'weekly';
-          } else if (productId.includes('monthly')) {
-            plan = 'monthly';
-          }
+            if (productId.includes('yearly') || productId.includes('annual')) {
+              plan = 'yearly';
+            } else if (productId.includes('weekly')) {
+              plan = 'weekly';
+            } else if (productId.includes('monthly')) {
+              plan = 'monthly';
+            }
 
-          const subscription: Subscription = {
-            userId: user.id,
-            plan,
-            status: entitlement.willRenew === false ? 'canceling' : 'active',
-            startDate: entitlement.originalPurchaseDate
-              ? new Date(entitlement.originalPurchaseDate)
-              : new Date(),
-            endDate: entitlement.expirationDate
-              ? new Date(entitlement.expirationDate)
-              : undefined,
-            cancelAtPeriodEnd: !entitlement.willRenew,
-            paymentProvider: 'revenuecat',
-            providerSubscriptionId: entitlement.productIdentifier,
-          };
+            const subscription: Subscription = {
+              userId: user.id,
+              plan,
+              status: entitlement.willRenew === false ? 'canceling' : 'active',
+              startDate: entitlement.originalPurchaseDate
+                ? new Date(entitlement.originalPurchaseDate)
+                : new Date(),
+              endDate: entitlement.expirationDate
+                ? new Date(entitlement.expirationDate)
+                : undefined,
+              cancelAtPeriodEnd: !entitlement.willRenew,
+              paymentProvider: 'revenuecat',
+              providerSubscriptionId: entitlement.productIdentifier,
+            };
 
-          set({
-            user: {
-              ...user,
-              isPremium: true,
-              premiumSince: entitlement.originalPurchaseDate || new Date().toISOString(),
-              subscription,
-            },
-          });
-        } else {
-          // User is not premium
-          set({
-            user: {
-              ...user,
-              isPremium: false,
-              subscription: {
-                userId: user.id,
-                plan: 'free',
-                status: 'active',
-                startDate: new Date(),
-                cancelAtPeriodEnd: false,
-                paymentProvider: 'none',
+            set({
+              user: {
+                ...user,
+                isPremium: true,
+                premiumSince: entitlement.originalPurchaseDate || new Date().toISOString(),
+                subscription,
               },
-            },
-          });
+            });
+          } else {
+            // User is not premium
+            set({
+              user: {
+                ...user,
+                isPremium: false,
+                subscription: {
+                  userId: user.id,
+                  plan: 'free',
+                  status: 'active',
+                  startDate: new Date(),
+                  cancelAtPeriodEnd: false,
+                  paymentProvider: 'none',
+                },
+              },
+            });
+          }
+        } catch (error) {
+          logErrorSync(error, { context: 'syncFromRevenueCat' });
         }
       },
-      
+
       decrementTrialUses: () => {
         const { user } = get();
         if (user && user.trialUsesRemaining > 0) {
@@ -213,7 +267,7 @@ export const useAuthStore = create<AuthState & AuthActions>()(
           });
         }
       },
-      
+
       resetTrialUses: () => {
         const { user } = get();
         if (user) {
@@ -243,7 +297,7 @@ export const useAuthStore = create<AuthState & AuthActions>()(
               await operation();
               return { success: true };
             } catch (error) {
-              errorLogger.log(error, { context: operation, attempt: attempt + 1 });
+              logErrorSync(error, { context: operationName, attempt: attempt + 1 });
               if (attempt === maxRetries - 1) {
                 return { success: false, error: error as Error };
               }
@@ -257,14 +311,20 @@ export const useAuthStore = create<AuthState & AuthActions>()(
 
         // Attempt Supabase logout with retries
         const supabaseResult = await retryWithBackoff(
-          () => authService.signOut(),
+          async () => {
+            const authService = await getAuthService();
+            await authService.signOut();
+          },
           'supabase logout',
           3
         );
 
         // Attempt RevenueCat logout with retries
         const revenueCatResult = await retryWithBackoff(
-          () => revenueCatService.logOutUser(),
+          async () => {
+            const revenueCatService = await getRevenueCatService();
+            await revenueCatService.logOutUser();
+          },
           'revenueCat logout',
           3
         );
