@@ -28,9 +28,9 @@ This document defines the complete migration plan for restoring RibbonApp functi
 
 ## Phase 2: Utilities (11 tasks)
 
-- [ ] Create `app/utils/` directory if it doesn't exist
-- [ ] Extract and copy `app/utils/logger.ts` from pre-baseline commit
-- [ ] Extract and copy `app/utils/dates.ts` from pre-baseline commit (date formatting utilities)
+- [x] Create `app/utils/` directory if it doesn't exist
+- [x] Extract and copy `app/utils/logger.ts` from pre-baseline commit
+- [x] Extract and copy `app/utils/dates.ts` from pre-baseline commit (date formatting utilities)
 - [ ] Extract and copy `app/utils/helpers.ts` from pre-baseline commit - VERIFY it uses Math.random NOT expo-crypto
 - [ ] If helpers.ts contains expo-crypto imports, replace with Math.random implementation
 - [ ] Extract and copy `app/utils/analytics.ts` from pre-baseline commit (should be stubbed/no-op)

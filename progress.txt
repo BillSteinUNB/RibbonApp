@@ -53,10 +53,26 @@
      - app/types/subscription.ts: Subscription, PricingPlan, ConsumableProduct interfaces with pricing data
       - app/types/user.ts: User, UserProfile interfaces with schemas and type guard functions
       - Verified TypeScript compilation passes with no errors (npx tsc --noEmit)
-   - [2025-01-18] Phase 1: Verified no TypeScript errors after Phase 1
-      - Ran npx tsc --noEmit to verify all type definitions are correct
-      - Compilation passed with no errors
-      - All constants and types are properly defined and type-safe
+- [2025-01-18] Phase 1: Verified no TypeScript errors after Phase 1
+       - Ran npx tsc --noEmit to verify all type definitions are correct
+       - Compilation passed with no errors
+       - All constants and types are properly defined and type-safe
+- [2025-01-18] Phase 2: Created app/utils directory
+       - Verified directory does not exist
+       - Created app/utils/ directory successfully
+- [2025-01-18] Phase 2: Extracted and copied app/utils/logger.ts from pre-baseline commit
+       - Retrieved logger.ts using git show 7ef03c2:app/utils/logger.ts
+       - Created app/utils/logger.ts with debug, info, warn, error, log functions
+       - Logger uses __DEV__ and NODE_ENV to determine if in development mode
+       - Production environment uses no-op functions for all log levels
+       - Verified TypeScript compilation passes with no errors (npx tsc --noEmit)
+- [2025-01-18] Phase 2: Extracted and copied app/utils/dates.ts from pre-baseline commit
+       - Retrieved dates.ts using git show 7ef03c2:app/utils/dates.ts
+       - Created app/utils/dates.ts with date formatting utilities
+       - Functions include: formatDate, getRelativeTime, getCountdown, isToday, isThisWeek, formatDateRange, parseDate, startOfDay, endOfDay
+       - All functions support both Date and string input types
+       - Uses Intl.DateTimeFormat and Intl.RelativeTimeFormat for locale-aware formatting
+       - Verified TypeScript compilation passes with no errors (npx tsc --noEmit)
 
 
 
