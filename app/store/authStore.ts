@@ -218,7 +218,7 @@ export const useAuthStore = create<AuthState & AuthActions>()(
           const hoursSinceFailure = (Date.now() - failedTime) / (1000 * 60 * 60);
 
           if (hoursSinceFailure > 24) {
-            console.log('[Auth] Force clearing stale logout state after 24 hours');
+            logger.info('[Auth] Force clearing stale logout state after 24 hours');
             await storage.removeItem('@ribbon/failed-logout-timestamp');
             set({
               user: null,
@@ -227,12 +227,12 @@ export const useAuthStore = create<AuthState & AuthActions>()(
               logoutError: null,
             });
           } else {
-            console.log('[Auth] Attempting to complete failed logout');
+            logger.info('[Auth] Attempting to complete failed logout');
             const store = get();
             await store.logout();
           }
         } catch (error) {
-          console.warn('[Auth] Failed to cleanup logout state:', error);
+          logger.warn('[Auth] Failed to cleanup logout state:', error);
           try {
             const storage = getSafeStorage();
             await storage.removeItem('@ribbon/failed-logout-timestamp');
