@@ -13,3 +13,8 @@
   - Confirmed app.json configuration is valid
   - Confirmed package.json dependencies are properly installed
   - Expo start command available and functional
+- [2025-01-18] Phase 1: Extracted and copied app/constants.ts from pre-baseline commit
+  - Retrieved constants.ts using git show 7ef03c2:app/constants.ts
+  - Created app/constants.ts with COLORS, SPACING, FONTS, RADIUS exports
+  - Verified TypeScript compilation passes with no errors (npx tsc --noEmit)
+  - Constants include: bgPrimary, bgSecondary, textPrimary, accentPrimary, etc.

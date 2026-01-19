@@ -12,8 +12,8 @@ This document defines the complete migration plan for restoring RibbonApp functi
 
 ## Phase 1: Constants & Types (11 tasks)
 
-- [ ] Extract `app/constants.ts` from pre-baseline commit using `git show <commit>:app/constants.ts`
-- [ ] Copy extracted `constants.ts` to `app/constants.ts` (contains COLORS, SPACING, FONTS, RADIUS exports)
+- [x] Extract `app/constants.ts` from pre-baseline commit using `git show <commit>:app/constants.ts`
+- [x] Copy extracted `constants.ts` to `app/constants.ts` (contains COLORS, SPACING, FONTS, RADIUS exports)
 - [ ] Create `app/constants/` directory if it doesn't exist
 - [ ] Extract and copy `app/constants/faq.ts` from pre-baseline commit
 - [ ] Extract and copy `app/constants/storageKeys.ts` from pre-baseline commit
