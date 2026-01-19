@@ -26,3 +26,8 @@
   - Created app/constants/faq.ts with FAQItem interface, FAQCategoryType, FAQ_CATEGORIES, FAQ_ITEMS
   - Verified TypeScript compilation passes with no errors (npx tsc --noEmit)
   - FAQ data includes: getting-started, account, gifts, billing, troubleshooting categories
+- [2025-01-18] Phase 1: Extracted and copied app/constants/storageKeys.ts from pre-baseline commit
+  - Retrieved storageKeys.ts using git show 7ef03c2:app/constants/storageKeys.ts
+  - Created app/constants/storageKeys.ts with STORAGE_KEYS, STORAGE_KEY_SENSITIVITY, STORAGE_VERSION
+  - Verified TypeScript compilation passes with no errors (npx tsc --noEmit)
+  - Storage keys include: Auth tokens, Recipients, Gifts, UI State, Onboarding, Analytics, Config
