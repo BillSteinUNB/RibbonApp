@@ -111,13 +111,13 @@ This document defines verification tasks to audit the migration work, ensuring a
 
 ## Phase 9: Verify App Configuration
 
-- [ ] Verify `app.json` has valid JSON syntax
-- [ ] Verify `app.json` has `newArchEnabled: false` in expo.plugins or equivalent
-- [ ] Verify `app.json` has correct bundle identifier (com.ribbon.app or similar)
-- [ ] Verify `app.json` has privacy policy URL configured
-- [ ] Verify `app.json` has support/contact information configured
-- [ ] Verify `eas.json` has valid EAS Build configuration
-- [ ] Verify `tsconfig.json` has valid TypeScript configuration for Expo
+- [x] Verify `app.json` has valid JSON syntax
+- [x] Verify `app.json` has `newArchEnabled: false` in expo.plugins or equivalent
+- [x] Verify `app.json` has correct bundle identifier (com.ribbon.app or similar)
+- [x] Verify `app.json` has privacy policy URL configured
+- [x] Verify `app.json` has support/contact information configured
+- [x] Verify `eas.json` has valid EAS Build configuration
+- [x] Verify `tsconfig.json` has valid TypeScript configuration for Expo
 
 ---
 
