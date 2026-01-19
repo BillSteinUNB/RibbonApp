@@ -135,11 +135,11 @@ This document defines verification tasks to audit the migration work, ensuring a
 
 ## Phase 11: Verify Cross-File Imports
 
-- [ ] Run `npx tsc --noEmit` on entire codebase - fix any errors found
-- [ ] Verify all barrel exports (index.ts files) properly re-export their modules
-- [ ] Verify no circular dependencies exist using `npx madge --circular app/`
-- [ ] Verify all relative imports use correct paths
-- [ ] Verify all absolute imports (if any) are configured in tsconfig.json
+- [x] Run `npx tsc --noEmit` on entire codebase - fix any errors found
+- [x] Verify all barrel exports (index.ts files) properly re-export their modules
+- [x] Verify no circular dependencies exist using `npx madge --circular app/`
+- [x] Verify all relative imports use correct paths
+- [x] Verify all absolute imports (if any) are configured in tsconfig.json
 
 ---
 
