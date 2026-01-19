@@ -18,7 +18,7 @@ This document defines the complete migration plan for restoring RibbonApp functi
 - [x] Extract and copy `app/constants/faq.ts` from pre-baseline commit
 - [x] Extract and copy `app/constants/storageKeys.ts` from pre-baseline commit
 - [x] Extract and copy `app/types.ts` from pre-baseline commit (Recipient, Gift, User interfaces)
-- [ ] Create `app/types/` directory if it doesn't exist
+- [x] Create `app/types/` directory if it doesn't exist
 - [ ] Extract and copy `app/types/api.ts` from pre-baseline commit
 - [ ] Extract and copy `app/types/errors.ts` from pre-baseline commit
 - [ ] Extract and copy `app/types/recipient.ts`, `app/types/settings.ts`, `app/types/subscription.ts`, `app/types/user.ts` from pre-baseline commit
