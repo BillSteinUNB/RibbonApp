@@ -134,7 +134,7 @@ This document defines the complete migration plan for restoring RibbonApp functi
 - [x] Create `app/recipients/` directory if it doesn't exist
 - [x] Extract and copy `app/recipients/_layout.tsx` from pre-baseline commit
 - [x] Extract and copy `app/recipients/[id].tsx` from pre-baseline commit (recipient detail)
-- [ ] Extract and copy `app/recipients/add.tsx` from pre-baseline commit (add recipient form)
+- [x] Extract and copy `app/recipients/add.tsx` from pre-baseline commit (add recipient form)
 - [x] Extract and copy `app/recipients/edit/[id].tsx` from pre-baseline commit (edit recipient form)
 
 ### Standalone Routes
@@ -182,15 +182,15 @@ This document defines the complete migration plan for restoring RibbonApp functi
 - [x] Verify package.json does NOT contain `expo-notifications`
 - [x] Verify package.json does NOT contain `expo-local-authentication`
 - [x] Verify package.json does NOT contain `expo-crypto`
-- [ ] Search codebase for any static imports of banned packages using grep
+- [x] Search codebase for any static imports of banned packages using grep
 
 ### App Configuration
-- [ ] Update `app.json` with correct privacy policy URL
-- [ ] Update `app.json` with correct support email
-- [ ] Verify `app.json` has `newArchEnabled: false`
+- [x] Update `app.json` with correct privacy policy URL
+- [x] Update `app.json` with correct support email
+- [x] Verify `app.json` has `newArchEnabled: false`
 
 ### Build & Deploy
-- [ ] Commit all migration changes with message "feat: complete migration from baseline"
+- [x] Commit all migration changes with message "feat: complete migration from baseline"
 - [ ] Push changes to GitHub main branch
 - [ ] Verify GitHub Actions workflow triggers automatically
 - [ ] Monitor GitHub Actions workflow for successful completion
