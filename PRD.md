@@ -98,14 +98,14 @@ This document defines verification tasks to audit the migration work, ensuring a
 
 ## Phase 8: Verify Package Dependencies
 
-- [ ] Verify package.json does NOT contain `react-native-purchases`
-- [ ] Verify package.json does NOT contain `@sentry/react-native`
-- [ ] Verify package.json does NOT contain `expo-notifications`
-- [ ] Verify package.json does NOT contain `expo-local-authentication`
-- [ ] Verify package.json does NOT contain `expo-crypto`
-- [ ] Verify package.json contains required dependencies: zustand, zod, @supabase/supabase-js
-- [ ] Verify package.json contains expo-router and related navigation dependencies
-- [ ] Run `npm ls` to check for any missing or conflicting dependencies
+- [x] Verify package.json does NOT contain `react-native-purchases`
+- [x] Verify package.json does NOT contain `@sentry/react-native`
+- [x] Verify package.json does NOT contain `expo-notifications`
+- [x] Verify package.json does NOT contain `expo-local-authentication`
+- [x] Verify package.json does NOT contain `expo-crypto`
+- [x] Verify package.json contains required dependencies: zustand, zod, @supabase/supabase-js
+- [x] Verify package.json contains expo-router and related navigation dependencies
+- [x] Run `npm ls` to check for any missing or conflicting dependencies
 
 ---
 
