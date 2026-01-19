@@ -214,6 +214,28 @@
                - Note: TypeScript errors expected - supabase will be created in Phase 7
                - Note: No test infrastructure in project, skipping tests
                - Note: No linting infrastructure in project, skipping linting
+- [2025-01-19] Phase 5: Extracted and copied app/services/recipientService.ts and dependencies from pre-baseline commit
+               - Retrieved recipientService.ts using git show 7ef03c2:app/services/recipientService.ts
+               - Retrieved storage.ts (not storageService.ts as noted in PRD) using git show 7ef03c2:app/services/storage.ts
+               - Retrieved encryptedStorage.ts using git show 7ef03c2:app/services/encryptedStorage.ts
+               - Created app/services/encryptedStorage.ts with encryption service
+                 - Uses dynamic imports for expo-crypto and expo-secure-store with fallbacks
+                 - Fallback to Math.random() when crypto unavailable
+                 - encryptValue, decryptValue, isEncryptionAvailable, rotateEncryptionKey
+               - Created app/services/storage.ts with storage service
+                 - Uses dynamic imports for errorLogger and encryptedStorage
+                 - Type-safe storage with error handling
+                 - getItem, setItem, removeItem, getItems, setItems, clear
+                 - Storage migrations and encryption support
+               - Created app/services/recipientService.ts with recipient management service
+                 - CRUD operations for recipients
+                 - Audit logging for destructive operations
+                 - Search, sort by recent consultation, upcoming occasions
+                 - Backup and restore functionality
+                 - Uses zod for validation
+               - Note: TypeScript errors expected - supabase will be created in Phase 7
+               - Note: No test infrastructure in project, skipping tests
+               - Note: No linting infrastructure in project, skipping linting
 - [2025-01-19] Pre-Migration Setup: Confirmed all GitHub secrets are configured
                - Created verification script (verify-github-secrets.sh) to document required secrets
                - Identified 9 required secrets from .github/workflows/ios-testflight.yml

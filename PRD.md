@@ -66,13 +66,13 @@ This document defines the complete migration plan for restoring RibbonApp functi
 
 - [x] Create `app/services/` directory if it doesn't exist
 - [x] Extract and copy `app/services/authService.ts` from pre-baseline commit
-- [ ] Extract and copy `app/services/recipientService.ts` from pre-baseline commit
+- [x] Extract and copy `app/services/recipientService.ts` from pre-baseline commit
 - [ ] Extract and copy `app/services/giftService.ts` from pre-baseline commit
 - [ ] Extract and copy `app/services/userService.ts` from pre-baseline commit
 - [ ] Extract and copy `app/services/subscriptionService.ts` from pre-baseline commit - STUB OUT all RevenueCat calls (return mock/no-op values)
 - [ ] Verify subscriptionService.ts has NO imports from react-native-purchases
 - [ ] Extract and copy `app/services/openaiService.ts` from pre-baseline commit (if exists)
-- [ ] Extract and copy `app/services/storageService.ts` from pre-baseline commit
+- [x] Extract and copy `app/services/storageService.ts` from pre-baseline commit
 - [ ] Extract and copy `app/services/index.ts` from pre-baseline commit
 - [ ] SKIP copying `app/services/notificationService.ts` (uses banned expo-notifications)
 - [ ] SKIP copying `app/services/biometricAuthService.ts` (uses banned expo-local-authentication)
