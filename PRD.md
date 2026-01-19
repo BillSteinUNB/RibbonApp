@@ -36,7 +36,7 @@ This document defines the complete migration plan for restoring RibbonApp functi
 - [x] Extract and copy `app/utils/analytics.ts` from pre-baseline commit (should be stubbed/no-op)
 - [x] Extract and copy `app/utils/debounce.ts` from pre-baseline commit
 - [x] Extract and copy `app/utils/errorMessages.ts` from pre-baseline commit
-- [ ] Extract and copy `app/utils/merge.ts` from pre-baseline commit
+- [x] Extract and copy `app/utils/merge.ts` from pre-baseline commit
 - [ ] Extract and copy `app/utils/validation.ts` from pre-baseline commit (Zod schemas)
 - [ ] Run `npx tsc --noEmit` to verify no TypeScript errors after Phase 2
 
