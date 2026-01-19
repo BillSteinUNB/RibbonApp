@@ -21,3 +21,8 @@
 - [2025-01-18] Phase 1: Created app/constants directory
   - Verified directory does not exist
   - Created app/constants/ directory successfully
+- [2025-01-18] Phase 1: Extracted and copied app/constants/faq.ts from pre-baseline commit
+  - Retrieved faq.ts using git show 7ef03c2:app/constants/faq.ts
+  - Created app/constants/faq.ts with FAQItem interface, FAQCategoryType, FAQ_CATEGORIES, FAQ_ITEMS
+  - Verified TypeScript compilation passes with no errors (npx tsc --noEmit)
+  - FAQ data includes: getting-started, account, gifts, billing, troubleshooting categories
