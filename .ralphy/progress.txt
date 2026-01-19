@@ -1,0 +1,17 @@
+# Ralphy Progress Log
+
+2026-01-19 11:44:00 - Completed Phase 5 task: Extract and copy app/services/giftService.ts
+- Extracted giftService.ts from pre-baseline commit (7ef03c2)
+- GiftService already existed as untracked file
+- Extracted missing dependencies: giftParser.ts, rateLimitService.ts
+- Extracted app/prompts/ directory with all prompt files:
+  - system.prompt.ts
+  - birthday.prompt.ts
+  - anniversary.prompt.ts
+  - holiday.prompt.ts
+  - custom.prompt.ts
+  - index.ts
+- Verified no banned dependencies in giftService (no react-native-purchases, @sentry/react-native, expo-notifications, expo-local-authentication, expo-crypto)
+- Ran TypeScript check: only remaining errors are related to missing supabase module (Phase 7)
+- No test or lint scripts configured in package.json
+- Updated PRD.md to mark task as complete
