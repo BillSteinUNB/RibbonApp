@@ -123,13 +123,13 @@ This document defines verification tasks to audit the migration work, ensuring a
 
 ## Phase 10: Verify GitHub Workflow
 
-- [ ] Verify `.github/workflows/ios-testflight.yml` has valid YAML syntax
-- [ ] Verify workflow triggers on push to main branch
-- [ ] Verify workflow has all required secrets referenced (APP_STORE_CONNECT_API_KEY_ID, etc.)
-- [ ] Verify workflow runs `npm ci` for dependency installation
-- [ ] Verify workflow runs `npx expo prebuild` before building
-- [ ] Verify workflow uses fastlane for TestFlight deployment
-- [ ] Verify workflow has proper environment variables set
+- [x] Verify `.github/workflows/ios-testflight.yml` has valid YAML syntax
+- [x] Verify workflow triggers on push to main branch
+- [x] Verify workflow has all required secrets referenced (APP_STORE_CONNECT_API_KEY_ID, etc.)
+- [x] Verify workflow runs `npm ci` for dependency installation
+- [x] Verify workflow runs `npx expo prebuild` before building
+- [x] Verify workflow uses fastlane for TestFlight deployment
+- [x] Verify workflow has proper environment variables set
 
 ---
 
