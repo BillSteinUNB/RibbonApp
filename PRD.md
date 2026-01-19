@@ -196,11 +196,11 @@ This document defines verification tasks to audit the migration work, ensuring a
 
 ## Phase 17: Verify Storage Persistence
 
-- [ ] Verify authStore persists user session correctly
-- [ ] Verify recipientStore persists recipient data correctly
-- [ ] Verify giftStore persists gift data correctly
-- [ ] Verify storage keys in storageKeys.ts are unique and descriptive
-- [ ] Verify storage operations are async and don't block UI
+- [x] Verify authStore persists user session correctly
+- [x] Verify recipientStore persists recipient data correctly
+- [x] Verify giftStore persists gift data correctly
+- [x] Verify storage keys in storageKeys.ts are unique and descriptive
+- [x] Verify storage operations are async and don't block UI
 
 ---
 
