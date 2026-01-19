@@ -55,7 +55,7 @@ This document defines the complete migration plan for restoring RibbonApp functi
 
 - [x] Create `app/store/` directory if it doesn't exist
 - [x] Extract and copy `app/store/authStore.ts` from pre-baseline commit - ensure it uses getSafeStorage() for persistence
-- [ ] Extract and copy `app/store/giftStore.ts` from pre-baseline commit - ensure it uses getSafeStorage() for persistence
+- [x] Extract and copy `app/store/giftStore.ts` from pre-baseline commit - ensure it uses getSafeStorage() for persistence
 - [ ] Extract and copy `app/store/recipientStore.ts` from pre-baseline commit - ensure it uses getSafeStorage() for persistence
 - [ ] Extract and copy `app/store/uiStore.ts` and `app/store/index.ts` from pre-baseline commit
 - [ ] Run `npx tsc --noEmit` to verify no TypeScript errors after Phase 4
