@@ -53,7 +53,7 @@ This document defines the complete migration plan for restoring RibbonApp functi
 
 ## Phase 4: Stores (6 tasks)
 
-- [ ] Create `app/store/` directory if it doesn't exist
+- [x] Create `app/store/` directory if it doesn't exist
 - [ ] Extract and copy `app/store/authStore.ts` from pre-baseline commit - ensure it uses getSafeStorage() for persistence
 - [ ] Extract and copy `app/store/giftStore.ts` from pre-baseline commit - ensure it uses getSafeStorage() for persistence
 - [ ] Extract and copy `app/store/recipientStore.ts` from pre-baseline commit - ensure it uses getSafeStorage() for persistence
