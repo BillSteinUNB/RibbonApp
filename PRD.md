@@ -5,7 +5,7 @@ This document defines the complete migration plan for restoring RibbonApp functi
 ## Pre-Migration Setup
 
 - [x] Identify the pre-baseline commit hash using `git log --oneline` to find the last commit before the fresh Expo reset
-- [ ] Verify the minimal baseline app builds successfully before starting migration
+- [x] Verify the minimal baseline app builds successfully before starting migration
 - [ ] Confirm all GitHub secrets are configured (APP_STORE_CONNECT_API_KEY_ID, MATCH_GIT_URL, etc.)
 
 ---
