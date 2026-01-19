@@ -65,7 +65,7 @@ This document defines the complete migration plan for restoring RibbonApp functi
 ## Phase 5: Services (15 tasks)
 
 - [x] Create `app/services/` directory if it doesn't exist
-- [ ] Extract and copy `app/services/authService.ts` from pre-baseline commit
+- [x] Extract and copy `app/services/authService.ts` from pre-baseline commit
 - [ ] Extract and copy `app/services/recipientService.ts` from pre-baseline commit
 - [ ] Extract and copy `app/services/giftService.ts` from pre-baseline commit
 - [ ] Extract and copy `app/services/userService.ts` from pre-baseline commit
