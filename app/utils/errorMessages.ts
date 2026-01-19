@@ -97,7 +97,7 @@ function getUserFriendlyMessageFromError(error: Error): string {
 /**
  * Format error with context (for debugging)
  */
-export function formatErrorWithDetails(error: unknown, context?: any): string {
+export function formatErrorWithDetails(error: unknown, context?: Record<string, unknown>): string {
   const baseMessage = formatErrorMessage(error);
 
   if (__DEV__ && context) {
@@ -172,11 +172,11 @@ export function isValidationError(error: unknown): boolean {
 /**
  * Create error log entry
  */
-export function createErrorLogEntry(error: unknown, context?: any): {
+export function createErrorLogEntry(error: unknown, context?: Record<string, unknown>): {
   message: string;
   code?: string;
   stack?: string;
-  context?: any;
+  context?: Record<string, unknown>;
   timestamp: string;
 } {
   return {

@@ -25,11 +25,17 @@ async function getSupabase() {
  * Error Logger Service for tracking and reporting errors to backend
  * Implements Issue #53 - Error Reporting to Backend
  */
+interface QueuedError {
+  error: AppError;
+  context?: Record<string, unknown>;
+  timestamp: string;
+}
+
 class ErrorLogger {
   private static instance: ErrorLogger | null = null;
   private errors: AppError[] = [];
   private maxErrors: number = 100;
-  private errorQueue: any[] = [];
+  private errorQueue: QueuedError[] = [];
   private isReporting = false;
   private reportIntervalMinutes = 5;
   private maxQueueSize = 50;
@@ -67,7 +73,7 @@ class ErrorLogger {
   /**
    * Log an error (and queue for backend reporting)
    */
-  log(error: AppError | Error | any, context?: any): void {
+  log(error: AppError | Error | unknown, context?: Record<string, unknown>): void {
     // Ensure initialization on first use
     this.initialize();
 
@@ -106,15 +112,10 @@ class ErrorLogger {
   /**
    * Queue error for backend reporting
    */
-  private queueForReporting(error: AppError, context?: any): void {
-    const errorData = {
-      message: error.message,
-      type: error.name || 'Error',
-      code: error.code,
-      stack: error.stack,
+  private queueForReporting(error: AppError, context?: Record<string, unknown>): void {
+    const errorData: QueuedError = {
+      error: error,
       context: context,
-      component: context?.component,
-      method: context?.context,
       timestamp: new Date().toISOString(),
     };
 
@@ -159,13 +160,13 @@ class ErrorLogger {
       for (const errorData of errorsToReport) {
         try {
           await supabase.rpc('log_error', {
-            p_error_message: errorData.message,
-            p_error_type: errorData.type,
-            p_error_code: errorData.code,
-            p_stack_trace: errorData.stack,
+            p_error_message: errorData.error.message,
+            p_error_type: errorData.error.name || 'Error',
+            p_error_code: errorData.error.code,
+            p_stack_trace: errorData.error.stack,
             p_context: errorData.context,
-            p_component: errorData.component,
-            p_method: errorData.method,
+            p_component: errorData.context?.component,
+            p_method: errorData.context?.method,
             p_platform: Platform.OS,
             p_app_version: process.env.EXPO_PUBLIC_APP_VERSION || 'unknown',
             p_device_info: this.getDeviceInfo(),
@@ -190,7 +191,13 @@ class ErrorLogger {
   /**
    * Get device info for error reporting
    */
-  private getDeviceInfo(): any {
+  private getDeviceInfo(): {
+    platform: string;
+    version: string | number;
+    model?: string;
+    systemName?: string;
+    systemVersion?: string;
+  } {
     const constants = Platform.constants as {
       Model?: string;
       systemName?: string;
@@ -208,7 +215,7 @@ class ErrorLogger {
   /**
    * Normalize any error to AppError
    */
-  private normalizeError(error: any): AppError {
+  private normalizeError(error: unknown): AppError {
     if (error instanceof AppError) {
       return error;
     }

@@ -7,7 +7,7 @@ export class AppError extends Error {
     message: string,
     public code?: string,
     public statusCode?: number,
-    public details?: any
+    public details?: Record<string, unknown>
   ) {
     super(message);
     this.name = this.constructor.name;
@@ -52,7 +52,7 @@ export class ServerError extends AppError {
 }
 
 export class StorageError extends AppError {
-  constructor(message: string = 'Storage error occurred', code?: string, statusCode?: number, details?: any) {
+  constructor(message: string = 'Storage error occurred', code?: string, statusCode?: number, details?: Record<string, unknown>) {
     super(message, code || 'STORAGE_ERROR', statusCode, details);
   }
 }

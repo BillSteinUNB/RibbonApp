@@ -12,7 +12,7 @@ export interface ApiError {
   message: string;
   code?: string;
   statusCode?: number;
-  details?: any;
+  details?: Record<string, unknown>;
 }
 
 export interface PaginatedResponse<T> {
@@ -26,7 +26,7 @@ export interface PaginatedResponse<T> {
 export interface ApiRequestConfig {
   method?: 'GET' | 'POST' | 'PUT' | 'DELETE' | 'PATCH';
   headers?: Record<string, string>;
-  body?: any;
+  body?: unknown;
   timeout?: number;
   retries?: number;
 }

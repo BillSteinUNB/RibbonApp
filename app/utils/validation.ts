@@ -24,7 +24,7 @@ export function validateEmail(email: string): { valid: boolean; error?: string }
 /**
  * Required field validation
  */
-export function validateRequired(value: any): { valid: boolean; error?: string } {
+export function validateRequired(value: unknown): { valid: boolean; error?: string } {
   if (value === null || value === undefined || value === '') {
     return { valid: false, error: 'This field is required' };
   }
@@ -137,8 +137,8 @@ export function validateDate(date: Date | string): { valid: boolean; error?: str
 /**
  * Validate array minimum length
  */
-export function validateArrayMinLength(
-  array: any[],
+export function validateArrayMinLength<T = unknown>(
+  array: T[],
   min: number
 ): { valid: boolean; error?: string } {
   if (!Array.isArray(array) || array.length < min) {

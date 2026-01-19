@@ -42,7 +42,7 @@ export const authService = {
    * Checks token expiration and forces re-auth if needed
    * @returns {isValid: boolean, needsReauth: boolean}
    */
-  async validateSession(): Promise<{ isValid: boolean; needsReauth: boolean; user?: any }> {
+  async validateSession(): Promise<{ isValid: boolean; needsReauth: boolean; user?: import('@supabase/supabase-js').User }> {
     try {
       logger.log('[AuthService] Validating session...');
 

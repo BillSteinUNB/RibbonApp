@@ -29,7 +29,7 @@ async function getErrorLogger() {
   return _errorLoggerModule.errorLogger;
 }
 
-function logErrorSync(error: any, context: any) {
+function logErrorSync(error: unknown, context: Record<string, unknown>) {
   getErrorLogger().then(el => el?.log(error, context)).catch(() => {});
   console.error('[AuthStore]', context, error);
 }

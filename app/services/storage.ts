@@ -33,7 +33,7 @@ async function getEncryptedStorage() {
   return _encryptedStorageModule.encryptedStorage;
 }
 
-function logError(error: any, context: any) {
+function logError(error: unknown, context: Record<string, unknown>) {
   getErrorLogger().then(el => el?.log(error, context)).catch(() => {});
   console.error('[Storage]', context, error);
 }

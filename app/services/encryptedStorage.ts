@@ -25,7 +25,7 @@ async function getErrorLogger() {
 }
 
 // Synchronous fallback for error logging (won't block on import)
-function logError(error: any, context: any) {
+function logError(error: unknown, context: Record<string, unknown>) {
   getErrorLogger().then(el => el?.log(error, context)).catch(() => {});
   console.error('[EncryptedStorage]', context, error);
 }
@@ -149,7 +149,7 @@ async function decryptData(encryptedData: EncryptedData, key: string): Promise<s
   }
 }
 
-function isEncrypted(value: any): boolean {
+function isEncrypted(value: unknown): boolean {
   if (!value || typeof value !== 'object') {
     return false;
   }
@@ -195,28 +195,28 @@ export class EncryptedStorageService {
     }
   }
 
-  static async decryptValue<T>(key: string, value: any): Promise<T> {
+  static async decryptValue<T>(key: string, value: unknown): Promise<T> {
     try {
       const sensitivity = STORAGE_KEY_SENSITIVITY[key as keyof typeof STORAGE_KEY_SENSITIVITY];
 
       if (sensitivity !== 'SENSITIVE') {
-        return value;
+        return value as T;
       }
 
       if (!isEncrypted(value)) {
-        return value;
+        return value as T;
       }
 
       logger.log(`[EncryptedStorage] Decrypting sensitive key: ${key}`);
 
       const encryptionKey = await getEncryptionKey();
-      const decryptedString = await decryptData(value, encryptionKey);
+      const decryptedString = await decryptData(value as EncryptedData, encryptionKey);
 
       return JSON.parse(decryptedString) as T;
     } catch (error) {
       logError(error, { context: 'decryptValue', key });
       logger.warn('[EncryptedStorage] Decryption failed, attempting to return original');
-      return value;
+      return value as T;
     }
   }
 
