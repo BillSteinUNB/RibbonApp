@@ -34,7 +34,7 @@ This document defines the complete migration plan for restoring RibbonApp functi
 - [x] Extract and copy `app/utils/helpers.ts` from pre-baseline commit - VERIFY it uses Math.random NOT expo-crypto
 - [x] If helpers.ts contains expo-crypto imports, replace with Math.random implementation
 - [x] Extract and copy `app/utils/analytics.ts` from pre-baseline commit (should be stubbed/no-op)
-- [ ] Extract and copy `app/utils/debounce.ts` from pre-baseline commit
+- [x] Extract and copy `app/utils/debounce.ts` from pre-baseline commit
 - [ ] Extract and copy `app/utils/errorMessages.ts` from pre-baseline commit
 - [ ] Extract and copy `app/utils/merge.ts` from pre-baseline commit
 - [ ] Extract and copy `app/utils/validation.ts` from pre-baseline commit (Zod schemas)
