@@ -6,7 +6,7 @@ This document defines the complete migration plan for restoring RibbonApp functi
 
 - [x] Identify the pre-baseline commit hash using `git log --oneline` to find the last commit before the fresh Expo reset
 - [x] Verify the minimal baseline app builds successfully before starting migration
-- [ ] Confirm all GitHub secrets are configured (APP_STORE_CONNECT_API_KEY_ID, MATCH_GIT_URL, etc.)
+- [x] Confirm all GitHub secrets are configured (APP_STORE_CONNECT_API_KEY_ID, MATCH_GIT_URL, etc.)
 
 ---
 
@@ -46,8 +46,8 @@ This document defines the complete migration plan for restoring RibbonApp functi
 
 - [x] Create `app/lib/` directory if it doesn't exist
 - [x] Extract and copy `app/lib/safeStorage.ts` from pre-baseline commit - VERIFY it uses dynamic import for AsyncStorage with try/catch
-- [ ] Extract and copy `app/lib/secureStorage.ts` from pre-baseline commit - VERIFY it uses dynamic import for expo-secure-store with try/catch
-- [ ] Run `npx tsc --noEmit` to verify no TypeScript errors after Phase 3
+- [x] Extract and copy `app/lib/secureStorage.ts` from pre-baseline commit - VERIFY it uses dynamic import for expo-secure-store with try/catch
+- [x] Run `npx tsc --noEmit` to verify no TypeScript errors after Phase 3
 
 ---
 
