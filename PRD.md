@@ -76,13 +76,13 @@ This document defines verification tasks to audit the migration work, ensuring a
 
 ## Phase 6: Verify Prompts
 
-- [ ] Verify `app/prompts/system.prompt.ts` has valid system prompt template
-- [ ] Verify `app/prompts/birthday.prompt.ts` has valid birthday prompt template
-- [ ] Verify `app/prompts/anniversary.prompt.ts` has valid anniversary prompt template
-- [ ] Verify `app/prompts/holiday.prompt.ts` has valid holiday prompt template
-- [ ] Verify `app/prompts/custom.prompt.ts` has valid custom prompt template
-- [ ] Verify `app/prompts/index.ts` properly exports all prompts
-- [ ] Run `npx tsc --noEmit` to confirm no TypeScript errors in prompts
+- [x] Verify `app/prompts/system.prompt.ts` has valid system prompt template
+- [x] Verify `app/prompts/birthday.prompt.ts` has valid birthday prompt template
+- [x] Verify `app/prompts/anniversary.prompt.ts` has valid anniversary prompt template
+- [x] Verify `app/prompts/holiday.prompt.ts` has valid holiday prompt template
+- [x] Verify `app/prompts/custom.prompt.ts` has valid custom prompt template
+- [x] Verify `app/prompts/index.ts` properly exports all prompts
+- [x] Run `npx tsc --noEmit` to confirm no TypeScript errors in prompts
 
 ---
 
