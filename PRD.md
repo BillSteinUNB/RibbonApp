@@ -22,7 +22,7 @@ This document defines the complete migration plan for restoring RibbonApp functi
 - [x] Extract and copy `app/types/api.ts` from pre-baseline commit
 - [x] Extract and copy `app/types/errors.ts` from pre-baseline commit
 - [x] Extract and copy `app/types/recipient.ts`, `app/types/settings.ts`, `app/types/subscription.ts`, `app/types/user.ts` from pre-baseline commit
-- [ ] Run `npx tsc --noEmit` to verify no TypeScript errors after Phase 1
+- [x] Run `npx tsc --noEmit` to verify no TypeScript errors after Phase 1
 
 ---
 
