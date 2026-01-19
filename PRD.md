@@ -1,206 +1,237 @@
-# RibbonApp Migration PRD
+# RibbonApp Migration Verification PRD
 
-This document defines the complete migration plan for restoring RibbonApp functionality to the fresh Expo baseline. Ralphy will execute these tasks sequentially, marking each complete as it progresses.
-
-## Pre-Migration Setup
-
-- [x] Identify the pre-baseline commit hash using `git log --oneline` to find the last commit before the fresh Expo reset
-- [x] Verify the minimal baseline app builds successfully before starting migration
-- [x] Confirm all GitHub secrets are configured (APP_STORE_CONNECT_API_KEY_ID, MATCH_GIT_URL, etc.)
+This document defines verification tasks to audit the migration work, ensuring all code is syntactically correct, properly structured, and won't cause runtime issues. Ralphy will execute these tasks sequentially.
 
 ---
 
-## Phase 1: Constants & Types (11 tasks)
+## Phase 1: Verify Constants & Types
 
-- [x] Extract `app/constants.ts` from pre-baseline commit using `git show <commit>:app/constants.ts`
-- [x] Copy extracted `constants.ts` to `app/constants.ts` (contains COLORS, SPACING, FONTS, RADIUS exports)
-- [x] Create `app/constants/` directory if it doesn't exist
-- [x] Extract and copy `app/constants/faq.ts` from pre-baseline commit
-- [x] Extract and copy `app/constants/storageKeys.ts` from pre-baseline commit
-- [x] Extract and copy `app/types.ts` from pre-baseline commit (Recipient, Gift, User interfaces)
-- [x] Create `app/types/` directory if it doesn't exist
-- [x] Extract and copy `app/types/api.ts` from pre-baseline commit
-- [x] Extract and copy `app/types/errors.ts` from pre-baseline commit
-- [x] Extract and copy `app/types/recipient.ts`, `app/types/settings.ts`, `app/types/subscription.ts`, `app/types/user.ts` from pre-baseline commit
-- [x] Run `npx tsc --noEmit` to verify no TypeScript errors after Phase 1
-
----
-
-## Phase 2: Utilities (11 tasks)
-
-- [x] Create `app/utils/` directory if it doesn't exist
-- [x] Extract and copy `app/utils/logger.ts` from pre-baseline commit
-- [x] Extract and copy `app/utils/dates.ts` from pre-baseline commit (date formatting utilities)
-- [x] Extract and copy `app/utils/helpers.ts` from pre-baseline commit - VERIFY it uses Math.random NOT expo-crypto
-- [x] If helpers.ts contains expo-crypto imports, replace with Math.random implementation
-- [x] Extract and copy `app/utils/analytics.ts` from pre-baseline commit (should be stubbed/no-op)
-- [x] Extract and copy `app/utils/debounce.ts` from pre-baseline commit
-- [x] Extract and copy `app/utils/errorMessages.ts` from pre-baseline commit
-- [x] Extract and copy `app/utils/merge.ts` from pre-baseline commit
-- [x] Extract and copy `app/utils/validation.ts` from pre-baseline commit (Zod schemas)
-- [x] Run `npx tsc --noEmit` to verify no TypeScript errors after Phase 2
+- [ ] Verify `app/constants.ts` exports COLORS, SPACING, FONTS, RADIUS - check syntax and types are valid
+- [ ] Verify `app/constants/faq.ts` has proper TypeScript syntax and exports FAQ data
+- [ ] Verify `app/constants/storageKeys.ts` exports storage key constants with proper typing
+- [ ] Verify `app/types.ts` has valid Recipient, Gift, User interface definitions
+- [ ] Verify `app/types/api.ts` has valid API response types with no circular dependencies
+- [ ] Verify `app/types/errors.ts` has valid error type definitions
+- [ ] Verify `app/types/recipient.ts` has valid Recipient-related types
+- [ ] Verify `app/types/settings.ts` has valid Settings types
+- [ ] Verify `app/types/subscription.ts` has valid Subscription types (no RevenueCat references)
+- [ ] Verify `app/types/user.ts` has valid User types
+- [ ] Run `npx tsc --noEmit` to confirm no TypeScript errors in types
 
 ---
 
-## Phase 3: Safe Storage Layer (4 tasks)
+## Phase 2: Verify Utilities
 
-- [x] Create `app/lib/` directory if it doesn't exist
-- [x] Extract and copy `app/lib/safeStorage.ts` from pre-baseline commit - VERIFY it uses dynamic import for AsyncStorage with try/catch
-- [x] Extract and copy `app/lib/secureStorage.ts` from pre-baseline commit - VERIFY it uses dynamic import for expo-secure-store with try/catch
-- [x] Run `npx tsc --noEmit` to verify no TypeScript errors after Phase 3
-
----
-
-## Phase 4: Stores (6 tasks)
-
-- [x] Create `app/store/` directory if it doesn't exist
-- [x] Extract and copy `app/store/authStore.ts` from pre-baseline commit - ensure it uses getSafeStorage() for persistence
-- [x] Extract and copy `app/store/giftStore.ts` from pre-baseline commit - ensure it uses getSafeStorage() for persistence
-- [x] Extract and copy `app/store/recipientStore.ts` from pre-baseline commit - ensure it uses getSafeStorage() for persistence
-- [x] Extract and copy `app/store/uiStore.ts` and `app/store/index.ts` from pre-baseline commit
-- [x] Run `npx tsc --noEmit` to verify no TypeScript errors after Phase 4
+- [ ] Verify `app/utils/logger.ts` has valid logging functions with proper exports
+- [ ] Verify `app/utils/dates.ts` has valid date formatting utilities
+- [ ] Verify `app/utils/helpers.ts` uses Math.random (NOT expo-crypto) - grep for "expo-crypto"
+- [ ] Verify `app/utils/analytics.ts` is stubbed/no-op and doesn't import banned packages
+- [ ] Verify `app/utils/debounce.ts` has valid debounce implementation
+- [ ] Verify `app/utils/errorMessages.ts` has valid error message utilities
+- [ ] Verify `app/utils/merge.ts` has valid merge utility functions
+- [ ] Verify `app/utils/validation.ts` has valid Zod schemas - check Zod is in package.json
+- [ ] Run `npx tsc --noEmit` to confirm no TypeScript errors in utils
 
 ---
 
-## Phase 5: Services (15 tasks)
+## Phase 3: Verify Safe Storage Layer
 
-- [x] Create `app/services/` directory if it doesn't exist
-- [x] Extract and copy `app/services/authService.ts` from pre-baseline commit
-- [x] Extract and copy `app/services/recipientService.ts` from pre-baseline commit
-- [x] Extract and copy `app/services/giftService.ts` from pre-baseline commit
-- [x] Extract and copy `app/services/userService.ts` from pre-baseline commit
-- [x] Extract and copy `app/services/subscriptionService.ts` from pre-baseline commit - STUB OUT all RevenueCat calls (return mock/no-op values)
-- [x] Verify subscriptionService.ts has NO imports from react-native-purchases
-- [x] Extract and copy `app/services/openaiService.ts` from pre-baseline commit (if exists)
-- [x] Extract and copy `app/services/storageService.ts` from pre-baseline commit
-- [x] Extract and copy `app/services/index.ts` from pre-baseline commit
-- [x] SKIP copying `app/services/notificationService.ts` (uses banned expo-notifications)
-- [x] SKIP copying `app/services/biometricAuthService.ts` (uses banned expo-local-authentication)
-- [x] SKIP copying `app/services/revenueCatService.ts` (uses banned react-native-purchases)
-- [x] SKIP copying `app/services/sentry.ts` (uses banned @sentry/react-native)
-- [x] Run `npx tsc --noEmit` to verify no TypeScript errors after Phase 5
+- [ ] Verify `app/lib/safeStorage.ts` uses dynamic import with try/catch for AsyncStorage
+- [ ] Verify `app/lib/safeStorage.ts` has fallback behavior when AsyncStorage unavailable
+- [ ] Verify `app/lib/secureStorage.ts` uses dynamic import with try/catch for expo-secure-store
+- [ ] Verify `app/lib/secureStorage.ts` has fallback behavior when SecureStore unavailable
+- [ ] Run `npx tsc --noEmit` to confirm no TypeScript errors in lib
 
 ---
 
-## Phase 6: Components (15 tasks)
+## Phase 4: Verify Stores
 
-- [x] Create `app/components/` directory if it doesn't exist
-- [x] Extract and copy `app/components/Button.tsx` from pre-baseline commit
-- [x] Extract and copy `app/components/Card.tsx` from pre-baseline commit
-- [x] Extract and copy `app/components/Input.tsx` from pre-baseline commit
-- [x] Extract and copy `app/components/Loading.tsx` from pre-baseline commit
-- [x] Extract and copy `app/components/ErrorBoundary.tsx` from pre-baseline commit - REMOVE ALL Sentry imports and calls
-- [x] Verify ErrorBoundary.tsx has NO imports from @sentry/react-native
-- [x] Extract and copy `app/components/Header.tsx` from pre-baseline commit
-- [x] Extract and copy `app/components/EmptyState.tsx` from pre-baseline commit
-- [x] Extract and copy `app/components/Avatar.tsx` from pre-baseline commit
-- [x] Create `app/components/forms/` directory if it doesn't exist
-- [x] Extract and copy all files from `app/components/forms/` from pre-baseline commit
-- [x] Extract and copy `app/components/index.ts` from pre-baseline commit (barrel export file)
-- [x] Verify all components use dynamic imports for any native modules with try/catch
-- [x] Run `npx tsc --noEmit` to verify no TypeScript errors after Phase 6
+- [ ] Verify `app/store/authStore.ts` uses Zustand with proper TypeScript types
+- [ ] Verify `app/store/authStore.ts` uses getSafeStorage() for persistence (not direct AsyncStorage)
+- [ ] Verify `app/store/giftStore.ts` uses Zustand with proper TypeScript types
+- [ ] Verify `app/store/giftStore.ts` uses getSafeStorage() for persistence
+- [ ] Verify `app/store/recipientStore.ts` uses Zustand with proper TypeScript types
+- [ ] Verify `app/store/recipientStore.ts` uses getSafeStorage() for persistence
+- [ ] Verify `app/store/uiStore.ts` has valid UI state management
+- [ ] Verify `app/store/index.ts` properly exports all stores
+- [ ] Run `npx tsc --noEmit` to confirm no TypeScript errors in stores
 
 ---
 
-## Phase 7: Supabase Integration (5 tasks)
+## Phase 5: Verify Services
 
-- [x] Extract and copy `app/lib/supabase.ts` from pre-baseline commit - VERIFY it uses dynamic import for @supabase/supabase-js with try/catch
-- [x] Create `app/contexts/` directory if it doesn't exist
-- [x] Extract and copy `app/contexts/AuthContext.tsx` from pre-baseline commit
-- [x] Extract and copy `app/contexts/SupabaseContext.tsx` from pre-baseline commit
-- [x] Run `npx tsc --noEmit` to verify no TypeScript errors after Phase 7
-
----
-
-## Phase 8: Routes (19 tasks)
-
-### Tab Routes
-- [x] Create `app/(tabs)/` directory if it doesn't exist
-- [x] Extract and copy `app/(tabs)/_layout.tsx` from pre-baseline commit (tab navigation layout)
-- [x] Extract and copy `app/(tabs)/index.tsx` from pre-baseline commit (home tab)
-- [x] Extract and copy `app/(tabs)/recipients.tsx` from pre-baseline commit (recipients list tab)
-- [x] Extract and copy `app/(tabs)/settings.tsx` from pre-baseline commit (settings tab)
-- [x] Verify tab routes have no static imports of banned dependencies
-
-### Auth Routes
-- [x] Create `app/(auth)/` directory if it doesn't exist
-- [x] Extract and copy `app/(auth)/_layout.tsx` from pre-baseline commit (auth navigation layout)
-- [x] Extract and copy `app/(auth)/login.tsx` from pre-baseline commit
-- [x] Extract and copy `app/(auth)/signup.tsx` from pre-baseline commit
-- [x] Extract and copy `app/(auth)/forgot-password.tsx` from pre-baseline commit (if exists)
-- [x] Verify auth routes have no static imports of banned dependencies
-
-### Recipient Routes
-- [x] Create `app/recipients/` directory if it doesn't exist
-- [x] Extract and copy `app/recipients/_layout.tsx` from pre-baseline commit
-- [x] Extract and copy `app/recipients/[id].tsx` from pre-baseline commit (recipient detail)
-- [x] Extract and copy `app/recipients/add.tsx` from pre-baseline commit (add recipient form)
-- [x] Extract and copy `app/recipients/edit/[id].tsx` from pre-baseline commit (edit recipient form)
-
-### Standalone Routes
-- [x] Extract and copy `app/help.tsx` from pre-baseline commit
-- [x] Extract and copy `app/onboarding.tsx` from pre-baseline commit
-- [x] Run `npx tsc --noEmit` to verify no TypeScript errors after Phase 8
+- [ ] Verify `app/services/authService.ts` has valid auth functions with proper error handling
+- [ ] Verify `app/services/recipientService.ts` has valid recipient CRUD operations
+- [ ] Verify `app/services/giftService.ts` has valid gift-related functions
+- [ ] Verify `app/services/giftParser.ts` has valid gift parsing logic
+- [ ] Verify `app/services/rateLimitService.ts` has valid rate limiting implementation
+- [ ] Verify `app/services/aiService.ts` has valid AI service integration (if exists)
+- [ ] Verify `app/services/storage.ts` has valid storage service functions
+- [ ] Verify `app/services/encryptedStorage.ts` has proper encryption handling with fallbacks
+- [ ] Verify `app/services/errorLogger.ts` has valid error logging (no Sentry imports)
+- [ ] Grep all services for banned imports: react-native-purchases, @sentry/react-native, expo-notifications, expo-local-authentication, expo-crypto
+- [ ] Run `npx tsc --noEmit` to confirm no TypeScript errors in services
 
 ---
 
-## Phase 9: Prompts & Config (8 tasks)
+## Phase 6: Verify Prompts
 
-- [x] Create `app/prompts/` directory if it doesn't exist
-- [x] Extract and copy `app/prompts/system.ts` from pre-baseline commit (system prompt template)
-- [x] Extract and copy `app/prompts/birthday.ts` from pre-baseline commit
-- [x] Extract and copy `app/prompts/anniversary.ts` from pre-baseline commit
-- [x] Extract and copy `app/prompts/holiday.ts` from pre-baseline commit
-- [x] Extract and copy `app/prompts/custom.ts` from pre-baseline commit
-- [x] Extract and copy `app/prompts/index.ts` from pre-baseline commit (barrel export)
-- [x] Run `npx tsc --noEmit` to verify no TypeScript errors after Phase 9
-
----
-
-## Phase 10: Integration Testing (6 tasks)
-
-- [x] Test authentication flow: signup, login, logout, password reset - **SKIPPED** (no test infrastructure)
-- [x] Test recipient management: add, edit, view, delete recipients - **SKIPPED** (no test infrastructure)
-- [x] Test navigation between all routes (tabs, auth, recipients, help, onboarding)
-- [x] Test storage persistence: data persists after app reload - **SKIPPED** (no test infrastructure)
-- [x] Test error handling: ErrorBoundary catches and displays errors gracefully - **SKIPPED** (no test infrastructure)
-- [x] Test subscription flow (stubbed): verify app doesn't crash when subscription features are accessed - **SKIPPED** (no test infrastructure)
+- [ ] Verify `app/prompts/system.prompt.ts` has valid system prompt template
+- [ ] Verify `app/prompts/birthday.prompt.ts` has valid birthday prompt template
+- [ ] Verify `app/prompts/anniversary.prompt.ts` has valid anniversary prompt template
+- [ ] Verify `app/prompts/holiday.prompt.ts` has valid holiday prompt template
+- [ ] Verify `app/prompts/custom.prompt.ts` has valid custom prompt template
+- [ ] Verify `app/prompts/index.ts` properly exports all prompts
+- [ ] Run `npx tsc --noEmit` to confirm no TypeScript errors in prompts
 
 ---
 
-## Phase 11: Build & TestFlight Verification (14 tasks)
+## Phase 7: Verify App Entry Points
 
-### Code Quality Checks
-- [x] Run `npx tsc --noEmit` to verify no TypeScript errors in entire codebase
-- [x] Run `npm run lint` to check for linting errors - **SKIPPED** (no lint infrastructure)
-- [x] Fix any linting errors found
-- [x] Run `npm test` to execute all unit tests (if test suite exists)
+- [ ] Verify `app/_layout.tsx` has valid Expo Router layout structure
+- [ ] Verify `app/_layout.tsx` properly wraps app with required providers
+- [ ] Verify `app/index.tsx` has valid entry point routing logic
+- [ ] Verify all imports in entry points resolve correctly
+- [ ] Run `npx tsc --noEmit` to confirm no TypeScript errors in entry points
 
-### Dependency Audit
-- [x] Verify package.json does NOT contain `react-native-purchases`
-- [x] Verify package.json does NOT contain `@sentry/react-native`
-- [x] Verify package.json does NOT contain `expo-notifications`
-- [x] Verify package.json does NOT contain `expo-local-authentication`
-- [x] Verify package.json does NOT contain `expo-crypto`
-- [x] Search codebase for any static imports of banned packages using grep
+---
 
-### App Configuration
-- [x] Update `app.json` with correct privacy policy URL
-- [x] Update `app.json` with correct support email
-- [x] Verify `app.json` has `newArchEnabled: false`
+## Phase 8: Verify Package Dependencies
 
-### Build & Deploy
-- [x] Commit all migration changes with message "feat: complete migration from baseline"
-- [x] Push changes to GitHub main branch
+- [ ] Verify package.json does NOT contain `react-native-purchases`
+- [ ] Verify package.json does NOT contain `@sentry/react-native`
+- [ ] Verify package.json does NOT contain `expo-notifications`
+- [ ] Verify package.json does NOT contain `expo-local-authentication`
+- [ ] Verify package.json does NOT contain `expo-crypto`
+- [ ] Verify package.json contains required dependencies: zustand, zod, @supabase/supabase-js
+- [ ] Verify package.json contains expo-router and related navigation dependencies
+- [ ] Run `npm ls` to check for any missing or conflicting dependencies
 
-**Remaining manual tasks moved to GitHub Issues:**
-- #86 - Verify GitHub Actions workflow triggers automatically
-- #87 - Monitor GitHub Actions workflow for successful completion
-- #85 - Verify TestFlight build appears in App Store Connect
-- #81 - Install TestFlight build on physical device
-- #84 - Test app launch - verify no crash on startup
-- #82 - Test core functionality: login, view recipients, navigate between tabs
-- #83 - Update MIGRATION_CONTEXT.md to mark migration as COMPLETE
+---
+
+## Phase 9: Verify App Configuration
+
+- [ ] Verify `app.json` has valid JSON syntax
+- [ ] Verify `app.json` has `newArchEnabled: false` in expo.plugins or equivalent
+- [ ] Verify `app.json` has correct bundle identifier (com.ribbon.app or similar)
+- [ ] Verify `app.json` has privacy policy URL configured
+- [ ] Verify `app.json` has support/contact information configured
+- [ ] Verify `eas.json` has valid EAS Build configuration
+- [ ] Verify `tsconfig.json` has valid TypeScript configuration for Expo
+
+---
+
+## Phase 10: Verify GitHub Workflow
+
+- [ ] Verify `.github/workflows/ios-testflight.yml` has valid YAML syntax
+- [ ] Verify workflow triggers on push to main branch
+- [ ] Verify workflow has all required secrets referenced (APP_STORE_CONNECT_API_KEY_ID, etc.)
+- [ ] Verify workflow runs `npm ci` for dependency installation
+- [ ] Verify workflow runs `npx expo prebuild` before building
+- [ ] Verify workflow uses fastlane for TestFlight deployment
+- [ ] Verify workflow has proper environment variables set
+
+---
+
+## Phase 11: Verify Cross-File Imports
+
+- [ ] Run `npx tsc --noEmit` on entire codebase - fix any errors found
+- [ ] Verify all barrel exports (index.ts files) properly re-export their modules
+- [ ] Verify no circular dependencies exist using `npx madge --circular app/`
+- [ ] Verify all relative imports use correct paths
+- [ ] Verify all absolute imports (if any) are configured in tsconfig.json
+
+---
+
+## Phase 12: Verify Runtime Safety Patterns
+
+- [ ] Verify all native module imports use try/catch pattern for graceful fallback
+- [ ] Verify all async functions have proper error handling
+- [ ] Verify all Zustand stores have proper initial state
+- [ ] Verify all API calls have error handling and don't crash on network failures
+- [ ] Verify all storage operations handle cases where storage is unavailable
+
+---
+
+## Phase 13: Verify Code Quality
+
+- [ ] Check for any `console.log` statements that should be removed (use logger instead)
+- [ ] Check for any hardcoded secrets or API keys in source code
+- [ ] Check for any TODO/FIXME comments that indicate incomplete work
+- [ ] Check for any unused imports in all TypeScript files
+- [ ] Check for any unused variables or functions
+- [ ] Verify consistent code formatting across all files
+
+---
+
+## Phase 14: Verify Type Safety
+
+- [ ] Verify no `any` types are used unnecessarily - grep for `: any` and review each
+- [ ] Verify all function parameters have proper TypeScript types
+- [ ] Verify all function return types are properly typed
+- [ ] Verify all React components have proper Props interfaces
+- [ ] Verify all Zustand store states have proper type definitions
+
+---
+
+## Phase 15: Verify Error Handling Patterns
+
+- [ ] Verify ErrorBoundary component exists and catches React errors
+- [ ] Verify ErrorBoundary has NO Sentry imports
+- [ ] Verify all services have consistent error handling patterns
+- [ ] Verify error messages are user-friendly in errorMessages.ts
+- [ ] Verify errors are logged appropriately via errorLogger.ts
+
+---
+
+## Phase 16: Verify Data Flow
+
+- [ ] Trace auth flow: authService -> authStore -> components (verify data flows correctly)
+- [ ] Trace recipient flow: recipientService -> recipientStore -> components
+- [ ] Trace gift flow: giftService -> giftStore -> components
+- [ ] Verify stores properly update when services return data
+- [ ] Verify components properly subscribe to store changes
+
+---
+
+## Phase 17: Verify Storage Persistence
+
+- [ ] Verify authStore persists user session correctly
+- [ ] Verify recipientStore persists recipient data correctly
+- [ ] Verify giftStore persists gift data correctly
+- [ ] Verify storage keys in storageKeys.ts are unique and descriptive
+- [ ] Verify storage operations are async and don't block UI
+
+---
+
+## Phase 18: Verify Supabase Integration
+
+- [ ] Verify `app/lib/supabase.ts` exists and initializes Supabase client
+- [ ] Verify Supabase client uses environment variables for URL and key
+- [ ] Verify Supabase client handles initialization errors gracefully
+- [ ] Verify auth service properly integrates with Supabase auth
+- [ ] Verify database operations use proper Supabase query patterns
+
+---
+
+## Phase 19: Verify Expo Router Setup
+
+- [ ] Verify `app/_layout.tsx` sets up navigation correctly
+- [ ] Verify file-based routing structure matches expected routes
+- [ ] Verify all route files export default React components
+- [ ] Verify navigation between routes works (no broken links)
+- [ ] Verify deep linking configuration in app.json (if applicable)
+
+---
+
+## Phase 20: Final Verification & Summary
+
+- [ ] Run full TypeScript check: `npx tsc --noEmit`
+- [ ] Run dependency check: `npm ls`
+- [ ] Generate summary report of all verification results
+- [ ] Document any issues found that need manual resolution
+- [ ] Create GitHub issues for any problems discovered during verification
+- [ ] Mark verification PRD as complete
 
 ---
 
@@ -213,27 +244,20 @@ This document defines the complete migration plan for restoring RibbonApp functi
    - `expo-local-authentication`
    - `expo-crypto`
 
-2. **All native modules MUST use dynamic imports with try/catch:**
-   ```typescript
-   let NativeModule;
-   try {
-     NativeModule = require('native-module');
-   } catch (e) {
-     NativeModule = null;
-   }
-   ```
+2. **All native modules MUST use dynamic imports with try/catch**
 
-3. **Build and typecheck after each major phase (1-9)**
+3. **Report issues - don't silently skip problems**
 
-4. **Source code retrieval:** Use `git show <pre-baseline-commit>:path/to/file` to extract files
+4. **Create GitHub issues for any problems found**
 
 ---
 
 ## Success Criteria
 
-- [x] All automated PRD tasks marked complete
-- [x] Zero TypeScript errors
-- [x] Zero banned dependencies in package.json
-- [ ] TestFlight build installs and runs without crash (see #81, #84)
-- [ ] Core app functionality works (see #82)
-- [ ] MIGRATION_CONTEXT.md updated (see #83)
+- [ ] All 20 phases complete with no blocking issues
+- [ ] Zero TypeScript errors
+- [ ] Zero banned dependency imports in codebase
+- [ ] All cross-file imports resolve correctly
+- [ ] All stores properly persist data
+- [ ] All services have proper error handling
+- [ ] GitHub workflow is valid and ready to run
