@@ -26,6 +26,14 @@ platform :ios do
       xcodeproj: ENV["IOS_PROJECT"] || "ios/Ribbon.xcodeproj"
     )
 
+    update_code_signing_settings(
+      use_automatic_signing: false,
+      path: ENV["IOS_PROJECT"] || "ios/Ribbon.xcodeproj",
+      team_id: "694SN4D466",
+      profile_name: "match AppStore com.ribbon.app",
+      code_sign_identity: "Apple Distribution"
+    )
+
     build_app(
       workspace: ENV["IOS_WORKSPACE"] || "ios/Ribbon.xcworkspace",
       scheme: ENV["IOS_SCHEME"] || "Ribbon",
