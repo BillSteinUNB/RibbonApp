@@ -1,6 +1,7 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect, useCallback } from 'react';
 import { View, Text, ScrollView, StyleSheet, KeyboardAvoidingView, Platform } from 'react-native';
 import { useRouter } from 'expo-router';
+import AsyncStorage from '@react-native-async-storage/async-storage';
 import { COLORS, SPACING, FONTS, RADIUS } from '../constants';
 import { Button } from '../components/Button';
 import { Input } from '../components/Input';
@@ -16,6 +17,8 @@ import {
 } from '../types/recipient';
 import { useRecipientStore } from '../store/recipientStore';
 import { generateId, getTimestamp } from '../utils/helpers';
+
+const DRAFT_STORAGE_KEY = '@ribbon/recipient-draft';
 
 const STEPS = [
   { title: 'Basic', description: 'Tell us about who this gift is for' },
@@ -44,6 +47,47 @@ export default function NewRecipientScreen() {
   const [formData, setFormData] = useState<RecipientFormData>(initialFormData);
   const [errors, setErrors] = useState<Record<string, string>>({});
   const [isSubmitting, setIsSubmitting] = useState(false);
+  const [isDraftLoaded, setIsDraftLoaded] = useState(false);
+
+  useEffect(() => {
+    const loadDraft = async () => {
+      try {
+        const savedDraft = await AsyncStorage.getItem(DRAFT_STORAGE_KEY);
+        if (savedDraft) {
+          const { formData: draftData, step } = JSON.parse(savedDraft);
+          setFormData(draftData);
+          setCurrentStep(step);
+        }
+      } catch (error) {
+        console.warn('Failed to load draft:', error);
+      } finally {
+        setIsDraftLoaded(true);
+      }
+    };
+    loadDraft();
+  }, []);
+
+  const saveDraft = useCallback(async (data: RecipientFormData, step: number) => {
+    try {
+      await AsyncStorage.setItem(DRAFT_STORAGE_KEY, JSON.stringify({ formData: data, step }));
+    } catch (error) {
+      console.warn('Failed to save draft:', error);
+    }
+  }, []);
+
+  const clearDraft = useCallback(async () => {
+    try {
+      await AsyncStorage.removeItem(DRAFT_STORAGE_KEY);
+    } catch (error) {
+      console.warn('Failed to clear draft:', error);
+    }
+  }, []);
+
+  useEffect(() => {
+    if (isDraftLoaded) {
+      saveDraft(formData, currentStep);
+    }
+  }, [formData, currentStep, isDraftLoaded, saveDraft]);
 
   const validateStep = (step: number): boolean => {
     const newErrors: Record<string, string> = {};
@@ -97,6 +141,7 @@ export default function NewRecipientScreen() {
         giftHistory: [],
       };
       addRecipient(recipient);
+      await clearDraft();
       router.replace('/(tabs)/recipients');
     } catch (error) {
       setErrors({ submit: 'Failed to save recipient. Please try again.' });
