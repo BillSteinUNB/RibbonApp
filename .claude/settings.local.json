@@ -8,7 +8,11 @@
       "Bash(opencode agent --help:*)",
       "Bash(opencode models)",
       "Bash(opencode models:*)",
-      "Bash(ls:*)"
+      "Bash(ls:*)",
+      "Bash(ssh-keygen:*)",
+      "Bash(git add:*)",
+      "Bash(git commit:*)",
+      "Bash(git push:*)"
     ]
   }
 }
