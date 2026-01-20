@@ -39,6 +39,13 @@ export default function TabLayout() {
           title: 'Settings',
         }}
       />
+      {/* @ts-expect-error expo-router Tabs.Screen type issue */}
+      <Tabs.Screen
+        name="pricing"
+        options={{
+          title: 'Premium',
+        }}
+      />
     </Tabs>
   );
 }
