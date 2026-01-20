@@ -12,7 +12,7 @@ jobs:
       IOS_SCHEME: Ribbon
       IOS_WORKSPACE: ios/Ribbon.xcworkspace
       IOS_PROJECT: ios/Ribbon.xcodeproj
-      BUILD_NUMBER: ${{ github.run_number + 100 }}
+      BUILD_NUMBER_OFFSET: 100
       EXPO_PUBLIC_SUPABASE_URL: ${{ secrets.EXPO_PUBLIC_SUPABASE_URL }}
       EXPO_PUBLIC_SUPABASE_ANON_KEY: ${{ secrets.EXPO_PUBLIC_SUPABASE_ANON_KEY }}
       APP_STORE_CONNECT_API_KEY_ID: ${{ secrets.APP_STORE_CONNECT_API_KEY_ID }}
@@ -63,6 +63,9 @@ jobs:
 
       - name: Install CocoaPods
         run: bundle exec pod install --project-directory=ios
+
+      - name: Set build number
+        run: echo "BUILD_NUMBER=$(( ${{ github.run_number }} + $BUILD_NUMBER_OFFSET ))" >> $GITHUB_ENV
 
       - name: Build and upload TestFlight
         run: bundle exec fastlane ios testflight
