@@ -21,6 +21,7 @@ jobs:
       APP_STORE_CONNECT_API_KEY_BASE64: ${{ secrets.APP_STORE_CONNECT_API_KEY_BASE64 }}
       MATCH_GIT_URL: ${{ secrets.MATCH_GIT_URL }}
       MATCH_PASSWORD: ${{ secrets.MATCH_PASSWORD }}
+      MATCH_GIT_BASIC_AUTHORIZATION: ${{ secrets.MATCH_GIT_BASIC_AUTHORIZATION }}
       MATCH_READONLY: "true"
       FASTLANE_DISABLE_COLORS: "1"
       FASTLANE_SKIP_UPDATE_CHECK: "1"
@@ -56,18 +57,6 @@ jobs:
           data = os.environ["APP_STORE_CONNECT_API_KEY_BASE64"]
           Path("fastlane/AuthKey.p8").write_bytes(base64.b64decode(data))
           PY
-
-      - name: Setup SSH key for Match
-        if: ${{ env.MATCH_GIT_PRIVATE_KEY != '' }}
-        run: |
-          mkdir -p ~/.ssh
-          echo "$MATCH_GIT_PRIVATE_KEY" | base64 -d > ~/.ssh/match_key
-          chmod 600 ~/.ssh/match_key
-          ssh-keyscan github.com >> ~/.ssh/known_hosts
-          eval "$(ssh-agent -s)"
-          ssh-add ~/.ssh/match_key
-        env:
-          MATCH_GIT_PRIVATE_KEY: ${{ secrets.MATCH_GIT_PRIVATE_KEY }}
 
       - name: Expo prebuild (iOS)
         run: npx expo prebuild --platform ios --clean --no-install
