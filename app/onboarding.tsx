@@ -1,13 +1,17 @@
-import React, { useState } from 'react';
+import React, { useState, useMemo } from 'react';
 import { View, Text, StyleSheet, ScrollView } from 'react-native';
 import { useRouter } from 'expo-router';
+import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { Button } from './components/Button';
-import { COLORS, SPACING, FONTS } from './constants';
-import { storage } from './services/storage';
-import { STORAGE_KEYS } from './constants/storageKeys';
+import { SPACING, FONTS } from './constants';
+import { useTheme } from './hooks/useTheme';
+import { useUIStore } from './store/uiStore';
 
 export default function OnboardingScreen() {
   const router = useRouter();
+  const insets = useSafeAreaInsets();
+  const { colors } = useTheme();
+  const setHasCompletedOnboarding = useUIStore(state => state.setHasCompletedOnboarding);
   const [currentStep, setCurrentStep] = useState(0);
 
   const steps = [
@@ -25,30 +29,24 @@ export default function OnboardingScreen() {
     },
   ];
 
-  const markOnboardingComplete = async () => {
-    try {
-      await storage.setItem(STORAGE_KEYS.HAS_COMPLETED_ONBOARDING, true);
-    } catch (error) {
-      console.warn('Failed to save onboarding completion state:', error);
-    }
-  };
+  const styles = useMemo(() => createStyles(colors), [colors]);
 
-  const handleNext = async () => {
+  const handleNext = () => {
     if (currentStep < steps.length - 1) {
       setCurrentStep(currentStep + 1);
     } else {
-      await handleSkip();
+      handleComplete();
     }
   };
 
-  const handleSkip = async () => {
-    await markOnboardingComplete();
-    router.replace('/');
+  const handleComplete = () => {
+    setHasCompletedOnboarding(true);
+    router.replace('/(tabs)');
   };
 
   return (
     <View style={styles.container}>
-        <ScrollView contentContainerStyle={styles.content}>
+        <ScrollView contentContainerStyle={[styles.content, { paddingTop: insets.top + SPACING.xl }]}>
           <View style={styles.pagination}>
             {steps.map((_, index) => (
               <View
@@ -72,7 +70,7 @@ export default function OnboardingScreen() {
 
           <Button
             title="Skip"
-            onPress={handleSkip}
+            onPress={handleComplete}
             variant="outline"
             style={styles.button}
           />
@@ -81,16 +79,15 @@ export default function OnboardingScreen() {
   );
 }
 
-const styles = StyleSheet.create({
+const createStyles = (colors: ReturnType<typeof import('./hooks/useTheme').useTheme>['colors']) => StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: COLORS.bgPrimary,
+    backgroundColor: colors.bgPrimary,
   },
   content: {
     flex: 1,
     padding: SPACING.xl,
     justifyContent: 'center',
-    paddingTop: 100,
   },
   pagination: {
     flexDirection: 'row',
@@ -101,23 +98,23 @@ const styles = StyleSheet.create({
     width: 8,
     height: 8,
     borderRadius: 4,
-    backgroundColor: COLORS.bgSubtle,
+    backgroundColor: colors.bgSubtle,
     marginHorizontal: SPACING.xs,
   },
   paginationDotActive: {
-    backgroundColor: COLORS.accentPrimary,
+    backgroundColor: colors.accentPrimary,
   },
   title: {
     fontSize: 32,
     fontWeight: '700',
-    color: COLORS.textPrimary,
+    color: colors.textPrimary,
     marginBottom: SPACING.md,
     textAlign: 'center',
     fontFamily: FONTS.display,
   },
   description: {
     fontSize: 18,
-    color: COLORS.textSecondary,
+    color: colors.textSecondary,
     textAlign: 'center',
     marginBottom: SPACING.xl * 2,
     lineHeight: 26,

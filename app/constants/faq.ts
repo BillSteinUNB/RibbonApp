@@ -170,9 +170,9 @@ export const FAQ_ITEMS: FAQItem[] = [
 ];
 
 export const CONTACT_INFO = {
-  supportEmail: 'support@ribbonapp.com',
-  bugReportEmail: 'support@ribbonapp.com',
-  featureRequestEmail: 'support@ribbonapp.com',
+  supportEmail: 'contact@billstein.dev',
+  bugReportEmail: 'contact@billstein.dev',
+  featureRequestEmail: 'contact@billstein.dev',
   documentationUrl: 'https://billsteinunb.github.io/RibbonApp/',
   githubUrl: 'https://github.com/BillSteinUNB/RibbonApp/issues',
 };

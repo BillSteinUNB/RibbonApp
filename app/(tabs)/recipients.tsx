@@ -1,17 +1,23 @@
-import React, { useCallback } from 'react';
-import { View, Text, StyleSheet, ScrollView, TouchableOpacity, RefreshControl, FlatList } from 'react-native';
+import React, { useCallback, useMemo } from 'react';
+import { View, Text, StyleSheet, TouchableOpacity, RefreshControl, FlatList } from 'react-native';
 import { useRouter } from 'expo-router';
+import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { Button } from '../components/Button';
-import { COLORS, SPACING, FONTS, RADIUS } from '../constants';
+import { SPACING, FONTS, RADIUS } from '../constants';
+import { useTheme } from '../hooks/useTheme';
 import { useRecipientStore, selectRecipients } from '../store/recipientStore';
 import { RELATIONSHIPS } from '../types/recipient';
 
 export default function RecipientsTab() {
   const router = useRouter();
+  const insets = useSafeAreaInsets();
+  const { colors } = useTheme();
   const recipients = useRecipientStore(selectRecipients);
   const { isLoading, error } = useRecipientStore();
 
   const [refreshing, setRefreshing] = React.useState(false);
+
+  const styles = useMemo(() => createStyles(colors), [colors]);
 
   const onRefresh = useCallback(() => {
     setRefreshing(true);
@@ -78,7 +84,7 @@ export default function RecipientsTab() {
 
   return (
     <View style={styles.container}>
-      <View style={styles.header}>
+      <View style={[styles.header, { paddingTop: insets.top + SPACING.lg }]}>
         <Text style={styles.title}>Recipients</Text>
         <Button
           title="Add Recipient"
@@ -107,21 +113,20 @@ export default function RecipientsTab() {
   );
 }
 
-const styles = StyleSheet.create({
+const createStyles = (colors: ReturnType<typeof import('../hooks/useTheme').useTheme>['colors']) => StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: COLORS.bgPrimary,
+    backgroundColor: colors.bgPrimary,
   },
   header: {
     padding: SPACING.xl,
-    paddingTop: 60,
     borderBottomWidth: 1,
-    borderBottomColor: COLORS.border,
+    borderBottomColor: colors.border,
   },
   title: {
     fontSize: 24,
     fontWeight: '700',
-    color: COLORS.textPrimary,
+    color: colors.textPrimary,
     marginBottom: SPACING.md,
     fontFamily: FONTS.display,
   },
@@ -132,12 +137,12 @@ const styles = StyleSheet.create({
     padding: SPACING.md,
   },
   card: {
-    backgroundColor: COLORS.bgSecondary,
+    backgroundColor: colors.bgSecondary,
     marginBottom: SPACING.md,
     padding: SPACING.lg,
     borderRadius: RADIUS.lg,
     borderWidth: 1,
-    borderColor: COLORS.border,
+    borderColor: colors.border,
     elevation: 1,
     shadowColor: '#000',
     shadowOffset: { width: 0, height: 1 },
@@ -147,13 +152,13 @@ const styles = StyleSheet.create({
   name: {
     fontSize: 18,
     fontWeight: '600',
-    color: COLORS.textPrimary,
+    color: colors.textPrimary,
     marginBottom: SPACING.xs,
     fontFamily: FONTS.body,
   },
   relationship: {
     fontSize: 14,
-    color: COLORS.textSecondary,
+    color: colors.textSecondary,
     marginBottom: SPACING.sm,
     fontFamily: FONTS.body,
   },
@@ -164,19 +169,19 @@ const styles = StyleSheet.create({
     marginTop: SPACING.xs,
   },
   interestTag: {
-    backgroundColor: COLORS.bgSubtle,
+    backgroundColor: colors.bgSubtle,
     paddingHorizontal: SPACING.sm,
     paddingVertical: SPACING.xs,
     borderRadius: RADIUS.full,
   },
   interestText: {
     fontSize: 11,
-    color: COLORS.textMuted,
+    color: colors.textMuted,
     fontFamily: FONTS.body,
   },
   moreInterests: {
     fontSize: 11,
-    color: COLORS.textMuted,
+    color: colors.textMuted,
     fontFamily: FONTS.body,
     paddingHorizontal: SPACING.xs,
     paddingVertical: SPACING.xs,
@@ -191,7 +196,7 @@ const styles = StyleSheet.create({
     width: 100,
     height: 100,
     borderRadius: 50,
-    backgroundColor: COLORS.bgSubtle,
+    backgroundColor: colors.bgSubtle,
     alignItems: 'center',
     justifyContent: 'center',
     marginBottom: SPACING.lg,
@@ -202,13 +207,13 @@ const styles = StyleSheet.create({
   emptyTitle: {
     fontSize: 20,
     fontWeight: '600',
-    color: COLORS.textPrimary,
+    color: colors.textPrimary,
     marginBottom: SPACING.sm,
     fontFamily: FONTS.display,
   },
   emptySubtitle: {
     fontSize: 14,
-    color: COLORS.textSecondary,
+    color: colors.textSecondary,
     textAlign: 'center',
     marginBottom: SPACING.xl,
     lineHeight: 20,
@@ -226,7 +231,7 @@ const styles = StyleSheet.create({
   },
   errorText: {
     fontSize: 14,
-    color: COLORS.textSecondary,
+    color: colors.textSecondary,
     textAlign: 'center',
     marginBottom: SPACING.lg,
     fontFamily: FONTS.body,

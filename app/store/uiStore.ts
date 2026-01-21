@@ -13,6 +13,7 @@ interface UIState {
   theme: 'light' | 'dark' | 'auto';
   keyboardVisible: boolean;
   keyboardHeight: number;
+  hasCompletedOnboarding: boolean;
 }
 
 interface UIActions {
@@ -25,6 +26,7 @@ interface UIActions {
   setTheme: (theme: 'light' | 'dark' | 'auto') => void;
   setKeyboardVisible: (visible: boolean) => void;
   setKeyboardHeight: (height: number) => void;
+  setHasCompletedOnboarding: (completed: boolean) => void;
   reset: () => void;
 }
 
@@ -39,6 +41,7 @@ export const useUIStore = create<UIState & UIActions>()(
       theme: 'auto',
       keyboardVisible: false,
       keyboardHeight: 0,
+      hasCompletedOnboarding: false,
 
       openBottomSheet: () => set({ isBottomSheetOpen: true }),
       closeBottomSheet: () => set({ isBottomSheetOpen: false }),
@@ -52,6 +55,7 @@ export const useUIStore = create<UIState & UIActions>()(
       setTheme: (theme) => set({ theme }),
       setKeyboardVisible: (visible) => set({ keyboardVisible: visible }),
       setKeyboardHeight: (height) => set({ keyboardHeight: height }),
+      setHasCompletedOnboarding: (completed) => set({ hasCompletedOnboarding: completed }),
 
       reset: () => set({
         isBottomSheetOpen: false,
@@ -73,3 +77,4 @@ export const selectActiveModal = (state: UIState & UIActions) => state.activeMod
 export const selectModalData = (state: UIState & UIActions) => state.modalData;
 export const selectIsLoadingOverlay = (state: UIState & UIActions) => state.isLoadingOverlay;
 export const selectTheme = (state: UIState & UIActions) => state.theme;
+export const selectHasCompletedOnboarding = (state: UIState & UIActions) => state.hasCompletedOnboarding;

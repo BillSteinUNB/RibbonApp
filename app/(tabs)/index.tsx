@@ -1,14 +1,18 @@
-import React from 'react';
+import React, { useMemo } from 'react';
 import { View, Text, StyleSheet, ScrollView, TouchableOpacity } from 'react-native';
 import { useRouter } from 'expo-router';
+import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { Gift, Plus, Sparkles, Calendar } from 'lucide-react-native';
-import { COLORS, SPACING, FONTS, RADIUS } from '../constants';
+import { SPACING, FONTS, RADIUS } from '../constants';
+import { useTheme } from '../hooks/useTheme';
 import { Card } from '../components/Card';
 import { useRecipientStore } from '../store/recipientStore';
 import { useAuthStore } from '../store/authStore';
 
 export default function HomeScreen() {
   const router = useRouter();
+  const insets = useSafeAreaInsets();
+  const { colors, isDark } = useTheme();
   const { user } = useAuthStore();
   const { recipients } = useRecipientStore();
 
@@ -17,8 +21,10 @@ export default function HomeScreen() {
     .sort((a, b) => new Date(a.occasion.date!).getTime() - new Date(b.occasion.date!).getTime())
     .slice(0, 3);
 
+  const styles = useMemo(() => createStyles(colors), [colors]);
+
   return (
-    <ScrollView style={styles.container} contentContainerStyle={styles.content}>
+    <ScrollView style={styles.container} contentContainerStyle={[styles.content, { paddingTop: insets.top + SPACING.lg }]}>
       <View style={styles.header}>
         <View>
           <Text style={styles.greeting}>Hello, {user?.profile?.name || 'Friend'}!</Text>
@@ -36,7 +42,7 @@ export default function HomeScreen() {
 
       <View style={styles.actionsGrid}>
         <TouchableOpacity 
-          style={[styles.actionCard, { backgroundColor: COLORS.accentPrimary }]}
+          style={[styles.actionCard, { backgroundColor: colors.accentPrimary }]}
           onPress={() => router.push('/recipients/new')}
         >
           <Plus stroke="white" size={24} />
@@ -44,10 +50,10 @@ export default function HomeScreen() {
         </TouchableOpacity>
         
         <TouchableOpacity 
-          style={[styles.actionCard, { backgroundColor: COLORS.bgSecondary }]}
+          style={[styles.actionCard, { backgroundColor: colors.bgSecondary }]}
           onPress={() => router.push('/(tabs)/recipients')}
         >
-          <Gift stroke={COLORS.accentPrimary} size={24} />
+          <Gift stroke={colors.accentPrimary} size={24} />
           <Text style={styles.actionTextDark}>My Recipients</Text>
         </TouchableOpacity>
       </View>
@@ -68,7 +74,7 @@ export default function HomeScreen() {
               onPress={() => router.push(`/recipients/${recipient.id}`)}
             >
               <View style={styles.occasionIcon}>
-                <Calendar stroke={COLORS.accentPrimary} size={20} />
+                <Calendar stroke={colors.accentPrimary} size={20} />
               </View>
               <View style={styles.occasionInfo}>
                 <Text style={styles.occasionName}>{recipient.name}</Text>
@@ -91,9 +97,9 @@ export default function HomeScreen() {
 
       <View style={styles.section}>
         <Text style={styles.sectionTitle}>Gift Giving Tips</Text>
-        <Card style={styles.tipCard}>
-          <Text style={styles.tipTitle}>Did you know?</Text>
-          <Text style={styles.tipText}>
+        <Card style={[styles.tipCard, isDark && styles.tipCardDark]}>
+          <Text style={[styles.tipTitle, isDark && styles.tipTitleDark]}>Did you know?</Text>
+          <Text style={[styles.tipText, isDark && styles.tipTextDark]}>
             Adding specific interests like "Hiking" or "Watercolor Painting" helps our AI suggest much more personalized gifts!
           </Text>
         </Card>
@@ -102,10 +108,10 @@ export default function HomeScreen() {
   );
 }
 
-const styles = StyleSheet.create({
+const createStyles = (colors: ReturnType<typeof import('../hooks/useTheme').useTheme>['colors']) => StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: COLORS.bgPrimary,
+    backgroundColor: colors.bgPrimary,
   },
   content: {
     padding: SPACING.lg,
@@ -121,12 +127,12 @@ const styles = StyleSheet.create({
   greeting: {
     fontSize: 24,
     fontWeight: 'bold',
-    color: COLORS.textPrimary,
+    color: colors.textPrimary,
     fontFamily: FONTS.display,
   },
   subGreeting: {
     fontSize: 16,
-    color: COLORS.textSecondary,
+    color: colors.textSecondary,
     marginTop: 4,
     fontFamily: FONTS.body,
   },
@@ -134,16 +140,16 @@ const styles = StyleSheet.create({
     width: 40,
     height: 40,
     borderRadius: 20,
-    backgroundColor: COLORS.bgSecondary,
+    backgroundColor: colors.bgSecondary,
     alignItems: 'center',
     justifyContent: 'center',
     borderWidth: 1,
-    borderColor: COLORS.border,
+    borderColor: colors.border,
   },
   profileInitial: {
     fontSize: 18,
     fontWeight: '600',
-    color: COLORS.accentPrimary,
+    color: colors.accentPrimary,
   },
   actionsGrid: {
     flexDirection: 'row',
@@ -170,7 +176,7 @@ const styles = StyleSheet.create({
     fontFamily: FONTS.body,
   },
   actionTextDark: {
-    color: COLORS.textPrimary,
+    color: colors.textPrimary,
     fontWeight: '600',
     fontSize: 14,
     fontFamily: FONTS.body,
@@ -187,11 +193,11 @@ const styles = StyleSheet.create({
   sectionTitle: {
     fontSize: 18,
     fontWeight: '600',
-    color: COLORS.textPrimary,
+    color: colors.textPrimary,
     fontFamily: FONTS.display,
   },
   seeAll: {
-    color: COLORS.accentPrimary,
+    color: colors.accentPrimary,
     fontSize: 14,
     fontWeight: '500',
   },
@@ -205,7 +211,7 @@ const styles = StyleSheet.create({
     width: 40,
     height: 40,
     borderRadius: 20,
-    backgroundColor: COLORS.accentSoft,
+    backgroundColor: colors.accentSoft,
     alignItems: 'center',
     justifyContent: 'center',
     marginRight: SPACING.md,
@@ -216,12 +222,12 @@ const styles = StyleSheet.create({
   occasionName: {
     fontSize: 16,
     fontWeight: '600',
-    color: COLORS.textPrimary,
+    color: colors.textPrimary,
     fontFamily: FONTS.body,
   },
   occasionType: {
     fontSize: 14,
-    color: COLORS.textSecondary,
+    color: colors.textSecondary,
     marginTop: 2,
   },
   emptyState: {
@@ -231,12 +237,12 @@ const styles = StyleSheet.create({
   },
   emptyText: {
     fontSize: 16,
-    color: COLORS.textSecondary,
+    color: colors.textSecondary,
     marginBottom: SPACING.xs,
   },
   emptyLink: {
     fontSize: 16,
-    color: COLORS.accentPrimary,
+    color: colors.accentPrimary,
     fontWeight: '600',
   },
   tipCard: {
@@ -244,15 +250,25 @@ const styles = StyleSheet.create({
     borderColor: '#FCD34D',
     borderWidth: 1,
   },
+  tipCardDark: {
+    backgroundColor: '#3D3520',
+    borderColor: '#92702A',
+  },
   tipTitle: {
     fontSize: 16,
     fontWeight: '600',
     color: '#92400E',
     marginBottom: SPACING.xs,
   },
+  tipTitleDark: {
+    color: '#FCD34D',
+  },
   tipText: {
     fontSize: 14,
     color: '#B45309',
     lineHeight: 20,
+  },
+  tipTextDark: {
+    color: '#E5C07A',
   },
 });

@@ -93,6 +93,24 @@ class AIService {
   }
 
   /**
+   * Get diagnostic info for debugging
+   */
+  getDiagnostics(): {
+    isAvailable: boolean;
+    hasSupabaseUrl: boolean;
+    hasSupabaseKey: boolean;
+    functionUrl: string;
+  } {
+    const config = getRuntimeConfig();
+    return {
+      isAvailable: this.isAvailable(),
+      hasSupabaseUrl: !!process.env.EXPO_PUBLIC_SUPABASE_URL,
+      hasSupabaseKey: !!process.env.EXPO_PUBLIC_SUPABASE_ANON_KEY,
+      functionUrl: config.functionUrl || 'Not configured',
+    };
+  }
+
+  /**
    * Get AI configuration (public info only)
    */
   getConfig() {

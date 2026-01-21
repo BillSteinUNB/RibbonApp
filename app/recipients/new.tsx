@@ -1,6 +1,7 @@
 import React, { useState, useEffect, useCallback } from 'react';
 import { View, Text, ScrollView, StyleSheet, KeyboardAvoidingView, Platform } from 'react-native';
 import { useRouter } from 'expo-router';
+import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { getSafeStorage } from '../lib/safeStorage';
 import { COLORS, SPACING, FONTS, RADIUS } from '../constants';
 import { Button } from '../components/Button';
@@ -42,6 +43,7 @@ const initialFormData: RecipientFormData = {
 
 export default function NewRecipientScreen() {
   const router = useRouter();
+  const insets = useSafeAreaInsets();
   const addRecipient = useRecipientStore(state => state.addRecipient);
   const [currentStep, setCurrentStep] = useState(0);
   const [formData, setFormData] = useState<RecipientFormData>(initialFormData);
@@ -349,7 +351,7 @@ export default function NewRecipientScreen() {
       behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
       style={styles.container}
     >
-      <View style={styles.header}>
+      <View style={[styles.header, { paddingTop: insets.top + SPACING.lg }]}>
         <Text style={styles.title}>Add Recipient</Text>
         <ProgressStepper steps={STEPS} currentStep={currentStep} />
       </View>
@@ -387,7 +389,6 @@ const styles = StyleSheet.create({
   },
   header: {
     padding: SPACING.xl,
-    paddingTop: 60,
     backgroundColor: COLORS.bgSecondary,
     borderBottomWidth: 1,
     borderBottomColor: COLORS.border,

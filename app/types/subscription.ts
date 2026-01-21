@@ -5,7 +5,7 @@ export interface Subscription {
   startDate: Date;
   endDate?: Date;
   cancelAtPeriodEnd: boolean;
-  paymentProvider: 'stripe' | 'revenuecat' | 'none';
+  paymentProvider: 'stripe' | 'revenuecat' | 'apple' | 'google' | 'none';
   providerCustomerId?: string;
   providerSubscriptionId?: string;
 }

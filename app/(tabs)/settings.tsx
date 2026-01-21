@@ -1,14 +1,15 @@
 import React, { useMemo, useState } from 'react';
 import { View, Text, StyleSheet, ScrollView, TouchableOpacity, Switch, Modal, Alert, Linking } from 'react-native';
 import { useRouter } from 'expo-router';
-import { COLORS, SPACING, FONTS, RADIUS } from '../constants';
+import { useSafeAreaInsets } from 'react-native-safe-area-context';
+import { SPACING, FONTS, RADIUS } from '../constants';
+import { useTheme } from '../hooks/useTheme';
 import { Button } from '../components/Button';
 import { Input } from '../components/Input';
 import { FormSelect } from '../components/forms';
 import { useAuthStore } from '../store/authStore';
 import { useRecipientStore } from '../store/recipientStore';
 import { useGiftStore } from '../store/giftStore';
-import { useUIStore } from '../store/uiStore';
 import { DEFAULT_PREFERENCES } from '../types/settings';
 import { authService } from '../services/authService';
 import { CONTACT_INFO } from '../constants/faq';
@@ -24,6 +25,8 @@ const THEME_OPTIONS = [
 
 export default function SettingsTab() {
   const router = useRouter();
+  const insets = useSafeAreaInsets();
+  const { colors, theme, setTheme } = useTheme();
   const user = useAuthStore(state => state.user);
   const setUser = useAuthStore(state => state.setUser);
   const updateUserPreferences = useAuthStore(state => state.updateUserPreferences);
@@ -31,8 +34,6 @@ export default function SettingsTab() {
   const setRecipients = useRecipientStore(state => state.setRecipients);
   const setActiveRecipient = useRecipientStore(state => state.setActiveRecipient);
   const resetGifts = useGiftStore(state => state.reset);
-  const theme = useUIStore(state => state.theme);
-  const setTheme = useUIStore(state => state.setTheme);
 
   const preferences = useMemo(() => {
     return user?.profile?.preferences || DEFAULT_PREFERENCES;
@@ -43,6 +44,8 @@ export default function SettingsTab() {
   const [isSavingProfile, setIsSavingProfile] = useState(false);
   const [isPasswordLoading, setIsPasswordLoading] = useState(false);
   const [isSigningOut, setIsSigningOut] = useState(false);
+
+  const styles = useMemo(() => createStyles(colors), [colors]);
 
   const updateNotifications = (updates: Partial<typeof preferences.notifications>) => {
     updateUserPreferences({
@@ -139,7 +142,7 @@ export default function SettingsTab() {
   };
 
   return (
-    <View style={styles.container}>
+    <View style={[styles.container, { paddingTop: insets.top + SPACING.lg }]}>
       <Text style={styles.title}>Settings</Text>
       <ScrollView>
         <View style={styles.section}>
@@ -177,53 +180,14 @@ export default function SettingsTab() {
               <Switch
                 value={preferences.notifications.pushNotifications}
                 onValueChange={(value) => updateNotifications({ pushNotifications: value })}
-                thumbColor={preferences.notifications.pushNotifications ? COLORS.accentPrimary : '#D1D5DB'}
-                trackColor={{ true: COLORS.accentSoft, false: '#E5E7EB' }}
-              />
-            </View>
-            <View style={styles.switchRow}>
-              <Text style={styles.itemText}>Occasion Reminders</Text>
-              <Switch
-                value={preferences.notifications.occasionReminders}
-                onValueChange={(value) => updateNotifications({ occasionReminders: value })}
-                thumbColor={preferences.notifications.occasionReminders ? COLORS.accentPrimary : '#D1D5DB'}
-                trackColor={{ true: COLORS.accentSoft, false: '#E5E7EB' }}
-              />
-            </View>
-            <View style={styles.switchRow}>
-              <Text style={styles.itemText}>Weekly Digest</Text>
-              <Switch
-                value={preferences.notifications.weeklyDigest}
-                onValueChange={(value) => updateNotifications({ weeklyDigest: value })}
-                thumbColor={preferences.notifications.weeklyDigest ? COLORS.accentPrimary : '#D1D5DB'}
-                trackColor={{ true: COLORS.accentSoft, false: '#E5E7EB' }}
-              />
-            </View>
-            <View style={styles.switchRow}>
-              <Text style={styles.itemText}>Email Updates</Text>
-              <Switch
-                value={preferences.notifications.emailUpdates}
-                onValueChange={(value) => updateNotifications({ emailUpdates: value })}
-                thumbColor={preferences.notifications.emailUpdates ? COLORS.accentPrimary : '#D1D5DB'}
-                trackColor={{ true: COLORS.accentSoft, false: '#E5E7EB' }}
-              />
-            </View>
-            <View style={styles.switchRow}>
-              <Text style={styles.itemText}>Marketing Messages</Text>
-              <Switch
-                value={preferences.notifications.marketing}
-                onValueChange={(value) => updateNotifications({ marketing: value })}
-                thumbColor={preferences.notifications.marketing ? COLORS.accentPrimary : '#D1D5DB'}
-                trackColor={{ true: COLORS.accentSoft, false: '#E5E7EB' }}
+                thumbColor={preferences.notifications.pushNotifications ? colors.accentPrimary : '#D1D5DB'}
+                trackColor={{ true: colors.accentSoft, false: '#E5E7EB' }}
               />
             </View>
           </View>
         </View>
         <View style={styles.section}>
           <Text style={styles.sectionTitle}>Support</Text>
-          <TouchableOpacity style={styles.item} onPress={() => router.push('/help')}>
-            <Text style={styles.itemText}>Help Center</Text>
-          </TouchableOpacity>
           <TouchableOpacity style={styles.item} onPress={handleContactSupport}>
             <Text style={styles.itemText}>Contact Support</Text>
             <Text style={styles.itemValue}>{CONTACT_INFO.supportEmail}</Text>
@@ -287,30 +251,29 @@ export default function SettingsTab() {
   );
 }
 
-const styles = StyleSheet.create({
+const createStyles = (colors: ReturnType<typeof import('../hooks/useTheme').useTheme>['colors']) => StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: COLORS.bgPrimary,
+    backgroundColor: colors.bgPrimary,
     padding: SPACING.xl,
-    paddingTop: 60,
   },
   title: {
     fontSize: 32,
     fontWeight: '700',
-    color: COLORS.textPrimary,
+    color: colors.textPrimary,
     marginBottom: SPACING.xl,
     fontFamily: FONTS.display,
   },
   section: {
     marginBottom: SPACING.xl,
-    backgroundColor: COLORS.bgSecondary,
+    backgroundColor: colors.bgSecondary,
     borderRadius: 12,
     overflow: 'hidden',
   },
   sectionTitle: {
     fontSize: 12,
     fontWeight: '600',
-    color: COLORS.textMuted,
+    color: colors.textMuted,
     textTransform: 'uppercase',
     padding: SPACING.md,
     letterSpacing: 0.5,
@@ -318,7 +281,7 @@ const styles = StyleSheet.create({
   },
   item: {
     borderBottomWidth: StyleSheet.hairlineWidth,
-    borderBottomColor: COLORS.border,
+    borderBottomColor: colors.border,
     paddingVertical: SPACING.md,
     paddingHorizontal: SPACING.lg,
     flexDirection: 'row',
@@ -327,18 +290,18 @@ const styles = StyleSheet.create({
   },
   itemText: {
     fontSize: 16,
-    color: COLORS.textPrimary,
+    color: colors.textPrimary,
     fontFamily: FONTS.body,
   },
   itemValue: {
     fontSize: 12,
-    color: COLORS.textMuted,
+    color: colors.textMuted,
     fontFamily: FONTS.body,
   },
   preferenceRow: {
     padding: SPACING.lg,
     borderBottomWidth: StyleSheet.hairlineWidth,
-    borderBottomColor: COLORS.border,
+    borderBottomColor: colors.border,
   },
   preferenceControl: {
     marginTop: SPACING.sm,
@@ -349,7 +312,7 @@ const styles = StyleSheet.create({
   },
   preferenceTitle: {
     fontSize: 14,
-    color: COLORS.textSecondary,
+    color: colors.textSecondary,
     marginBottom: SPACING.sm,
     fontFamily: FONTS.body,
   },
@@ -369,14 +332,14 @@ const styles = StyleSheet.create({
     padding: SPACING.xl,
   },
   modalContent: {
-    backgroundColor: COLORS.bgSecondary,
+    backgroundColor: colors.bgSecondary,
     borderRadius: RADIUS.lg,
     padding: SPACING.lg,
   },
   modalTitle: {
     fontSize: 18,
     fontWeight: '600',
-    color: COLORS.textPrimary,
+    color: colors.textPrimary,
     marginBottom: SPACING.md,
     fontFamily: FONTS.display,
   },

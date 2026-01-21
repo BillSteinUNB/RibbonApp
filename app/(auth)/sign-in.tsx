@@ -1,8 +1,10 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useMemo } from 'react';
 import { View, StyleSheet, ScrollView, KeyboardAvoidingView, Platform, Text } from 'react-native';
 import { useRouter } from 'expo-router';
 import { StatusBar } from 'expo-status-bar';
-import { COLORS, SPACING, FONTS, RADIUS } from '../constants';
+import { useSafeAreaInsets } from 'react-native-safe-area-context';
+import { SPACING, FONTS, RADIUS } from '../constants';
+import { useTheme } from '../hooks/useTheme';
 import { Button } from '../components/Button';
 import { Input } from '../components/Input';
 import { authService } from '../services/authService';
@@ -16,6 +18,8 @@ import { rateLimitService } from '../services/rateLimitService';
 
 export default function SignInScreen() {
   const router = useRouter();
+  const insets = useSafeAreaInsets();
+  const { colors, isDark } = useTheme();
   const setUser = useAuthStore(state => state.setUser);
   const setAuthenticated = useAuthStore(state => state.setAuthenticated);
   const setLoading = useAuthStore(state => state.setLoading);
@@ -30,6 +34,8 @@ export default function SignInScreen() {
     remainingSeconds: number;
     remainingAttempts: number;
   }>({ isLocked: false, remainingSeconds: 0, remainingAttempts: 5 });
+
+  const styles = useMemo(() => createStyles(colors), [colors]);
 
   useEffect(() => {
     if (rateLimitInfo.remainingSeconds <= 0) return;
@@ -134,13 +140,13 @@ export default function SignInScreen() {
 
   return (
     <>
-      <StatusBar style="dark" />
+      <StatusBar style={isDark ? 'light' : 'dark'} />
       <KeyboardAvoidingView
         behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
         style={styles.container}
       >
         <ScrollView
-          contentContainerStyle={styles.scrollContent}
+          contentContainerStyle={[styles.scrollContent, { paddingTop: insets.top + SPACING.xl }]}
           keyboardShouldPersistTaps="handled"
         >
           <View style={styles.content}>
@@ -215,10 +221,10 @@ export default function SignInScreen() {
   );
 }
 
-const styles = StyleSheet.create({
+const createStyles = (colors: ReturnType<typeof import('../hooks/useTheme').useTheme>['colors']) => StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: COLORS.bgPrimary,
+    backgroundColor: colors.bgPrimary,
   },
   scrollContent: {
     flexGrow: 1,
@@ -227,7 +233,6 @@ const styles = StyleSheet.create({
     flex: 1,
     paddingHorizontal: 24,
     paddingVertical: SPACING.xl,
-    paddingTop: 80,
   },
   header: {
     marginBottom: SPACING.xl * 2,
@@ -235,13 +240,13 @@ const styles = StyleSheet.create({
   title: {
     fontSize: 32,
     fontWeight: '700',
-    color: COLORS.textPrimary,
+    color: colors.textPrimary,
     marginBottom: SPACING.sm,
     fontFamily: FONTS.display,
   },
   subtitle: {
     fontSize: 16,
-    color: COLORS.textSecondary,
+    color: colors.textSecondary,
     lineHeight: 22,
     fontFamily: FONTS.body,
   },
@@ -254,7 +259,7 @@ const styles = StyleSheet.create({
   },
   forgotPassword: {
     fontSize: 14,
-    color: COLORS.accentPrimary,
+    color: colors.accentPrimary,
     fontFamily: FONTS.body,
   },
   button: {
@@ -267,13 +272,13 @@ const styles = StyleSheet.create({
   },
   footerText: {
     fontSize: 14,
-    color: COLORS.textSecondary,
+    color: colors.textSecondary,
     fontFamily: FONTS.body,
   },
   link: {
     fontSize: 14,
     fontWeight: '600',
-    color: COLORS.accentPrimary,
+    color: colors.accentPrimary,
     fontFamily: FONTS.body,
   },
   rateLimitWarning: {

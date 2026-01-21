@@ -1,22 +1,26 @@
-import React, { useState } from 'react';
+import React, { useState, useMemo } from 'react';
 import { View, Text, StyleSheet, ScrollView, KeyboardAvoidingView, Platform, ActivityIndicator } from 'react-native';
 import { useRouter } from 'expo-router';
 import { StatusBar } from 'expo-status-bar';
+import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { Button } from '../components/Button';
 import { Input } from '../components/Input';
-import { COLORS, SPACING, FONTS, RADIUS } from '../constants';
+import { SPACING, FONTS, RADIUS } from '../constants';
+import { useTheme } from '../hooks/useTheme';
 import { authService } from '../services/authService';
 import { validateEmail, validatePassword } from '../utils/validation';
 import { useAuthStore } from '../store/authStore';
 import type { User } from '../store/authStore';
-import { storage } from '../services/storage';
-import { STORAGE_KEYS } from '../constants/storageKeys';
+import { useUIStore } from '../store/uiStore';
 
 export default function SignUpScreen() {
   const router = useRouter();
+  const insets = useSafeAreaInsets();
+  const { colors, isDark } = useTheme();
   const setUser = useAuthStore(state => state.setUser);
   const setAuthenticated = useAuthStore(state => state.setAuthenticated);
   const setLoading = useAuthStore(state => state.setLoading);
+  const setHasCompletedOnboarding = useUIStore(state => state.setHasCompletedOnboarding);
   const isLoadingStore = useAuthStore(state => state.isLoading);
 
   const [isLoading, setIsLoadingLocal] = useState(false);
@@ -27,6 +31,8 @@ export default function SignUpScreen() {
   });
   const [errors, setErrors] = useState<Record<string, string>>({});
   const [generalError, setGeneralError] = useState<string | null>(null);
+
+  const styles = useMemo(() => createStyles(colors), [colors]);
 
   const validateForm = (): boolean => {
     const newErrors: Record<string, string> = {};
@@ -78,11 +84,7 @@ export default function SignUpScreen() {
         };
         setUser(user);
         setAuthenticated(true);
-        try {
-          await storage.setItem(STORAGE_KEYS.HAS_COMPLETED_ONBOARDING, false);
-        } catch (error) {
-          console.warn('Failed to reset onboarding status:', error);
-        }
+        setHasCompletedOnboarding(false);
         router.replace('/onboarding');
       }
     } catch (error) {
@@ -96,13 +98,13 @@ export default function SignUpScreen() {
 
   return (
     <>
-      <StatusBar style="dark" />
+      <StatusBar style={isDark ? 'light' : 'dark'} />
       <KeyboardAvoidingView
         behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
         style={styles.container}
       >
         <ScrollView
-          contentContainerStyle={styles.scrollContent}
+          contentContainerStyle={[styles.scrollContent, { paddingTop: insets.top + SPACING.xl }]}
           keyboardShouldPersistTaps="handled"
         >
           <View style={styles.content}>
@@ -152,7 +154,7 @@ export default function SignUpScreen() {
 
             {isLoading ? (
               <View style={styles.loadingButton}>
-                <ActivityIndicator color={COLORS.white} />
+                <ActivityIndicator color={colors.white} />
               </View>
             ) : (
               <Button
@@ -180,10 +182,10 @@ export default function SignUpScreen() {
   );
 }
 
-const styles = StyleSheet.create({
+const createStyles = (colors: ReturnType<typeof import('../hooks/useTheme').useTheme>['colors']) => StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: COLORS.bgPrimary,
+    backgroundColor: colors.bgPrimary,
   },
   scrollContent: {
     flexGrow: 1,
@@ -192,7 +194,6 @@ const styles = StyleSheet.create({
     flex: 1,
     paddingHorizontal: 24,
     paddingVertical: SPACING.xl,
-    paddingTop: 80,
   },
   header: {
     marginBottom: SPACING.xl * 2,
@@ -200,13 +201,13 @@ const styles = StyleSheet.create({
   title: {
     fontSize: 32,
     fontWeight: '700',
-    color: COLORS.textPrimary,
+    color: colors.textPrimary,
     marginBottom: SPACING.sm,
     fontFamily: FONTS.display,
   },
   subtitle: {
     fontSize: 16,
-    color: COLORS.textSecondary,
+    color: colors.textSecondary,
     lineHeight: 22,
     fontFamily: FONTS.body,
   },
@@ -219,7 +220,7 @@ const styles = StyleSheet.create({
     borderColor: '#FECACA',
   },
   errorText: {
-    color: COLORS.error,
+    color: colors.error,
     fontSize: 14,
     fontFamily: FONTS.body,
     textAlign: 'center',
@@ -232,7 +233,7 @@ const styles = StyleSheet.create({
   },
   loadingButton: {
     height: 56,
-    backgroundColor: COLORS.accentPrimary,
+    backgroundColor: colors.accentPrimary,
     borderRadius: RADIUS.md,
     justifyContent: 'center',
     alignItems: 'center',
@@ -245,13 +246,13 @@ const styles = StyleSheet.create({
   },
   footerText: {
     fontSize: 14,
-    color: COLORS.textSecondary,
+    color: colors.textSecondary,
     fontFamily: FONTS.body,
   },
   link: {
     fontSize: 14,
     fontWeight: '600',
-    color: COLORS.accentPrimary,
+    color: colors.accentPrimary,
     fontFamily: FONTS.body,
   },
 });

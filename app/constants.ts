@@ -2,7 +2,7 @@ import { Platform, Dimensions } from 'react-native';
 
 export const SCREEN_WIDTH = Dimensions.get('window').width;
 
-export const COLORS = {
+export const LIGHT_COLORS = {
   bgPrimary: '#FAFAFA',
   bgSecondary: '#FFFFFF',
   bgSubtle: '#F5F3F0',
@@ -18,6 +18,27 @@ export const COLORS = {
   white: '#FFFFFF',
   shadow: 'rgba(0,0,0,0.06)',
 };
+
+export const DARK_COLORS = {
+  bgPrimary: '#121212',
+  bgSecondary: '#1E1E1E',
+  bgSubtle: '#2A2A2A',
+  textPrimary: '#F5F5F5',
+  textSecondary: '#A1A1A1',
+  textMuted: '#6B7280',
+  accentPrimary: '#E85D75',
+  accentSecondary: '#F4A261',
+  accentSuccess: '#6BCB77',
+  error: '#EF4444',
+  accentSoft: '#3D2A2E',
+  border: '#333333',
+  white: '#FFFFFF',
+  shadow: 'rgba(0,0,0,0.3)',
+};
+
+export const COLORS = LIGHT_COLORS;
+
+export type ThemeColors = typeof LIGHT_COLORS;
 
 export const RADIUS = {
   sm: 8,
