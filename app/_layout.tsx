@@ -97,26 +97,51 @@ export default function RootLayout() {
   useEffect(() => {
     if (isChecking || !navigationState.key) return;
 
-    const currentRoute = navigationState.routes[navigationState.index]?.name || '';
-    const isAuthRoute = AUTH_ROUTES.some(route => currentRoute.includes(route));
-    const isOnboardingRoute = currentRoute.includes('onboarding');
-    const isProtectedRoute = PROTECTED_ROUTES.some(route => 
-      currentRoute === route || currentRoute.startsWith(route + '/')
-    );
+    let cancelled = false;
 
-    if (isAuthenticated && hasCompletedOnboarding === false && !isOnboardingRoute) {
-      router.replace('/onboarding');
-      return;
-    }
+    const evaluateRoutes = async () => {
+      const currentRoute = navigationState.routes[navigationState.index]?.name || '';
+      const isAuthRoute = AUTH_ROUTES.some(route => currentRoute.includes(route));
+      const isOnboardingRoute = currentRoute.includes('onboarding');
+      const isProtectedRoute = PROTECTED_ROUTES.some(route => 
+        currentRoute === route || currentRoute.startsWith(route + '/')
+      );
 
-    if (isAuthenticated && isAuthRoute) {
-      router.replace(hasCompletedOnboarding === false ? '/onboarding' : '/');
-      return;
-    }
+      let onboardingComplete = hasCompletedOnboarding;
 
-    if (!isAuthenticated && isProtectedRoute) {
-      router.replace('/(auth)/sign-in');
-    }
+      if (isAuthenticated && onboardingComplete === false && !isOnboardingRoute) {
+        try {
+          const value = await storage.getItem<boolean>(STORAGE_KEYS.HAS_COMPLETED_ONBOARDING);
+          if (cancelled) return;
+          if (value === true) {
+            setHasCompletedOnboarding(true);
+            onboardingComplete = true;
+          }
+        } catch {
+          if (cancelled) return;
+        }
+      }
+
+      if (isAuthenticated && onboardingComplete === false && !isOnboardingRoute) {
+        router.replace('/onboarding');
+        return;
+      }
+
+      if (isAuthenticated && isAuthRoute) {
+        router.replace(onboardingComplete === false ? '/onboarding' : '/');
+        return;
+      }
+
+      if (!isAuthenticated && isProtectedRoute) {
+        router.replace('/(auth)/sign-in');
+      }
+    };
+
+    evaluateRoutes();
+
+    return () => {
+      cancelled = true;
+    };
   }, [isChecking, isAuthenticated, hasCompletedOnboarding, navigationState, router]);
 
   if (isChecking) {

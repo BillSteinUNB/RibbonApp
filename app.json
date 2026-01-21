@@ -16,12 +16,18 @@
     "ios": {
       "supportsTablet": true,
       "bundleIdentifier": "com.ribbon.app",
+      "privacyPolicyUrl": "https://billsteinunb.github.io/RibbonApp/privacy-policy.html",
+      "supportUrl": "https://billsteinunb.github.io/RibbonApp/",
+      "marketingUrl": "https://billsteinunb.github.io/RibbonApp/",
       "infoPlist": {
         "ITSAppUsesNonExemptEncryption": false
       }
     },
     "android": {
       "package": "com.ribbon.app",
+      "privacyPolicyUrl": "https://billsteinunb.github.io/RibbonApp/privacy-policy.html",
+      "supportUrl": "https://billsteinunb.github.io/RibbonApp/",
+      "marketingUrl": "https://billsteinunb.github.io/RibbonApp/",
       "adaptiveIcon": {
         "foregroundImage": "./assets/adaptive-icon.png",
         "backgroundColor": "#FAFAFA"
