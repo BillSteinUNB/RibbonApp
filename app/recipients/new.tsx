@@ -1,7 +1,7 @@
 import React, { useState, useEffect, useCallback } from 'react';
 import { View, Text, ScrollView, StyleSheet, KeyboardAvoidingView, Platform } from 'react-native';
 import { useRouter } from 'expo-router';
-import AsyncStorage from '@react-native-async-storage/async-storage';
+import { getSafeStorage } from '../lib/safeStorage';
 import { COLORS, SPACING, FONTS, RADIUS } from '../constants';
 import { Button } from '../components/Button';
 import { Input } from '../components/Input';
@@ -52,7 +52,8 @@ export default function NewRecipientScreen() {
   useEffect(() => {
     const loadDraft = async () => {
       try {
-        const savedDraft = await AsyncStorage.getItem(DRAFT_STORAGE_KEY);
+        const storage = getSafeStorage();
+        const savedDraft = await storage.getItem(DRAFT_STORAGE_KEY);
         if (savedDraft) {
           const { formData: draftData, step } = JSON.parse(savedDraft);
           setFormData(draftData);
@@ -69,7 +70,8 @@ export default function NewRecipientScreen() {
 
   const saveDraft = useCallback(async (data: RecipientFormData, step: number) => {
     try {
-      await AsyncStorage.setItem(DRAFT_STORAGE_KEY, JSON.stringify({ formData: data, step }));
+      const storage = getSafeStorage();
+      await storage.setItem(DRAFT_STORAGE_KEY, JSON.stringify({ formData: data, step }));
     } catch (error) {
       console.warn('Failed to save draft:', error);
     }
@@ -77,7 +79,8 @@ export default function NewRecipientScreen() {
 
   const clearDraft = useCallback(async () => {
     try {
-      await AsyncStorage.removeItem(DRAFT_STORAGE_KEY);
+      const storage = getSafeStorage();
+      await storage.removeItem(DRAFT_STORAGE_KEY);
     } catch (error) {
       console.warn('Failed to clear draft:', error);
     }

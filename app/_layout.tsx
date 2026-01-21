@@ -2,10 +2,25 @@ import React, { useEffect, useState } from 'react';
 import { View, Text, StyleSheet, ActivityIndicator } from 'react-native';
 import { Stack, useRouter, useNavigationState } from 'expo-router';
 import { useAuthStore } from './store/authStore';
-import { authService } from './services/authService';
-import { storage } from './services/storage';
 import { STORAGE_KEYS } from './constants/storageKeys';
 import { COLORS, SPACING, FONTS } from './constants';
+
+let _authServiceModule: typeof import('./services/authService') | null = null;
+let _storageModule: typeof import('./services/storage') | null = null;
+
+async function getAuthService() {
+  if (!_authServiceModule) {
+    _authServiceModule = await import('./services/authService');
+  }
+  return _authServiceModule.authService;
+}
+
+async function getStorage() {
+  if (!_storageModule) {
+    _storageModule = await import('./services/storage');
+  }
+  return _storageModule.storage;
+}
 
 const AUTH_ROUTES = ['sign-in', 'sign-up', 'forgot-password'];
 
@@ -42,7 +57,8 @@ export default function RootLayout() {
 
     const loadOnboardingStatus = async () => {
       try {
-        const value = await storage.getItem<boolean>(STORAGE_KEYS.HAS_COMPLETED_ONBOARDING);
+        const storageService = await getStorage();
+        const value = await storageService.getItem<boolean>(STORAGE_KEYS.HAS_COMPLETED_ONBOARDING);
         if (isMounted) {
           setHasCompletedOnboarding(value === true);
         }
@@ -67,7 +83,8 @@ export default function RootLayout() {
   useEffect(() => {
     const checkAuth = async () => {
       try {
-        const result = await authService.validateSession();
+        const authServiceInstance = await getAuthService();
+        const result = await authServiceInstance.validateSession();
         
         if (result.isValid && result.user) {
           setUser({
@@ -111,7 +128,8 @@ export default function RootLayout() {
 
       if (isAuthenticated && onboardingComplete === false && !isOnboardingRoute) {
         try {
-          const value = await storage.getItem<boolean>(STORAGE_KEYS.HAS_COMPLETED_ONBOARDING);
+          const storageService = await getStorage();
+          const value = await storageService.getItem<boolean>(STORAGE_KEYS.HAS_COMPLETED_ONBOARDING);
           if (cancelled) return;
           if (value === true) {
             setHasCompletedOnboarding(true);
