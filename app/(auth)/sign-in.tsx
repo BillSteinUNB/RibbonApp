@@ -7,6 +7,7 @@ import { Button } from '../components/Button';
 import { Input } from '../components/Input';
 import { authService } from '../services/authService';
 import type { AuthCredentials } from '../types/user';
+import { useAuthStore } from '../store/authStore';
 import { validateEmail } from '../utils/validation';
 import { formatErrorMessage } from '../utils/errorMessages';
 import { errorLogger } from '../services/errorLogger';
@@ -15,6 +16,9 @@ import { rateLimitService } from '../services/rateLimitService';
 
 export default function SignInScreen() {
   const router = useRouter();
+  const setUser = useAuthStore(state => state.setUser);
+  const setAuthenticated = useAuthStore(state => state.setAuthenticated);
+  const setLoading = useAuthStore(state => state.setLoading);
   const [isLoading, setIsLoading] = useState(false);
   const [formData, setFormData] = useState<AuthCredentials>({
     email: '',
@@ -82,10 +86,21 @@ export default function SignInScreen() {
     }
 
     setIsLoading(true);
+    setLoading(true);
     setErrors({});
 
     try {
-      await authService.signIn(formData.email, formData.password);
+      const result = await authService.signIn(formData.email, formData.password);
+      if (result.user) {
+        setUser({
+          id: result.user.id,
+          email: result.user.email || formData.email,
+          createdAt: result.user.created_at || new Date().toISOString(),
+          trialUsesRemaining: 5,
+          isPremium: false,
+        });
+        setAuthenticated(true);
+      }
       await rateLimitService.recordAttempt(formData.email, true);
       trackEvent('auth_sign_in', { method: 'email' });
       router.replace('/');
@@ -113,6 +128,7 @@ export default function SignInScreen() {
       errorLogger.log(error, { context: 'signIn' });
     } finally {
       setIsLoading(false);
+      setLoading(false);
     }
   };
 

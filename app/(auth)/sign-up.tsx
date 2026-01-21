@@ -9,6 +9,8 @@ import { authService } from '../services/authService';
 import { validateEmail, validatePassword } from '../utils/validation';
 import { useAuthStore } from '../store/authStore';
 import type { User } from '../store/authStore';
+import { storage } from '../services/storage';
+import { STORAGE_KEYS } from '../constants/storageKeys';
 
 export default function SignUpScreen() {
   const router = useRouter();
@@ -43,7 +45,7 @@ export default function SignUpScreen() {
     } else {
       const passwordValidation = validatePassword(formData.password);
       if (!passwordValidation.valid) {
-        newErrors.password = 'Password must be at least 8 characters with uppercase, lowercase, and number';
+        newErrors.password = passwordValidation.error || 'Password does not meet requirements';
       }
     }
 
@@ -76,6 +78,11 @@ export default function SignUpScreen() {
         };
         setUser(user);
         setAuthenticated(true);
+        try {
+          await storage.setItem(STORAGE_KEYS.HAS_COMPLETED_ONBOARDING, false);
+        } catch (error) {
+          console.warn('Failed to reset onboarding status:', error);
+        }
         router.replace('/onboarding');
       }
     } catch (error) {
@@ -128,7 +135,7 @@ export default function SignUpScreen() {
                 label="Password"
                 value={formData.password}
                 onChangeText={(text) => setFormData({ ...formData, password: text })}
-                placeholder="Min. 8 chars with uppercase, lowercase, number"
+                placeholder="Min. 12 chars with upper, lower, number, special"
                 secureTextEntry
                 error={errors.password}
               />

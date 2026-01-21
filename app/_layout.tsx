@@ -3,16 +3,22 @@ import { View, Text, StyleSheet, ActivityIndicator } from 'react-native';
 import { Stack, useRouter, useNavigationState } from 'expo-router';
 import { useAuthStore } from './store/authStore';
 import { authService } from './services/authService';
+import { storage } from './services/storage';
+import { STORAGE_KEYS } from './constants/storageKeys';
 import { COLORS, SPACING, FONTS } from './constants';
 
 const AUTH_ROUTES = ['sign-in', 'sign-up', 'forgot-password'];
 
 const PROTECTED_ROUTES = [
+  '(tabs)',
   '',
   'index',
   'recipients',
-  'settings',
   'recipients/new',
+  'settings',
+  'pricing',
+  'help',
+  'onboarding',
 ];
 
 function LoadingScreen() {
@@ -29,6 +35,34 @@ export default function RootLayout() {
   const navigationState = useNavigationState();
   const { isAuthenticated, setUser, setAuthenticated, setLoading, isLoading } = useAuthStore();
   const [isChecking, setIsChecking] = useState(true);
+  const [hasCompletedOnboarding, setHasCompletedOnboarding] = useState<boolean | null>(null);
+
+  useEffect(() => {
+    let isMounted = true;
+
+    const loadOnboardingStatus = async () => {
+      try {
+        const value = await storage.getItem<boolean>(STORAGE_KEYS.HAS_COMPLETED_ONBOARDING);
+        if (isMounted) {
+          setHasCompletedOnboarding(value === true);
+        }
+      } catch {
+        if (isMounted) {
+          setHasCompletedOnboarding(false);
+        }
+      }
+    };
+
+    if (isAuthenticated) {
+      loadOnboardingStatus();
+    } else {
+      setHasCompletedOnboarding(null);
+    }
+
+    return () => {
+      isMounted = false;
+    };
+  }, [isAuthenticated]);
 
   useEffect(() => {
     const checkAuth = async () => {
@@ -44,7 +78,7 @@ export default function RootLayout() {
             isPremium: false,
           });
           setAuthenticated(true);
-        } else if (result.needsReauth) {
+        } else {
           setUser(null);
           setAuthenticated(false);
         }
@@ -65,16 +99,25 @@ export default function RootLayout() {
 
     const currentRoute = navigationState.routes[navigationState.index]?.name || '';
     const isAuthRoute = AUTH_ROUTES.some(route => currentRoute.includes(route));
+    const isOnboardingRoute = currentRoute.includes('onboarding');
     const isProtectedRoute = PROTECTED_ROUTES.some(route => 
       currentRoute === route || currentRoute.startsWith(route + '/')
     );
 
+    if (isAuthenticated && hasCompletedOnboarding === false && !isOnboardingRoute) {
+      router.replace('/onboarding');
+      return;
+    }
+
     if (isAuthenticated && isAuthRoute) {
-      router.replace('/');
-    } else if (!isAuthenticated && isProtectedRoute) {
+      router.replace(hasCompletedOnboarding === false ? '/onboarding' : '/');
+      return;
+    }
+
+    if (!isAuthenticated && isProtectedRoute) {
       router.replace('/(auth)/sign-in');
     }
-  }, [isChecking, isAuthenticated, navigationState, router]);
+  }, [isChecking, isAuthenticated, hasCompletedOnboarding, navigationState, router]);
 
   if (isChecking) {
     return <LoadingScreen />;

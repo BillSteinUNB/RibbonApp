@@ -22,13 +22,14 @@ export default function GiftGenerationScreen() {
   const { id } = useLocalSearchParams();
   const recipientId = typeof id === 'string' ? id : '';
   const recipient = useRecipientStore(selectRecipientById(recipientId));
-  const { setCurrentGifts, createGenerationSession, setIsGenerating, setError } = useGiftStore();
+  const { setCurrentGifts, setAllGifts, createGenerationSession, setIsGenerating, setError } = useGiftStore();
 
   const [progressMessage, setProgressMessage] = useState(PROGRESS_MESSAGES[0]);
   const [currentMessageIndex, setCurrentMessageIndex] = useState(0);
   const [error, setLocalError] = useState<string | null>(null);
   const [isLoading, setIsLoading] = useState(true);
   const [isCancelled, setIsCancelled] = useState(false);
+  const [retryToken, setRetryToken] = useState(0);
 
   const spinValue = useRef(new Animated.Value(0)).current;
   const pulseValue = useRef(new Animated.Value(1)).current;
@@ -106,6 +107,8 @@ export default function GiftGenerationScreen() {
           generationSessionId: sessionId,
         }));
 
+        const existingGifts = useGiftStore.getState().allGifts;
+        setAllGifts([...existingGifts, ...giftsWithSession]);
         setCurrentGifts(giftsWithSession);
         setIsGenerating(false);
         router.replace(`/recipients/${recipientId}/results`);
@@ -121,7 +124,7 @@ export default function GiftGenerationScreen() {
     };
 
     generateGifts();
-  }, [recipient, isCancelled, recipientId, router, setCurrentGifts, createGenerationSession, setIsGenerating, setError]);
+  }, [recipient, isCancelled, retryToken, recipientId, router, setCurrentGifts, setAllGifts, createGenerationSession, setIsGenerating, setError]);
 
   const handleCancel = () => {
     setIsCancelled(true);
@@ -133,6 +136,11 @@ export default function GiftGenerationScreen() {
     setLocalError(null);
     setIsLoading(true);
     setIsCancelled(false);
+    setError(null);
+    setCurrentMessageIndex(0);
+    setProgressMessage(PROGRESS_MESSAGES[0]);
+    progressValue.setValue(0);
+    setRetryToken((prev) => prev + 1);
   };
 
   const spinAnimation = spinValue.interpolate({

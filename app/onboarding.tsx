@@ -3,6 +3,8 @@ import { View, Text, StyleSheet, ScrollView } from 'react-native';
 import { useRouter } from 'expo-router';
 import { Button } from './components/Button';
 import { COLORS, SPACING, FONTS } from './constants';
+import { storage } from './services/storage';
+import { STORAGE_KEYS } from './constants/storageKeys';
 
 export default function OnboardingScreen() {
   const router = useRouter();
@@ -23,15 +25,24 @@ export default function OnboardingScreen() {
     },
   ];
 
-  const handleNext = () => {
-    if (currentStep < steps.length - 1) {
-      setCurrentStep(currentStep + 1);
-    } else {
-      handleSkip();
+  const markOnboardingComplete = async () => {
+    try {
+      await storage.setItem(STORAGE_KEYS.HAS_COMPLETED_ONBOARDING, true);
+    } catch (error) {
+      console.warn('Failed to save onboarding completion state:', error);
     }
   };
 
-  const handleSkip = () => {
+  const handleNext = async () => {
+    if (currentStep < steps.length - 1) {
+      setCurrentStep(currentStep + 1);
+    } else {
+      await handleSkip();
+    }
+  };
+
+  const handleSkip = async () => {
+    await markOnboardingComplete();
     router.replace('/');
   };
 
