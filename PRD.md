@@ -103,7 +103,7 @@ This document defines verification tasks to audit the migration work, ensuring a
 - [x] Verify package.json does NOT contain `expo-notifications`
 - [x] Verify package.json does NOT contain `expo-local-authentication`
 - [x] Verify package.json does NOT contain `expo-crypto`
-- [x] Verify package.json contains required dependencies: zustand, zod, @supabase/supabase-js
+- [x] Verify package.json contains required dependencies: zustand, zod
 - [x] Verify package.json contains expo-router and related navigation dependencies
 - [x] Run `npm ls` to check for any missing or conflicting dependencies
 
@@ -204,17 +204,7 @@ This document defines verification tasks to audit the migration work, ensuring a
 
 ---
 
-## Phase 18: Verify Supabase Integration
-
-- [x] Verify `app/lib/supabase.ts` exists and initializes Supabase client
-- [x] Verify Supabase client uses environment variables for URL and key
-- [x] Verify Supabase client handles initialization errors gracefully
-- [x] Verify auth service properly integrates with Supabase auth
-- [x] Verify database operations use proper Supabase query patterns
-
----
-
-## Phase 19: Verify Expo Router Setup
+## Phase 18: Verify Expo Router Setup
 
 - [x] Verify `app/_layout.tsx` sets up navigation correctly
 - [x] Verify file-based routing structure matches expected routes
@@ -224,7 +214,7 @@ This document defines verification tasks to audit the migration work, ensuring a
 
 ---
 
-## Phase 20: Final Verification & Summary
+## Phase 19: Final Verification & Summary
 
 - [x] Run full TypeScript check: `npx tsc --noEmit`
 - [x] Run dependency check: `npm ls`

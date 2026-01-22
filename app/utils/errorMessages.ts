@@ -12,7 +12,7 @@ const SENSITIVE_PATTERNS: RegExp[] = [
   /at\s+[\w.<>]+\s+\([^)]+\)/g,                    // Stack trace lines
   /line\s+\d+/gi,                                  // Line numbers
   /column\s+\d+/gi,                                // Column numbers
-  /supabase|postgres|postgresql|mysql|sqlite/gi,  // Database references
+  /postgres|postgresql|mysql|sqlite/gi,  // Database references
   /api[_-]?key|secret|token|password/gi,          // Credential references
 ];
 

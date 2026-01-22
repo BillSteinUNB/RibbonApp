@@ -1,6 +1,5 @@
 import React, { useMemo, useState } from 'react';
 import { View, Text, StyleSheet, ScrollView, TouchableOpacity, Switch, Modal, Alert, Linking } from 'react-native';
-import { useRouter } from 'expo-router';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { SPACING, FONTS, RADIUS } from '../constants';
 import { useTheme } from '../hooks/useTheme';
@@ -8,10 +7,7 @@ import { Button } from '../components/Button';
 import { Input } from '../components/Input';
 import { FormSelect } from '../components/forms';
 import { useAuthStore } from '../store/authStore';
-import { useRecipientStore } from '../store/recipientStore';
-import { useGiftStore } from '../store/giftStore';
 import { DEFAULT_PREFERENCES } from '../types/settings';
-import { authService } from '../services/authService';
 import { CONTACT_INFO } from '../constants/faq';
 
 const PRIVACY_POLICY_URL = 'https://billsteinunb.github.io/RibbonApp/privacy-policy.html';
@@ -24,16 +20,11 @@ const THEME_OPTIONS = [
 ];
 
 export default function SettingsTab() {
-  const router = useRouter();
   const insets = useSafeAreaInsets();
   const { colors, theme, setTheme } = useTheme();
   const user = useAuthStore(state => state.user);
   const setUser = useAuthStore(state => state.setUser);
   const updateUserPreferences = useAuthStore(state => state.updateUserPreferences);
-  const logout = useAuthStore(state => state.logout);
-  const setRecipients = useRecipientStore(state => state.setRecipients);
-  const setActiveRecipient = useRecipientStore(state => state.setActiveRecipient);
-  const resetGifts = useGiftStore(state => state.reset);
 
   const preferences = useMemo(() => {
     return user?.profile?.preferences || DEFAULT_PREFERENCES;
@@ -42,8 +33,6 @@ export default function SettingsTab() {
   const [isProfileModalOpen, setIsProfileModalOpen] = useState(false);
   const [profileName, setProfileName] = useState(user?.profile?.name || '');
   const [isSavingProfile, setIsSavingProfile] = useState(false);
-  const [isPasswordLoading, setIsPasswordLoading] = useState(false);
-  const [isSigningOut, setIsSigningOut] = useState(false);
 
   const styles = useMemo(() => createStyles(colors), [colors]);
 
@@ -95,23 +84,6 @@ export default function SettingsTab() {
     setIsProfileModalOpen(false);
   };
 
-  const handleChangePassword = async () => {
-    if (!user?.email) {
-      Alert.alert('Missing email', 'Please sign in again to reset your password.');
-      return;
-    }
-
-    setIsPasswordLoading(true);
-    try {
-      await authService.resetPassword(user.email);
-      Alert.alert('Password Reset Sent', `We sent a reset link to ${user.email}.`);
-    } catch (error) {
-      const message = error instanceof Error ? error.message : 'Failed to send reset link.';
-      Alert.alert('Reset Failed', message);
-    } finally {
-      setIsPasswordLoading(false);
-    }
-  };
 
   const handleContactSupport = () => {
     const email = CONTACT_INFO.supportEmail || 'support@ribbonapp.com';
@@ -120,44 +92,16 @@ export default function SettingsTab() {
     openUrl(url, `Please email ${email} for support.`);
   };
 
-  const handleSignOut = () => {
-    Alert.alert('Sign Out', 'Are you sure you want to sign out?', [
-      { text: 'Cancel', style: 'cancel' },
-      {
-        text: 'Sign Out',
-        style: 'destructive',
-        onPress: async () => {
-          setIsSigningOut(true);
-          try {
-            await logout();
-            resetGifts();
-            setRecipients([]);
-            setActiveRecipient(null);
-          } finally {
-            setIsSigningOut(false);
-          }
-        },
-      },
-    ]);
-  };
 
   return (
     <View style={[styles.container, { paddingTop: insets.top + SPACING.lg }]}>
       <Text style={styles.title}>Settings</Text>
       <ScrollView>
         <View style={styles.section}>
-          <Text style={styles.sectionTitle}>Account</Text>
+          <Text style={styles.sectionTitle}>Profile</Text>
           <TouchableOpacity style={styles.item} onPress={handleEditProfile}>
             <Text style={styles.itemText}>Edit Profile</Text>
             <Text style={styles.itemValue}>{user?.profile?.name || 'Add name'}</Text>
-          </TouchableOpacity>
-          <TouchableOpacity
-            style={styles.item}
-            onPress={handleChangePassword}
-            disabled={isPasswordLoading}
-          >
-            <Text style={styles.itemText}>Change Password</Text>
-            <Text style={styles.itemValue}>{isPasswordLoading ? 'Sending...' : 'Email reset link'}</Text>
           </TouchableOpacity>
         </View>
         <View style={styles.section}>
@@ -204,15 +148,6 @@ export default function SettingsTab() {
           >
             <Text style={styles.itemText}>Terms of Service</Text>
           </TouchableOpacity>
-        </View>
-
-        <View style={styles.signOutContainer}>
-          <Button
-            title={isSigningOut ? 'Signing Out...' : 'Sign Out'}
-            onPress={handleSignOut}
-            variant="outline"
-            disabled={isSigningOut}
-          />
         </View>
       </ScrollView>
 
@@ -320,10 +255,6 @@ const createStyles = (colors: ReturnType<typeof import('../hooks/useTheme').useT
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'space-between',
-  },
-  signOutContainer: {
-    paddingHorizontal: SPACING.xl,
-    paddingBottom: SPACING.xl,
   },
   modalOverlay: {
     flex: 1,

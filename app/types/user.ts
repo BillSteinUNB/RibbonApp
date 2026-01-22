@@ -7,7 +7,7 @@ import { UserPreferences, DEFAULT_PREFERENCES } from './settings';
 
 export interface User {
   id: string;
-  email: string;
+  email?: string;
   createdAt: string;
   trialUsesRemaining: number;
   isPremium: boolean;
@@ -28,7 +28,7 @@ export { UserPreferences };
  */
 export const userSchema = z.object({
   id: z.string().min(1, 'User ID is required'),
-  email: z.string().email('Invalid email address'),
+  email: z.string().email('Invalid email address').optional(),
   createdAt: z.string(),
   trialUsesRemaining: z.number().int().min(0),
   isPremium: z.boolean(),
@@ -76,37 +76,6 @@ export const userPreferencesSchema: z.ZodType<UserPreferences> = z.object({
   language: z.string(),
   currency: z.string(),
 });
-
-/**
- * Authentication credentials
- */
-export interface AuthCredentials {
-  email: string;
-  password: string;
-}
-
-/**
- * Registration data
- */
-export interface RegistrationData extends AuthCredentials {
-  name?: string;
-}
-
-/**
- * Password reset data
- */
-export interface PasswordResetData {
-  email: string;
-}
-
-/**
- * Password update data
- */
-export interface PasswordUpdateData {
-  currentPassword?: string;
-  newPassword: string;
-  confirmNewPassword: string;
-}
 
 /**
  * Type guards

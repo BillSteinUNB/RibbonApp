@@ -46,8 +46,9 @@ Set all of these in the repo **Secrets**:
 - `MATCH_GIT_URL` (private git repo for certificates)
 - `MATCH_PASSWORD`
 - `MATCH_GIT_BASIC_AUTHORIZATION` **or** `MATCH_GIT_PRIVATE_KEY`
-- `EXPO_PUBLIC_SUPABASE_URL`
-- `EXPO_PUBLIC_SUPABASE_ANON_KEY`
+- `EXPO_PUBLIC_REVENUECAT_API_KEY`
+- `EXPO_PUBLIC_AI_API_URL`
+- `EXPO_PUBLIC_AI_API_KEY` (optional)
 
 ### Match Setup (One-time, on a Mac)
 1. `bundle install`
@@ -72,10 +73,9 @@ Set all of these in the repo **Secrets**:
 - `@react-native-async-storage/async-storage`
 
 **Third-party:**
-- `@supabase/supabase-js`, `zustand`, `zod`, `lucide-react-native`, `react-native-url-polyfill`
+- `react-native-purchases`, `zustand`, `zod`, `lucide-react-native`, `react-native-url-polyfill`
 
 ### Banned Dependencies (do NOT install)
-- `react-native-purchases` (RevenueCat)
 - `@sentry/react-native`
 - `expo-notifications`
 - `expo-local-authentication`
@@ -143,21 +143,14 @@ Then copy specific files into the new `app/` directory as described below.
 - Ensure `ErrorBoundary.tsx` has **no Sentry**.
 - Build/Test.
 
-### Phase 7: Supabase
-- Copy:
-  - `app/lib/supabase.ts`
-  - `app/contexts/`
-- Build/Test.
-
-### Phase 8: Routes (one at a time)
+### Phase 7: Routes (one at a time)
 - Copy & enable routes in sequence:
   1. `app/(tabs)/` (rename from `_disabled_tabs`)
-  2. `app/(auth)/` (rename from `_disabled_auth`)
-  3. `app/recipients/`
-  4. `app/help.tsx`, `app/onboarding.tsx`
+  2. `app/recipients/`
+  3. `app/help.tsx`, `app/onboarding.tsx`
 - Build/Test after each sub-step if needed.
 
-### Phase 9: Prompts & Config
+### Phase 8: Prompts & Config
 - Copy:
   - `app/prompts/`
   - `app/config/`
@@ -165,8 +158,9 @@ Then copy specific files into the new `app/` directory as described below.
 
 ## 7) Environment Variables
 Set both locally and in GitHub secrets:
-- `EXPO_PUBLIC_SUPABASE_URL`
-- `EXPO_PUBLIC_SUPABASE_ANON_KEY`
+- `EXPO_PUBLIC_REVENUECAT_API_KEY`
+- `EXPO_PUBLIC_AI_API_URL`
+- `EXPO_PUBLIC_AI_API_KEY` (optional)
 
 ## 8) Success Criteria
 1. GitHub Actions **TestFlight build** completes without errors.

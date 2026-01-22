@@ -95,20 +95,14 @@ We use the collected information for the following purposes:
 
 We use the following third-party services to operate the App:
 
-### 4.1 Supabase (Database and Authentication)
-
-- **Purpose:** User authentication, database storage, and account management
-- **Data Shared:** Email, encrypted password, user profile, recipient data, gift history, subscription information
-- **Privacy Policy:** [https://supabase.com/privacy](https://supabase.com/privacy)
-
-### 4.2 MiniMax M2.1 AI API
+### 4.1 MiniMax M2.1 AI API
 
 - **Purpose:** AI-powered gift recommendation generation
 - **Data Shared:** Recipient information (interests, age range, gender, occasion details, budget) to generate gift suggestions
 - **Important:** We send recipient data to MiniMax AI to process gift recommendations. This data is used solely for generating suggestions and is not used for training AI models.
 - **Privacy Policy:** [https://www.minimaxi.com/privacy-policy](https://www.minimaxi.com/privacy-policy)
 
-### 4.3 Expo (Push Notifications)
+### 4.2 Expo (Push Notifications)
 
 - **Purpose:** Delivery of push notifications
 - **Data Shared:** Device push tokens, notification content

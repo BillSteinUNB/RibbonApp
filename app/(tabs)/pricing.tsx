@@ -1,6 +1,5 @@
 import React, { useMemo, useEffect, useState } from 'react';
 import { View, Text, ScrollView, StyleSheet, TouchableOpacity, ActivityIndicator, Alert } from 'react-native';
-import { useRouter } from 'expo-router';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { Check, Crown, Sparkles, RefreshCw } from 'lucide-react-native';
 import { PurchasesPackage } from 'react-native-purchases';
@@ -10,10 +9,9 @@ import { SPACING, RADIUS, FONTS } from '../constants';
 import { useTheme } from '../hooks/useTheme';
 
 export default function PricingScreen() {
-  const router = useRouter();
   const insets = useSafeAreaInsets();
   const { colors } = useTheme();
-  const { user, setUser } = useAuthStore();
+  const { user, setSubscription, getOrCreateUser } = useAuthStore();
   const isPremium = user?.isPremium;
 
   const [packages, setPackages] = useState<PurchasesPackage[]>([]);
@@ -47,9 +45,9 @@ export default function PricingScreen() {
     try {
       const result = await subscriptionService.purchasePackage(pkg);
       if (result.success) {
-        if (user) {
-          setUser({ ...user, isPremium: true });
-        }
+        const activeUser = user ?? getOrCreateUser();
+        const subscription = await subscriptionService.getSubscription(activeUser.id);
+        setSubscription(subscription);
         Alert.alert('Success', 'Thank you for subscribing to Ribbon Pro!');
       } else if (result.error && result.error !== 'Purchase cancelled') {
         Alert.alert('Purchase Failed', result.error);
@@ -66,9 +64,9 @@ export default function PricingScreen() {
     try {
       const result = await subscriptionService.restorePurchases();
       if (result.success && result.isPremium) {
-        if (user) {
-          setUser({ ...user, isPremium: true });
-        }
+        const activeUser = user ?? getOrCreateUser();
+        const subscription = await subscriptionService.getSubscription(activeUser.id);
+        setSubscription(subscription);
         Alert.alert('Restored', 'Your subscription has been restored!');
       } else if (result.success) {
         Alert.alert('No Purchases Found', 'No previous purchases were found to restore.');

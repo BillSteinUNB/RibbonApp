@@ -3,7 +3,6 @@ import { errorLogger } from './errorLogger';
 import { storage } from './storage';
 import { STORAGE_KEYS } from '../constants/storageKeys';
 import { useAuthStore } from '../store/authStore';
-import { supabase } from '../lib/supabase';
 import { logger } from '../utils/logger';
 
 /**
@@ -25,104 +24,42 @@ interface TrialUsageData {
 
 /**
  * Trial Limit Service
- * Manages free trial usage and limits with server-side validation
+ * Manages free trial usage and limits locally
  */
 class TrialService {
   private usageData: TrialUsageData | null = null;
   private isLoaded = false;
-  private syncInProgress = false;
 
   /**
-   * Initialize trial limits from server (call on app startup)
-   * This syncs server data with local storage to detect tampering
+   * Initialize trial limits on app startup
    */
   async initializeFromServer(): Promise<void> {
     try {
       const userId = this.getCurrentUserId();
-      if (!userId) return;
+      if (!userId || this.usageData) return;
 
-      const { data, error } = await supabase.rpc('initialize_trial_limits');
+      this.usageData = {
+        usesRemaining: TRIAL_CONFIG.FREE_TRIAL_USES,
+        lastResetDate: new Date().toISOString(),
+        totalCount: 0,
+      };
 
-      if (error) {
-        logger.error('[TrialService] Server initialization failed:', error);
-        return;
-      }
-
-      if (data && data.length > 0) {
-        const serverData = data[0];
-        if (serverData.success) {
-          this.usageData = {
-            usesRemaining: serverData.uses_remaining,
-            lastResetDate: new Date().toISOString(),
-            totalCount: this.usageData?.totalCount || 0,
-          };
-
-          await this.saveUsageData(userId);
-          logger.log('[TrialService] Trial limits synced from server');
-        }
-      }
+      await this.saveUsageData(userId);
+      logger.log('[TrialService] Trial limits initialized locally');
     } catch (error) {
       errorLogger.log(error, { context: 'initializeFromServer' });
     }
   }
 
   /**
-   * Sync trial usage with server (detect tampering)
+   * Sync trial usage (local)
    */
   private async syncWithServer(): Promise<TrialUsageData | null> {
-    if (this.syncInProgress) return this.usageData;
-
-    try {
-      this.syncInProgress = true;
-      const userId = this.getCurrentUserId();
-      if (!userId) return this.usageData;
-
-      const { data, error } = await supabase.rpc('get_trial_limits');
-
-      if (error) {
-        logger.error('[TrialService] Server sync failed:', error);
-        return this.usageData;
-      }
-
-      if (data && data.length > 0) {
-        const serverData = data[0];
-
-        const localData = this.usageData;
-        const hasDiscrepancy =
-          !localData ||
-          localData.usesRemaining !== serverData.uses_remaining;
-
-        if (hasDiscrepancy) {
-          logger.warn('[TrialService] Trial usage discrepancy detected:', {
-            userId,
-            local: localData?.usesRemaining,
-            server: serverData.uses_remaining,
-          });
-
-          this.usageData = {
-            usesRemaining: serverData.uses_remaining,
-            lastResetDate: serverData.last_reset_date,
-            totalCount: serverData.total_uses,
-          };
-
-          await this.saveUsageData(userId);
-        }
-
-        return this.usageData;
-      }
-
-      return this.usageData;
-    } catch (error) {
-      errorLogger.log(error, { context: 'syncWithServer' });
-      return this.usageData;
-    } finally {
-      this.syncInProgress = false;
-    }
+    return this.usageData;
   }
 
   /**
    * Load trial usage data from storage
-   * Includes server-side validation to detect tampering
    */
   async loadUsageData(userId: string): Promise<TrialUsageData> {
     try {
@@ -181,7 +118,7 @@ class TrialService {
     if (daysSinceReset >= TRIAL_CONFIG.RESET_PERIOD_DAYS) {
       this.usageData.usesRemaining = TRIAL_CONFIG.FREE_TRIAL_USES;
       this.usageData.lastResetDate = now.toISOString();
-      await this.saveUsageData(this.getCurrentUserId()!);
+      await this.saveUsageData(this.getCurrentUserId());
     }
   }
 
@@ -254,8 +191,8 @@ class TrialService {
   /**
    * Get current user ID from auth store
    */
-  private getCurrentUserId(): string | null {
-    return useAuthStore.getState().user?.id ?? null;
+  private getCurrentUserId(): string {
+    return useAuthStore.getState().getOrCreateUser().id;
   }
 
   /**
@@ -276,29 +213,17 @@ class TrialService {
   }
 
   /**
-   * Check if user can use gift generation (server-side check)
+   * Check if user can use gift generation
    */
   canUseFeature(): boolean {
     return this.hasRemainingUses();
   }
 
   /**
-   * Check if user can use trial feature (server-side validation)
+   * Check if user can use trial feature
    */
   async canUseFeatureServerSide(): Promise<boolean> {
-    try {
-      const { data, error } = await supabase.rpc('can_use_trial_feature');
-
-      if (error) {
-        logger.error('[TrialService] Server check failed:', error);
-        return this.hasRemainingUses();
-      }
-
-      return data === true;
-    } catch (error) {
-      errorLogger.log(error, { context: 'canUseFeatureServerSide' });
-      return this.hasRemainingUses();
-    }
+    return this.hasRemainingUses();
   }
 
   /**

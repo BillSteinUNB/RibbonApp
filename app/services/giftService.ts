@@ -31,11 +31,7 @@ class GiftService {
 
     try {
       // Get user info for rate limiting
-      const user = useAuthStore.getState().user;
-
-      if (!user) {
-        throw new AppError('User not authenticated', 'UNAUTHORIZED');
-      }
+      const user = useAuthStore.getState().getOrCreateUser();
 
       const userId = user.id;
       const isPremium = user.isPremium;
@@ -400,11 +396,7 @@ Return a JSON array of gift ideas with this exact structure (no markdown, no ext
 
     try {
       // Get user info for rate limiting
-      const user = useAuthStore.getState().user;
-
-      if (!user) {
-        throw new AppError('User not authenticated', 'UNAUTHORIZED');
-      }
+      const user = useAuthStore.getState().getOrCreateUser();
 
       const userId = user.id;
       const isPremium = user.isPremium;
@@ -502,8 +494,8 @@ Return a JSON array of gift ideas with this exact structure (no markdown, no ext
     // PREMIUM-ONLY FEATURE: Check if user has premium subscription
     // Note: This is client-side validation. For complete security, server-side validation
     // should be implemented if API is exposed to external callers.
-    const user = useAuthStore.getState().user;
-    if (!user || !user.isPremium) {
+    const user = useAuthStore.getState().getOrCreateUser();
+    if (!user.isPremium) {
       throw new AppError(
         'Premium subscription required for gift refinement',
         'PREMIUM_REQUIRED'

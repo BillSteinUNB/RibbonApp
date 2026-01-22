@@ -4,5 +4,5 @@
     "strict": true
   },
   "include": ["**/*.ts", "**/*.tsx", "*.d.ts"],
-  "exclude": ["node_modules", "supabase/**"]
+  "exclude": ["node_modules"]
 }

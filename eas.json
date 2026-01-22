@@ -11,8 +11,9 @@
         "simulator": true
       },
       "env": {
-        "EXPO_PUBLIC_SUPABASE_URL": "${EXPO_PUBLIC_SUPABASE_URL}",
-        "EXPO_PUBLIC_SUPABASE_ANON_KEY": "${EXPO_PUBLIC_SUPABASE_ANON_KEY}"
+        "EXPO_PUBLIC_AI_API_URL": "${EXPO_PUBLIC_AI_API_URL}",
+        "EXPO_PUBLIC_AI_API_KEY": "${EXPO_PUBLIC_AI_API_KEY}",
+        "EXPO_PUBLIC_REVENUECAT_API_KEY": "${EXPO_PUBLIC_REVENUECAT_API_KEY}"
       }
     },
     "testflight": {
@@ -22,8 +23,9 @@
         "resourceClass": "m-medium"
       },
       "env": {
-        "EXPO_PUBLIC_SUPABASE_URL": "${EXPO_PUBLIC_SUPABASE_URL}",
-        "EXPO_PUBLIC_SUPABASE_ANON_KEY": "${EXPO_PUBLIC_SUPABASE_ANON_KEY}"
+        "EXPO_PUBLIC_AI_API_URL": "${EXPO_PUBLIC_AI_API_URL}",
+        "EXPO_PUBLIC_AI_API_KEY": "${EXPO_PUBLIC_AI_API_KEY}",
+        "EXPO_PUBLIC_REVENUECAT_API_KEY": "${EXPO_PUBLIC_REVENUECAT_API_KEY}"
       }
     },
     "production": {
@@ -32,8 +34,9 @@
         "resourceClass": "m-medium"
       },
       "env": {
-        "EXPO_PUBLIC_SUPABASE_URL": "${EXPO_PUBLIC_SUPABASE_URL}",
-        "EXPO_PUBLIC_SUPABASE_ANON_KEY": "${EXPO_PUBLIC_SUPABASE_ANON_KEY}"
+        "EXPO_PUBLIC_AI_API_URL": "${EXPO_PUBLIC_AI_API_URL}",
+        "EXPO_PUBLIC_AI_API_KEY": "${EXPO_PUBLIC_AI_API_KEY}",
+        "EXPO_PUBLIC_REVENUECAT_API_KEY": "${EXPO_PUBLIC_REVENUECAT_API_KEY}"
       }
     }
   },

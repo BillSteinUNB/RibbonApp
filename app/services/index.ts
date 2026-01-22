@@ -1,4 +1,3 @@
-export { authService } from './authService';
 export { recipientService } from './recipientService';
 export { giftService } from './giftService';
 export { giftParser } from './giftParser';

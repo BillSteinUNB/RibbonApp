@@ -2,7 +2,7 @@ import { errorLogger } from './errorLogger';
 
 /**
  * AI Service Configuration
- * Now routes through Supabase Edge Function to keep API key secure
+ * Uses a custom backend endpoint for AI requests
  */
 const DEFAULT_AI_CONFIG = {
   maxTokens: 1000,
@@ -12,20 +12,19 @@ const DEFAULT_AI_CONFIG = {
 } as const;
 
 function getRuntimeConfig() {
-  const supabaseUrl = process.env.EXPO_PUBLIC_SUPABASE_URL;
-  const supabaseAnonKey = process.env.EXPO_PUBLIC_SUPABASE_ANON_KEY;
+  const apiUrl = process.env.EXPO_PUBLIC_AI_API_URL;
+  const apiKey = process.env.EXPO_PUBLIC_AI_API_KEY;
 
   return {
-    functionUrl: supabaseUrl ? `${supabaseUrl}/functions/v1/generate-gifts` : '',
-    supabaseAnonKey: supabaseAnonKey || '',
+    apiUrl: apiUrl || '',
+    apiKey: apiKey || '',
     ...DEFAULT_AI_CONFIG,
   } as const;
 }
 
 /**
  * AI Service
- * Manages gift generation via Supabase Edge Function
- * API key is stored securely in Supabase secrets, not exposed to client
+ * Manages gift generation via an external API
  */
 class AIService {
   private isInitialized = false;
@@ -38,8 +37,8 @@ class AIService {
 
     const config = getRuntimeConfig();
 
-    if (!config.functionUrl || !config.supabaseAnonKey) {
-      throw new Error('Supabase configuration is not set');
+    if (!config.apiUrl) {
+      throw new Error('AI API URL is not set');
     }
 
     this.isInitialized = true;
@@ -58,13 +57,17 @@ class AIService {
 
     try {
       const config = getRuntimeConfig();
-      const response = await fetch(config.functionUrl, {
+      const headers: Record<string, string> = {
+        'Content-Type': 'application/json',
+      };
+
+      if (config.apiKey) {
+        headers.Authorization = `Bearer ${config.apiKey}`;
+      }
+
+      const response = await fetch(config.apiUrl, {
         method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-          'Authorization': `Bearer ${config.supabaseAnonKey}`,
-          'apikey': config.supabaseAnonKey || '',
-        },
+        headers,
         body: JSON.stringify({
           systemPrompt,
           userPrompt,
@@ -89,7 +92,7 @@ class AIService {
    */
   isAvailable(): boolean {
     const config = getRuntimeConfig();
-    return !!(config.functionUrl && config.supabaseAnonKey);
+    return !!config.apiUrl;
   }
 
   /**
@@ -97,16 +100,16 @@ class AIService {
    */
   getDiagnostics(): {
     isAvailable: boolean;
-    hasSupabaseUrl: boolean;
-    hasSupabaseKey: boolean;
-    functionUrl: string;
+    hasApiUrl: boolean;
+    hasApiKey: boolean;
+    apiUrl: string;
   } {
     const config = getRuntimeConfig();
     return {
       isAvailable: this.isAvailable(),
-      hasSupabaseUrl: !!process.env.EXPO_PUBLIC_SUPABASE_URL,
-      hasSupabaseKey: !!process.env.EXPO_PUBLIC_SUPABASE_ANON_KEY,
-      functionUrl: config.functionUrl || 'Not configured',
+      hasApiUrl: !!process.env.EXPO_PUBLIC_AI_API_URL,
+      hasApiKey: !!process.env.EXPO_PUBLIC_AI_API_KEY,
+      apiUrl: config.apiUrl || 'Not configured',
     };
   }
 

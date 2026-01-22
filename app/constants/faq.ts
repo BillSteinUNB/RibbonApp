@@ -9,7 +9,7 @@ export interface FAQItem {
   category: FAQCategoryType;
 }
 
-export type FAQCategoryType = 'getting-started' | 'account' | 'gifts' | 'billing' | 'troubleshooting';
+export type FAQCategoryType = 'getting-started' | 'profile' | 'gifts' | 'billing' | 'troubleshooting';
 
 export interface FAQCategory {
   id: FAQCategoryType;
@@ -19,7 +19,7 @@ export interface FAQCategory {
 
 export const FAQ_CATEGORIES: { id: FAQCategoryType; title: string; icon: string }[] = [
   { id: 'getting-started', title: 'Getting Started', icon: '🚀' },
-  { id: 'account', title: 'Account & Settings', icon: '👤' },
+  { id: 'profile', title: 'Profile & Preferences', icon: '👤' },
   { id: 'gifts', title: 'Gifts & Recipients', icon: '🎁' },
   { id: 'billing', title: 'Billing & Subscription', icon: '💳' },
   { id: 'troubleshooting', title: 'Troubleshooting', icon: '🔧' },
@@ -52,28 +52,28 @@ export const FAQ_ITEMS: FAQItem[] = [
     answer: 'Yes! You can save gift ideas that interest you, mark gifts as purchased when you buy them, and view your complete gift history for each recipient. This helps you track what you\'ve given in the past and avoid repetition.',
   },
 
-  // Account & Settings
+  // Profile & Settings
   {
     id: 'acc-1',
-    category: 'account',
-    question: 'How do I create an account?',
-    answer: 'You can create an account using your email address and password. We also support social login options (Google and Apple) for quick and secure access to your account.',
+    category: 'profile',
+    question: 'Do I need to create an account?',
+    answer: 'No account required. Ribbon stores your profile and gift history locally on your device so you can start using the app immediately.',
   },
   {
     id: 'acc-2',
-    category: 'account',
-    question: 'How do I change my password?',
-    answer: 'Go to Settings > tap on your profile > select "Change Password". You\'ll receive an email with instructions to reset your password.',
+    category: 'profile',
+    question: 'How do I update my profile?',
+    answer: 'Go to Settings and select "Edit Profile" to update your name and preferences. Changes are saved automatically on your device.',
   },
   {
     id: 'acc-3',
-    category: 'account',
-    question: 'Can I delete my account?',
-    answer: 'Yes, you can delete your account from the Settings screen. Go to Settings > Profile > Delete Account. Please note that this action is irreversible and will delete all your data including recipients and gift history.',
+    category: 'profile',
+    question: 'How do I reset my data?',
+    answer: 'All data is stored locally. To start fresh, clear Ribbon\'s storage in your device settings or reinstall the app.',
   },
   {
     id: 'acc-4',
-    category: 'account',
+    category: 'profile',
     question: 'How do I enable or disable notifications?',
     answer: 'Go to Settings > Notifications. You can toggle occasion reminders, weekly digest emails, and other notifications on or off based on your preferences.',
   },
@@ -139,7 +139,7 @@ export const FAQ_ITEMS: FAQItem[] = [
     id: 'bill-5',
     category: 'billing',
     question: 'How do I restore purchases?',
-    answer: 'If you\'ve reinstalled the app or changed devices, go to Settings > Subscription > Restore Purchases to recover your subscription and purchases.',
+    answer: 'Open the Premium tab and tap "Restore Purchases" to recover your subscription and purchases.',
   },
 
   // Troubleshooting
@@ -153,13 +153,13 @@ export const FAQ_ITEMS: FAQItem[] = [
     id: 'tr-2',
     category: 'troubleshooting',
     question: 'The app keeps crashing. How do I fix it?',
-    answer: 'Try restarting the app first. If that doesn\'t work, reinstall the app. Your data is saved in the cloud and will be restored when you log back in. If issues continue, please contact support.',
+    answer: 'Try restarting the app first. If that doesn\'t work, reinstall the app. Your data is stored locally, so export anything important before reinstalling. If issues continue, please contact support.',
   },
   {
     id: 'tr-3',
     category: 'troubleshooting',
     question: 'I can\'t see my recipients or gift history.',
-    answer: 'Make sure you\'re logged into the correct account. Try refreshing the app by pulling down on the screen. If data is still missing, check your internet connection and try again.',
+    answer: 'Data is stored locally on your device. If items are missing, try restarting the app. If the issue persists, check available storage and contact support.',
   },
   {
     id: 'tr-4',

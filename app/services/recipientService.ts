@@ -293,7 +293,7 @@ class RecipientService {
       await this.addAuditLog({
         operation: 'UPDATE',
         timestamp: getTimestamp(),
-        userId: useAuthStore.getState().user?.id ?? null,
+        userId: useAuthStore.getState().getOrCreateUser().id,
         details: { restoredCount: recipients.length },
       });
     } catch (error) {
@@ -303,16 +303,11 @@ class RecipientService {
   }
 
   /**
-   * Clear all recipients (for logout or testing)
-   * REQUIRES: User authentication and confirmation
+   * Clear all recipients (for testing or recovery)
    */
   async clearAll(backup?: boolean): Promise<{ success: boolean; backup?: Recipient[] }> {
     try {
-      // Check if user is authenticated
-      const user = useAuthStore.getState().user;
-      if (!user) {
-        throw new AppError('User must be authenticated to clear recipients', 'AUTHORIZATION_ERROR');
-      }
+      const user = useAuthStore.getState().getOrCreateUser();
 
       // Create backup if requested (for recovery)
       let backupData: Recipient[] | undefined;
@@ -357,11 +352,7 @@ class RecipientService {
         throw new AppError('No backup found to restore', 'NOT_FOUND');
       }
 
-      // Check if user is authenticated
-      const user = useAuthStore.getState().user;
-      if (!user) {
-        throw new AppError('User must be authenticated to restore recipients', 'AUTHORIZATION_ERROR');
-      }
+      const user = useAuthStore.getState().getOrCreateUser();
 
       await this.applyBackup(backupData);
 
