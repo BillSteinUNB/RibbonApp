@@ -22,3 +22,6 @@ auth.json
 *.tsbuildinfo
 /ios
 /android
+
+# Supabase temp files
+supabase/.temp/

@@ -2,29 +2,30 @@ import { errorLogger } from './errorLogger';
 
 /**
  * AI Service Configuration
- * Uses a custom backend endpoint for AI requests
+ * Uses Supabase Edge Function to securely proxy requests to MiniMax
  */
 const DEFAULT_AI_CONFIG = {
-  maxTokens: 1000,
+  maxTokens: 2000,
   temperature: 0.7,
   topP: 0.95,
   requestCount: 5,
 } as const;
 
 function getRuntimeConfig() {
-  const apiUrl = process.env.EXPO_PUBLIC_AI_API_URL;
-  const apiKey = process.env.EXPO_PUBLIC_AI_API_KEY;
+  const apiUrl = process.env.EXPO_PUBLIC_SUPABASE_URL;
+  const anonKey = process.env.EXPO_PUBLIC_SUPABASE_ANON_KEY;
 
   return {
-    apiUrl: apiUrl || '',
-    apiKey: apiKey || '',
+    // Edge function URL: {supabase_url}/functions/v1/generate-gifts
+    functionUrl: apiUrl ? `${apiUrl}/functions/v1/generate-gifts` : '',
+    anonKey: anonKey || '',
     ...DEFAULT_AI_CONFIG,
   } as const;
 }
 
 /**
  * AI Service
- * Manages gift generation via an external API
+ * Manages gift generation via Supabase Edge Function -> MiniMax
  */
 class AIService {
   private isInitialized = false;
@@ -37,15 +38,15 @@ class AIService {
 
     const config = getRuntimeConfig();
 
-    if (!config.apiUrl) {
-      throw new Error('AI API URL is not set');
+    if (!config.functionUrl) {
+      throw new Error('Supabase URL is not configured');
     }
 
     this.isInitialized = true;
   }
 
   /**
-   * Generate gift suggestions via secure Edge Function
+   * Generate gift suggestions via Supabase Edge Function
    */
   async generateGiftSuggestions(
     systemPrompt: string,
@@ -57,15 +58,18 @@ class AIService {
 
     try {
       const config = getRuntimeConfig();
+
       const headers: Record<string, string> = {
         'Content-Type': 'application/json',
       };
 
-      if (config.apiKey) {
-        headers.Authorization = `Bearer ${config.apiKey}`;
+      // Add Supabase anon key if available
+      if (config.anonKey) {
+        headers['apikey'] = config.anonKey;
+        headers['Authorization'] = `Bearer ${config.anonKey}`;
       }
 
-      const response = await fetch(config.apiUrl, {
+      const response = await fetch(config.functionUrl, {
         method: 'POST',
         headers,
         body: JSON.stringify({
@@ -92,7 +96,7 @@ class AIService {
    */
   isAvailable(): boolean {
     const config = getRuntimeConfig();
-    return !!config.apiUrl;
+    return !!config.functionUrl;
   }
 
   /**
@@ -100,16 +104,16 @@ class AIService {
    */
   getDiagnostics(): {
     isAvailable: boolean;
-    hasApiUrl: boolean;
-    hasApiKey: boolean;
-    apiUrl: string;
+    hasSupabaseUrl: boolean;
+    hasAnonKey: boolean;
+    functionUrl: string;
   } {
     const config = getRuntimeConfig();
     return {
       isAvailable: this.isAvailable(),
-      hasApiUrl: !!process.env.EXPO_PUBLIC_AI_API_URL,
-      hasApiKey: !!process.env.EXPO_PUBLIC_AI_API_KEY,
-      apiUrl: config.apiUrl || 'Not configured',
+      hasSupabaseUrl: !!process.env.EXPO_PUBLIC_SUPABASE_URL,
+      hasAnonKey: !!process.env.EXPO_PUBLIC_SUPABASE_ANON_KEY,
+      functionUrl: config.functionUrl || 'Not configured',
     };
   }
 
