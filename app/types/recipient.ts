@@ -77,9 +77,9 @@ export interface GenerationSession {
  */
 
 export const budgetSchema = z.object({
-  minimum: z.number().min(1, 'Minimum budget must be at least 1').max(100000, 'Budget exceeds maximum limit'),
-  maximum: z.number().min(1, 'Maximum budget must be at least 1').max(100000, 'Budget exceeds maximum limit'),
-  currency: z.enum(['USD', 'EUR', 'GBP', 'CAD', 'AUD', 'JPY']),
+  minimum: z.number().min(0, 'Minimum budget cannot be negative').max(10000, 'Budget exceeds maximum limit of 10,000'),
+  maximum: z.number().min(1, 'Maximum budget must be at least 1').max(10000, 'Budget exceeds maximum limit of 10,000'),
+  currency: z.enum(['USD', 'EUR', 'GBP', 'CAD', 'AUD']),
 }).refine(data => data.maximum >= data.minimum, {
   message: 'Maximum budget must be greater than or equal to minimum',
   path: ['maximum'],
@@ -89,6 +89,25 @@ export const occasionSchema = z.object({
   type: z.enum(['birthday', 'holiday', 'anniversary', 'wedding', 'other']),
   date: z.string().optional(),
   customName: z.string().optional(),
+});
+
+export const giftIdeaSchema = z.object({
+  id: z.string(),
+  recipientId: z.string(),
+  name: z.string(),
+  description: z.string(),
+  reasoning: z.string(),
+  price: z.string(),
+  category: z.string(),
+  url: z.string().optional(),
+  stores: z.array(z.string()).default([]),
+  tags: z.array(z.string()).default([]),
+  isSaved: z.boolean().default(false),
+  isPurchased: z.boolean().default(false),
+  generatedAt: z.string(),
+  isRefined: z.boolean().optional(),
+  refinementFeedback: z.enum(['liked', 'disliked']).nullable().optional(),
+  generationSessionId: z.string().optional(),
 });
 
 export const recipientSchema = z.object({
@@ -103,7 +122,7 @@ export const recipientSchema = z.object({
   occasion: occasionSchema,
   pastGifts: z.array(z.string()).default([]),
   notes: z.string().optional(),
-  giftHistory: z.array(z.any()).optional(),
+  giftHistory: z.array(giftIdeaSchema).optional(),
   createdAt: z.string(),
   updatedAt: z.string(),
   lastGiftConsultation: z.string().optional(),
@@ -216,5 +235,4 @@ export const CURRENCIES = [
   { value: 'GBP', label: 'GBP (£)' },
   { value: 'CAD', label: 'CAD (C$)' },
   { value: 'AUD', label: 'AUD (A$)' },
-  { value: 'JPY', label: 'JPY (¥)' },
 ] as const;

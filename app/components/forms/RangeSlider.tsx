@@ -1,4 +1,4 @@
-import React, { useState, useRef, useCallback } from 'react';
+import React, { useState, useRef, useCallback, useEffect } from 'react';
 import { View, Text, StyleSheet, PanResponder, Animated, TextInput, TouchableOpacity } from 'react-native';
 import { COLORS, SPACING, FONTS, RADIUS } from '../../constants';
 
@@ -38,8 +38,20 @@ export function RangeSlider({
   error,
 }: RangeSliderProps) {
   const [sliderWidth, setSliderWidth] = useState(SLIDER_WIDTH);
+  const [isCustomMode, setIsCustomMode] = useState(false);
+  const [customMin, setCustomMin] = useState('');
+  const [customMax, setCustomMax] = useState('');
   const minPos = useRef(new Animated.Value(0)).current;
   const maxPos = useRef(new Animated.Value(1)).current;
+
+  // Check if current values exceed slider max (indicating custom mode)
+  useEffect(() => {
+    if (minValue > max || maxValue > max) {
+      setIsCustomMode(true);
+      setCustomMin(String(minValue));
+      setCustomMax(String(maxValue));
+    }
+  }, []);
 
   const valueToPosition = useCallback((value: number) => {
     return (value - min) / (max - min);
@@ -104,15 +116,43 @@ export function RangeSlider({
   ];
 
   const handlePresetSelect = (preset: { min: number; max: number }) => {
+    setIsCustomMode(false);
+    setCustomMin('');
+    setCustomMax('');
     onMinChange(preset.min);
     onMaxChange(preset.max);
   };
 
+  const handleCustomSelect = () => {
+    setIsCustomMode(true);
+    setCustomMin(String(minValue));
+    setCustomMax(String(maxValue));
+  };
+
+  const handleCustomMinChange = (text: string) => {
+    setCustomMin(text);
+    const num = parseInt(text, 10);
+    if (!isNaN(num) && num >= 0 && num <= 10000) {
+      onMinChange(num);
+    }
+  };
+
+  const handleCustomMaxChange = (text: string) => {
+    setCustomMax(text);
+    const num = parseInt(text, 10);
+    if (!isNaN(num) && num >= 1 && num <= 10000) {
+      onMaxChange(num);
+    }
+  };
+
   const isPresetSelected = (preset: { min: number; max: number }) => {
-    return minValue === preset.min && maxValue === preset.max;
+    return !isCustomMode && minValue === preset.min && maxValue === preset.max;
   };
 
   const formatValue = (value: number) => {
+    if (isCustomMode) {
+      return `${currency}${value.toLocaleString()}`;
+    }
     if (value >= 1000) return `${currency}1000+`;
     return `${currency}${value}`;
   };
@@ -136,61 +176,65 @@ export function RangeSlider({
         )}
       </View>
 
-      <View 
-        style={styles.sliderContainer}
-        onLayout={(e) => setSliderWidth(e.nativeEvent.layout.width)}
-      >
-        <View style={styles.track} />
-        <Animated.View 
-          style={[
-            styles.selectedTrack,
-            {
-              left: minPos.interpolate({
-                inputRange: [0, 1],
-                outputRange: [0, sliderWidth],
-              }),
-              right: maxPos.interpolate({
-                inputRange: [0, 1],
-                outputRange: [sliderWidth, 0],
-              }),
-            }
-          ]}
-        />
-        <Animated.View
-          {...minPanResponder.panHandlers}
-          style={[
-            styles.thumb,
-            {
-              left: minPos.interpolate({
-                inputRange: [0, 1],
-                outputRange: [-THUMB_SIZE / 2, sliderWidth - THUMB_SIZE / 2],
-              }),
-            }
-          ]}
-        >
-          <View style={styles.thumbInner} />
-        </Animated.View>
-        <Animated.View
-          {...maxPanResponder.panHandlers}
-          style={[
-            styles.thumb,
-            {
-              left: maxPos.interpolate({
-                inputRange: [0, 1],
-                outputRange: [-THUMB_SIZE / 2, sliderWidth - THUMB_SIZE / 2],
-              }),
-            }
-          ]}
-        >
-          <View style={styles.thumbInner} />
-        </Animated.View>
-      </View>
+      {!isCustomMode && (
+        <>
+          <View
+            style={styles.sliderContainer}
+            onLayout={(e) => setSliderWidth(e.nativeEvent.layout.width)}
+          >
+            <View style={styles.track} />
+            <Animated.View
+              style={[
+                styles.selectedTrack,
+                {
+                  left: minPos.interpolate({
+                    inputRange: [0, 1],
+                    outputRange: [0, sliderWidth],
+                  }),
+                  right: maxPos.interpolate({
+                    inputRange: [0, 1],
+                    outputRange: [sliderWidth, 0],
+                  }),
+                }
+              ]}
+            />
+            <Animated.View
+              {...minPanResponder.panHandlers}
+              style={[
+                styles.thumb,
+                {
+                  left: minPos.interpolate({
+                    inputRange: [0, 1],
+                    outputRange: [-THUMB_SIZE / 2, sliderWidth - THUMB_SIZE / 2],
+                  }),
+                }
+              ]}
+            >
+              <View style={styles.thumbInner} />
+            </Animated.View>
+            <Animated.View
+              {...maxPanResponder.panHandlers}
+              style={[
+                styles.thumb,
+                {
+                  left: maxPos.interpolate({
+                    inputRange: [0, 1],
+                    outputRange: [-THUMB_SIZE / 2, sliderWidth - THUMB_SIZE / 2],
+                  }),
+                }
+              ]}
+            >
+              <View style={styles.thumbInner} />
+            </Animated.View>
+          </View>
 
-      <View style={styles.rangeLabels}>
-        <Text style={styles.rangeLabel}>{currency}0</Text>
-        <Text style={styles.rangeLabel}>{currency}500</Text>
-        <Text style={styles.rangeLabel}>{currency}1000+</Text>
-      </View>
+          <View style={styles.rangeLabels}>
+            <Text style={styles.rangeLabel}>{currency}0</Text>
+            <Text style={styles.rangeLabel}>{currency}500</Text>
+            <Text style={styles.rangeLabel}>{currency}1000+</Text>
+          </View>
+        </>
+      )}
 
       <Text style={styles.quickSelectLabel}>Quick Select:</Text>
       <View style={styles.presets}>
@@ -211,7 +255,50 @@ export function RangeSlider({
             </Text>
           </TouchableOpacity>
         ))}
+        <TouchableOpacity
+          style={[
+            styles.presetButton,
+            isCustomMode && styles.presetButtonSelected,
+          ]}
+          onPress={handleCustomSelect}
+        >
+          <Text style={[
+            styles.presetText,
+            isCustomMode && styles.presetTextSelected,
+          ]}>
+            Custom
+          </Text>
+        </TouchableOpacity>
       </View>
+
+      {isCustomMode && (
+        <View style={styles.customInputContainer}>
+          <View style={styles.customInputWrapper}>
+            <Text style={styles.customInputLabel}>Min</Text>
+            <TextInput
+              style={styles.customInput}
+              placeholder="0"
+              placeholderTextColor={COLORS.textMuted}
+              keyboardType="number-pad"
+              value={customMin}
+              onChangeText={handleCustomMinChange}
+            />
+          </View>
+          <Text style={styles.customInputDash}>–</Text>
+          <View style={styles.customInputWrapper}>
+            <Text style={styles.customInputLabel}>Max</Text>
+            <TextInput
+              style={styles.customInput}
+              placeholder="1000"
+              placeholderTextColor={COLORS.textMuted}
+              keyboardType="number-pad"
+              value={customMax}
+              onChangeText={handleCustomMaxChange}
+            />
+          </View>
+          <Text style={styles.customInputHint}>Max: {currency}10,000</Text>
+        </View>
+      )}
 
       {showGiftCount && onGiftCountChange && (
         <View style={styles.giftCountContainer}>
@@ -426,6 +513,45 @@ const styles = StyleSheet.create({
     fontSize: 12,
     color: COLORS.error,
     marginTop: SPACING.xs,
+    fontFamily: FONTS.body,
+  },
+  customInputContainer: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: SPACING.sm,
+    marginBottom: SPACING.lg,
+    flexWrap: 'wrap',
+  },
+  customInputWrapper: {
+    flex: 1,
+    minWidth: 80,
+  },
+  customInputLabel: {
+    fontSize: 11,
+    color: COLORS.textMuted,
+    marginBottom: SPACING.xs,
+    fontFamily: FONTS.body,
+  },
+  customInput: {
+    height: 44,
+    borderRadius: RADIUS.md,
+    backgroundColor: COLORS.bgSubtle,
+    paddingHorizontal: SPACING.md,
+    fontSize: 16,
+    color: COLORS.textPrimary,
+    fontFamily: FONTS.body,
+    borderWidth: 1,
+    borderColor: COLORS.border,
+  },
+  customInputDash: {
+    fontSize: 18,
+    color: COLORS.textMuted,
+    marginTop: SPACING.md,
+  },
+  customInputHint: {
+    fontSize: 11,
+    color: COLORS.textMuted,
+    marginTop: SPACING.md,
     fontFamily: FONTS.body,
   },
 });

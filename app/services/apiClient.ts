@@ -32,10 +32,16 @@ class APIClient {
   }
 
   /**
-   * Calculate delay with exponential backoff
+   * Calculate delay with exponential backoff and jitter
+   * Jitter helps prevent thundering herd when many clients retry simultaneously
    */
   private getRetryDelay(attempt: number): number {
-    return this.config.retryDelay * Math.pow(2, attempt);
+    const baseDelay = this.config.retryDelay * Math.pow(2, attempt);
+    const maxDelay = 30000; // Cap at 30 seconds
+    const cappedDelay = Math.min(baseDelay, maxDelay);
+    // Add ±25% jitter to spread out retries
+    const jitter = cappedDelay * 0.25 * (Math.random() * 2 - 1);
+    return Math.round(cappedDelay + jitter);
   }
 
   /**
@@ -63,15 +69,16 @@ class APIClient {
 
   /**
    * Create abort controller for timeout
+   * Returns both the controller and timeout ID for cleanup
    */
-  private getAbortController(): AbortController {
-    const abortController = new AbortController();
+  private createAbortController(): { controller: AbortController; timeoutId: ReturnType<typeof setTimeout> } {
+    const controller = new AbortController();
 
-    setTimeout(() => {
-      abortController.abort();
+    const timeoutId = setTimeout(() => {
+      controller.abort();
     }, this.config.timeout);
 
-    return abortController;
+    return { controller, timeoutId };
   }
 
   /**
@@ -148,7 +155,7 @@ class APIClient {
     config: ApiRequestConfig,
     attempt: number = 0
   ): Promise<ApiResponse<T>> {
-    const abortController = this.getAbortController();
+    const { controller, timeoutId } = this.createAbortController();
 
     try {
       const url = this.config.baseURL + endpoint;
@@ -160,7 +167,7 @@ class APIClient {
           ...config.headers,
         },
         body: config.body ? JSON.stringify(config.body) : undefined,
-        signal: abortController.signal,
+        signal: controller.signal,
       });
 
       return await this.handleResponse<T>(response, attempt);
@@ -190,6 +197,9 @@ class APIClient {
       }
 
       throw error;
+    } finally {
+      // Always clear timeout to prevent memory leaks
+      clearTimeout(timeoutId);
     }
   }
 

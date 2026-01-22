@@ -13,7 +13,7 @@ Core Principles:
 2. Consider the relationship context and intimacy level
 3. Balance practical vs. sentimental gifts
 4. Respect of budget constraints
-5. Avoid disliked items and ╨░╨╗╨╗╨╡╤Ç╨│╨╡╨╜╤ï at all costs
+5. Avoid disliked items and allergens at all costs
 6. Consider the occasion significance and emotional impact
 7. Include both traditional and modern gift ideas
 8. Prioritize gifts with perceived value over face value

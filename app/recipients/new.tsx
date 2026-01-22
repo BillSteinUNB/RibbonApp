@@ -219,12 +219,12 @@ export default function NewRecipientScreen() {
 
             <Input
               label="Past Gifts (Optional)"
-              value={formData.pastGifts.join(', ')}
+              value={formData.pastGifts.join('; ')}
               onChangeText={(text) => setFormData({
                 ...formData,
-                pastGifts: text.split(',').map(s => s.trim()).filter(Boolean)
+                pastGifts: text.split(';').map(s => s.trim()).filter(Boolean)
               })}
-              placeholder="e.g., Watch, Books, Scarf..."
+              placeholder="e.g., Watch; Books; Nike Air Max 90, Red..."
               multiline
               numberOfLines={2}
             />
