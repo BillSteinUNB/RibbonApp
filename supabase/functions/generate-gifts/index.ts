@@ -1,6 +1,7 @@
 import { serve } from 'https://deno.land/std@0.168.0/http/server.ts'
 
-const MINIMAX_API_URL = 'https://api.minimax.chat/v1/text/chatcompletion_v2'
+// OpenAI-compatible endpoint for MiniMax Coding Plan subscriptions
+const MINIMAX_API_URL = 'https://api.minimax.io/v1/chat/completions'
 
 const corsHeaders = {
   'Access-Control-Allow-Origin': '*',
@@ -29,6 +30,7 @@ serve(async (req) => {
       )
     }
 
+    // Use OpenAI-compatible format for Coding Plan subscriptions
     const response = await fetch(MINIMAX_API_URL, {
       method: 'POST',
       headers: {
@@ -36,12 +38,12 @@ serve(async (req) => {
         'Authorization': `Bearer ${MINIMAX_API_KEY}`,
       },
       body: JSON.stringify({
-        model: 'abab6.5s-chat',
+        model: 'MiniMax-M2',
         messages: [
           { role: 'system', content: systemPrompt },
           { role: 'user', content: userPrompt },
         ],
-        tokens_to_generate: 2000,
+        max_tokens: 2000,
         temperature: 0.7,
         top_p: 0.95,
       }),
