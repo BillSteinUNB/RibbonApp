@@ -54,7 +54,7 @@ serve(async (req) => {
     }
 
     const data = await response.json()
-    const content = data.choices?.[0]?.messages?.[0]?.content
+    const content = data.choices?.[0]?.message?.content
 
     if (!content) {
       throw new Error('No content in MiniMax response')
