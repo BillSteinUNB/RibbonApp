@@ -9,12 +9,8 @@
       "Bash(opencode models)",
       "Bash(opencode models:*)",
       "Bash(ls:*)",
-      "Bash(ssh-keygen:*)",
-      "Bash(git add:*)",
-      "Bash(git commit:*)",
-      "Bash(git push:*)",
-      "Bash(npm install)",
-      "Bash(gh run:*)"
+      "Bash(certutil -encode \"C:\\\\Users\\\\bills\\\\Documents\\\\Personal Projects\\\\RibbonApp\\\\AuthKey_WY8PV47DWJ.p8\" temp.txt)",
+      "Bash(del temp.txt)"
     ]
   }
 }

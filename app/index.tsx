@@ -1,13 +1,20 @@
+/**
+ * Index Route - Entry Point
+ * 
+ * This redirects users based on onboarding status:
+ * - Not completed onboarding -> Onboarding flow
+ * - Completed onboarding -> Main app (tabs)
+ */
+
 import { Redirect } from 'expo-router';
-import { useUIStore, selectHasCompletedOnboarding } from './store/uiStore';
-import { ROUTES } from './constants/routes';
+import { useOnboardingStore } from './store/onboardingStore';
 
 export default function Index() {
-  const hasCompletedOnboarding = useUIStore(selectHasCompletedOnboarding);
+  const { hasCompletedOnboarding } = useOnboardingStore();
 
   if (!hasCompletedOnboarding) {
-    return <Redirect href={ROUTES.ONBOARDING} />;
+    return <Redirect href="/(onboarding)" />;
   }
 
-  return <Redirect href={ROUTES.TABS.ROOT} />;
+  return <Redirect href="/(tabs)" />;
 }

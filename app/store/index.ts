@@ -2,6 +2,13 @@ import { create } from 'zustand';
 import { persist, createJSONStorage } from 'zustand/middleware';
 import { getSafeStorage } from '../lib/safeStorage';
 
+// Re-export all stores for convenience
+export { useAuthStore } from './authStore';
+export { useRecipientStore } from './recipientStore';
+export { useGiftStore } from './giftStore';
+export { useOnboardingStore } from './onboardingStore';
+export { useUIStore } from './uiStore';
+
 export interface StoreState<T> {
   data: T | null;
   isLoading: boolean;
