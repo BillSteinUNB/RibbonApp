@@ -18,6 +18,8 @@ import {
 } from '../types/recipient';
 import { useRecipientStore } from '../store/recipientStore';
 import { generateId, getTimestamp } from '../utils/helpers';
+import { ROUTES } from '../constants/routes';
+import { useUnsavedChanges, hasFormChanged } from '../hooks/useUnsavedChanges';
 
 const DRAFT_STORAGE_KEY = '@ribbon/recipient-draft';
 
@@ -50,6 +52,14 @@ export default function NewRecipientScreen() {
   const [errors, setErrors] = useState<Record<string, string>>({});
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [isDraftLoaded, setIsDraftLoaded] = useState(false);
+
+  // Warn user when navigating away with unsaved changes
+  const isDirty = hasFormChanged(formData, initialFormData);
+  useUnsavedChanges({
+    isDirty: isDirty && isDraftLoaded,
+    title: 'Discard New Recipient?',
+    message: 'You have unsaved changes. Your draft will be saved, but are you sure you want to leave?',
+  });
 
   useEffect(() => {
     const loadDraft = async () => {
@@ -147,7 +157,7 @@ export default function NewRecipientScreen() {
       };
       addRecipient(recipient);
       await clearDraft();
-      router.replace('/(tabs)/recipients');
+      router.replace(ROUTES.TABS.RECIPIENTS);
     } catch (error) {
       setErrors({ submit: 'Failed to save recipient. Please try again.' });
     } finally {

@@ -152,6 +152,10 @@ export const useAuthStore = create<AuthState & AuthActions>()(
 
         decrementTrialUses: () => {
           const user = ensureUser();
+          // Premium users have unlimited uses - don't decrement
+          if (user.isPremium) {
+            return;
+          }
           if (user.trialUsesRemaining > 0) {
             set({
               user: {

@@ -6,6 +6,7 @@ import { Button } from './components/Button';
 import { SPACING, FONTS } from './constants';
 import { useTheme } from './hooks/useTheme';
 import { useUIStore } from './store/uiStore';
+import { ROUTES } from './constants/routes';
 
 export default function OnboardingScreen() {
   const router = useRouter();
@@ -41,7 +42,7 @@ export default function OnboardingScreen() {
 
   const handleComplete = () => {
     setHasCompletedOnboarding(true);
-    router.replace('/(tabs)');
+    router.replace(ROUTES.TABS.ROOT);
   };
 
   return (

@@ -7,6 +7,7 @@ import { SPACING, FONTS, RADIUS } from '../constants';
 import { useTheme } from '../hooks/useTheme';
 import { useRecipientStore, selectRecipients } from '../store/recipientStore';
 import { RELATIONSHIPS } from '../types/recipient';
+import { ROUTES } from '../constants/routes';
 
 export default function RecipientsTab() {
   const router = useRouter();
@@ -31,7 +32,7 @@ export default function RecipientsTab() {
   const renderRecipientItem = ({ item }: { item: typeof recipients[0] }) => (
     <TouchableOpacity
       style={styles.card}
-      onPress={() => router.push(`/recipients/${item.id}`)}
+      onPress={() => router.push(ROUTES.RECIPIENTS.DETAIL(item.id))}
       activeOpacity={0.7}
     >
       <Text style={styles.name}>{item.name}</Text>
@@ -62,7 +63,7 @@ export default function RecipientsTab() {
       </Text>
       <Button
         title="Add Recipient"
-        onPress={() => router.push('/recipients/new')}
+        onPress={() => router.push(ROUTES.RECIPIENTS.NEW)}
         style={styles.emptyButton}
       />
     </View>
@@ -88,7 +89,7 @@ export default function RecipientsTab() {
         <Text style={styles.title}>Recipients</Text>
         <Button
           title="Add Recipient"
-          onPress={() => router.push('/recipients/new')}
+          onPress={() => router.push(ROUTES.RECIPIENTS.NEW)}
           style={styles.addButton}
         />
       </View>

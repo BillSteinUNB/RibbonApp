@@ -25,32 +25,35 @@ class GiftService {
   ): Promise<{
     gifts: GiftIdea[];
     duration: number;
-    method: 'ai' | 'fallback';
   }> {
     const startTime = Date.now();
 
+    // Get user info for rate limiting
+    const user = useAuthStore.getState().getOrCreateUser();
+
+    const userId = user.id;
+    const isPremium = user.isPremium;
+
+    // Check if AI service is available
+    if (!aiService.isAvailable()) {
+      logger.warn('AI service not configured');
+      throw new AppError(
+        'AI service unavailable. No credit used - please try again later.',
+        'AI_UNAVAILABLE'
+      );
+    }
+
+    // Check rate limit for AI generation
+    const limitCheck = await rateLimitService.checkAndRecordGeneration(userId, isPremium);
+
+    if (!limitCheck.allowed) {
+      throw new AppError(
+        `Daily limit reached. ${limitCheck.remainingHours} hours until reset.`,
+        'RATE_LIMIT_EXCEEDED'
+      );
+    }
+
     try {
-      // Get user info for rate limiting
-      const user = useAuthStore.getState().getOrCreateUser();
-
-      const userId = user.id;
-      const isPremium = user.isPremium;
-
-      // Check rate limit for AI generation (skip for fallback mode)
-      if (aiService.isAvailable()) {
-        const limitCheck = await rateLimitService.checkAndRecordGeneration(userId, isPremium);
-
-        if (!limitCheck.allowed) {
-          throw new AppError(
-            `Daily limit reached. ${limitCheck.remainingHours} hours until reset.`,
-            'RATE_LIMIT_EXCEEDED'
-          );
-        }
-      } else {
-        logger.warn('AI service not configured, using fallback');
-        return this.generateFallbackGifts(recipient, count, startTime);
-      }
-
       // Select appropriate prompt based on occasion
       const userPrompt = getPromptForOccasion(recipient, count);
       const systemPrompt = 'You are a helpful and creative gift recommendation assistant.';
@@ -67,7 +70,7 @@ class GiftService {
       // Parse response
       const gifts = await giftParser.parseResponse(response, recipient.id);
 
-      // Decrement trial uses from auth service
+      // Decrement trial uses from auth service (only on success)
       const decrementTrial = useAuthStore.getState().decrementTrialUses;
       decrementTrial();
 
@@ -76,33 +79,23 @@ class GiftService {
       return {
         gifts,
         duration,
-        method: 'ai',
       };
     } catch (error) {
+      // Log the error but don't decrement credits - AI failed
       errorLogger.log(error, { context: 'generateGifts', recipientId: recipient.id });
-      logger.warn('AI generation failed, using fallback');
-      return this.generateFallbackGifts(recipient, count, startTime);
-    }
-  }
+      logger.warn('AI generation failed');
 
-  /**
-   * Generate fallback gifts when AI fails
-   */
-  private generateFallbackGifts(
-    recipient: Recipient,
-    count: number,
-    startTime: number
-  ): {
-    gifts: GiftIdea[];
-    duration: number;
-    method: 'fallback';
-  } {
-    const gifts = giftParser.getFallbackGifts(recipient.id, count);
-    return {
-      gifts,
-      duration: Date.now() - startTime,
-      method: 'fallback',
-    };
+      // Re-throw specific errors (rate limit, etc.)
+      if (error instanceof AppError) {
+        throw error;
+      }
+
+      // For other errors, throw a user-friendly message
+      throw new AppError(
+        'AI failed - no credit used. Please try again later.',
+        'AI_GENERATION_FAILED'
+      );
+    }
   }
 
   /**
@@ -390,7 +383,6 @@ Return a JSON array of gift ideas with this exact structure (no markdown, no ext
   ): Promise<{
     gifts: GiftIdea[];
     duration: number;
-    method: 'ai' | 'fallback';
   }> {
     const startTime = Date.now();
 
@@ -470,7 +462,6 @@ Return a JSON array of gift ideas with this exact structure (no markdown, no ext
       return {
         gifts: giftsWithRefinementFlag,
         duration,
-        method: 'ai',
       };
     } catch (error) {
       errorLogger.log(error, { context: 'refineGifts', sessionId });

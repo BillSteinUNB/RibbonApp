@@ -7,6 +7,7 @@ import { useRecipientStore, selectRecipientById } from '../../store/recipientSto
 import { useGiftStore } from '../../store/giftStore';
 import { giftService } from '../../services/giftService';
 import type { GiftIdea } from '../../types/recipient';
+import { ROUTES } from '../../constants/routes';
 
 const PROGRESS_MESSAGES = [
   'Analyzing recipient preferences...',
@@ -111,7 +112,7 @@ export default function GiftGenerationScreen() {
         setAllGifts([...existingGifts, ...giftsWithSession]);
         setCurrentGifts(giftsWithSession);
         setIsGenerating(false);
-        router.replace(`/recipients/${recipientId}/results`);
+        router.replace(ROUTES.RECIPIENTS.RESULTS(recipientId));
       } catch (err) {
         if (isCancelled) return;
         

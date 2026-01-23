@@ -5,6 +5,7 @@ import { Button } from '../components/Button';
 import { COLORS, SPACING, FONTS, RADIUS } from '../constants';
 import { useRecipientStore, selectRecipientById } from '../store/recipientStore';
 import { RELATIONSHIPS, AGE_RANGES, OCCASION_TYPES } from '../types/recipient';
+import { ROUTES } from '../constants/routes';
 
 export default function RecipientDetail() {
   const router = useRouter();
@@ -104,14 +105,14 @@ export default function RecipientDetail() {
         <View style={styles.actionsContainer}>
           <TouchableOpacity
             style={styles.editButton}
-            onPress={() => router.push(`/recipients/${recipientId}/edit`)}
+            onPress={() => router.push(ROUTES.RECIPIENTS.EDIT(recipientId))}
           >
             <Text style={styles.editButtonText}>Edit Recipient</Text>
           </TouchableOpacity>
 
           <TouchableOpacity
             style={styles.giftIdeasButton}
-            onPress={() => router.push(`/recipients/${recipientId}/ideas`)}
+            onPress={() => router.push(ROUTES.RECIPIENTS.IDEAS(recipientId))}
           >
             <Text style={styles.giftIdeasButtonText}>Find Gift Ideas</Text>
           </TouchableOpacity>
@@ -119,7 +120,7 @@ export default function RecipientDetail() {
 
         <Button
           title="Back to List"
-          onPress={() => router.replace('/(tabs)/recipients')}
+          onPress={() => router.replace(ROUTES.TABS.RECIPIENTS)}
           variant="outline"
           style={styles.backButton}
         />

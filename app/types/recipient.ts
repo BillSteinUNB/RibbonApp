@@ -4,6 +4,18 @@ import { z } from 'zod';
  * Recipient data models and validation schemas
  */
 
+/**
+ * Limit constants to prevent unbounded data growth
+ */
+export const RECIPIENT_LIMITS = {
+  MAX_RECIPIENTS: 100,
+  MAX_INTERESTS_PER_RECIPIENT: 20,
+  MAX_PAST_GIFTS: 50,
+  MAX_NAME_LENGTH: 100,
+  MAX_NOTES_LENGTH: 1000,
+  MAX_DISLIKES_LENGTH: 500,
+} as const;
+
 export interface Recipient {
   id: string;
   name: string;
@@ -112,16 +124,26 @@ export const giftIdeaSchema = z.object({
 
 export const recipientSchema = z.object({
   id: z.string().min(1, 'Recipient ID is required'),
-  name: z.string().min(2, 'Name must be at least 2 characters'),
+  name: z.string()
+    .min(2, 'Name must be at least 2 characters')
+    .max(RECIPIENT_LIMITS.MAX_NAME_LENGTH, `Name cannot exceed ${RECIPIENT_LIMITS.MAX_NAME_LENGTH} characters`),
   relationship: z.string().min(1, 'Relationship is required'),
   ageRange: z.string().optional(),
   gender: z.string().optional(),
-  interests: z.array(z.string()).min(1, 'At least one interest is required'),
-  dislikes: z.string().optional(),
+  interests: z.array(z.string())
+    .min(1, 'At least one interest is required')
+    .max(RECIPIENT_LIMITS.MAX_INTERESTS_PER_RECIPIENT, `Cannot have more than ${RECIPIENT_LIMITS.MAX_INTERESTS_PER_RECIPIENT} interests`),
+  dislikes: z.string()
+    .max(RECIPIENT_LIMITS.MAX_DISLIKES_LENGTH, `Dislikes cannot exceed ${RECIPIENT_LIMITS.MAX_DISLIKES_LENGTH} characters`)
+    .optional(),
   budget: budgetSchema,
   occasion: occasionSchema,
-  pastGifts: z.array(z.string()).default([]),
-  notes: z.string().optional(),
+  pastGifts: z.array(z.string())
+    .max(RECIPIENT_LIMITS.MAX_PAST_GIFTS, `Cannot have more than ${RECIPIENT_LIMITS.MAX_PAST_GIFTS} past gifts`)
+    .default([]),
+  notes: z.string()
+    .max(RECIPIENT_LIMITS.MAX_NOTES_LENGTH, `Notes cannot exceed ${RECIPIENT_LIMITS.MAX_NOTES_LENGTH} characters`)
+    .optional(),
   giftHistory: z.array(giftIdeaSchema).optional(),
   createdAt: z.string(),
   updatedAt: z.string(),

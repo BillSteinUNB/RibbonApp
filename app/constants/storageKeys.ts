@@ -28,6 +28,10 @@ export const STORAGE_KEYS = {
   // Config
   FEATURE_FLAGS: '@ribbon/feature_flags',
 
+  // Logs
+  ERROR_LOGS: '@ribbon/error_logs',
+  AUDIT_LOGS: '@ribbon/recipient_audit_logs',
+
   // Version
   STORAGE_VERSION: '@ribbon/storage_version',
 } as const;
@@ -63,6 +67,10 @@ export const STORAGE_KEY_SENSITIVITY: Record<keyof typeof STORAGE_KEYS, StorageK
 
   // Config - SAFE
   FEATURE_FLAGS: 'SAFE',
+
+  // Logs - SAFE (no PII in error/audit logs)
+  ERROR_LOGS: 'SAFE',
+  AUDIT_LOGS: 'SAFE',
 
   // Version - SAFE
   STORAGE_VERSION: 'SAFE',

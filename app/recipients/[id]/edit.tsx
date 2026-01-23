@@ -16,6 +16,8 @@ import {
 } from '../../types/recipient';
 import { useRecipientStore, selectRecipientById } from '../../store/recipientStore';
 import { getTimestamp } from '../../utils/helpers';
+import { ROUTES } from '../../constants/routes';
+import { useUnsavedChanges, hasFormChanged } from '../../hooks/useUnsavedChanges';
 
 const STEPS = [
   { title: 'Basic', description: 'Tell us about who this gift is for' },
@@ -34,13 +36,14 @@ export default function EditRecipientScreen() {
 
   const [currentStep, setCurrentStep] = useState(0);
   const [formData, setFormData] = useState<RecipientFormData | null>(null);
+  const [initialFormData, setInitialFormData] = useState<RecipientFormData | null>(null);
   const [errors, setErrors] = useState<Record<string, string>>({});
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [isDeleting, setIsDeleting] = useState(false);
 
   useEffect(() => {
     if (recipient) {
-      setFormData({
+      const recipientFormData: RecipientFormData = {
         name: recipient.name,
         relationship: recipient.relationship,
         ageRange: recipient.ageRange || '',
@@ -51,9 +54,19 @@ export default function EditRecipientScreen() {
         occasion: recipient.occasion,
         pastGifts: recipient.pastGifts || [],
         notes: recipient.notes || '',
-      });
+      };
+      setFormData(recipientFormData);
+      setInitialFormData(recipientFormData);
     }
   }, [recipient]);
+
+  // Warn user when navigating away with unsaved changes
+  const isDirty = formData && initialFormData ? hasFormChanged(formData, initialFormData) : false;
+  useUnsavedChanges({
+    isDirty,
+    title: 'Discard Changes?',
+    message: 'You have unsaved changes to this recipient. Are you sure you want to leave?',
+  });
 
   if (!recipient || !formData) {
     return (
@@ -134,7 +147,7 @@ export default function EditRecipientScreen() {
             setIsDeleting(true);
             try {
               removeRecipient(recipientId);
-              router.replace('/(tabs)/recipients');
+              router.replace(ROUTES.TABS.RECIPIENTS);
             } catch (error) {
               setIsDeleting(false);
               Alert.alert('Error', 'Failed to delete recipient. Please try again.');

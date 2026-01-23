@@ -3,6 +3,7 @@ import { errorLogger } from './errorLogger';
 import { storage } from './storage';
 import { STORAGE_KEYS } from '../constants/storageKeys';
 import type { Recipient, RecipientFormData } from '../types/recipient';
+import { RECIPIENT_LIMITS } from '../types/recipient';
 import { generateId, getTimestamp } from '../utils/helpers';
 import { recipientFormSchema } from '../types/recipient';
 import { z } from 'zod';
@@ -54,12 +55,45 @@ class RecipientService {
   }
 
   /**
+   * Check if a recipient with the same name already exists
+   * @param name - The name to check
+   * @param excludeId - Optional ID to exclude (for updates)
+   * @returns The existing recipient if found, null otherwise
+   */
+  private findDuplicateByName(name: string, excludeId?: string): Recipient | null {
+    const normalizedName = name.trim().toLowerCase();
+    return this.recipients.find(
+      (r) => r.name.trim().toLowerCase() === normalizedName && r.id !== excludeId
+    ) || null;
+  }
+
+  /**
    * Create a new recipient
    */
   async createRecipient(formData: Partial<RecipientFormData>): Promise<Recipient> {
     try {
       // Validate form data
       const validatedData = recipientFormSchema.parse(formData);
+
+      // Ensure recipients are loaded before checking limits and duplicates
+      await this.ensureLoaded();
+
+      // Check max recipients limit
+      if (this.recipients.length >= RECIPIENT_LIMITS.MAX_RECIPIENTS) {
+        throw new AppError(
+          `Maximum of ${RECIPIENT_LIMITS.MAX_RECIPIENTS} recipients reached. Please delete some recipients before adding new ones.`,
+          'MAX_RECIPIENTS_REACHED'
+        );
+      }
+
+      // Check for duplicate name
+      const existingRecipient = this.findDuplicateByName(validatedData.name);
+      if (existingRecipient) {
+        throw new AppError(
+          `A recipient named "${existingRecipient.name}" already exists`,
+          'DUPLICATE_RECIPIENT'
+        );
+      }
 
       const newRecipient: Recipient = {
         ...validatedData,
@@ -75,6 +109,9 @@ class RecipientService {
 
       return newRecipient;
     } catch (error) {
+      if (error instanceof AppError) {
+        throw error;
+      }
       if (error instanceof z.ZodError) {
         throw new AppError('Invalid recipient data', 'VALIDATION_ERROR');
       }
@@ -125,6 +162,17 @@ class RecipientService {
       const currentRecipient = this.recipients[index];
       const recipientUpdate = recipientFormSchema.parse(updates);
 
+      // Check for duplicate name if name is being changed
+      if (recipientUpdate.name !== currentRecipient.name) {
+        const existingRecipient = this.findDuplicateByName(recipientUpdate.name, id);
+        if (existingRecipient) {
+          throw new AppError(
+            `A recipient named "${existingRecipient.name}" already exists`,
+            'DUPLICATE_RECIPIENT'
+          );
+        }
+      }
+
       const updatedRecipient: Recipient = {
         ...currentRecipient,
         ...recipientUpdate,
@@ -136,6 +184,9 @@ class RecipientService {
 
       return updatedRecipient;
     } catch (error) {
+      if (error instanceof AppError) {
+        throw error;
+      }
       if (error instanceof z.ZodError) {
         throw new AppError('Invalid recipient data', 'VALIDATION_ERROR');
       }

@@ -8,6 +8,7 @@ import { useTheme } from '../hooks/useTheme';
 import { Card } from '../components/Card';
 import { useRecipientStore } from '../store/recipientStore';
 import { useAuthStore } from '../store/authStore';
+import { ROUTES } from '../constants/routes';
 
 export default function HomeScreen() {
   const router = useRouter();
@@ -32,7 +33,7 @@ export default function HomeScreen() {
         </View>
         <TouchableOpacity 
           style={styles.profileButton}
-          onPress={() => router.push('/(tabs)/settings')}
+          onPress={() => router.push(ROUTES.TABS.SETTINGS)}
         >
           <Text style={styles.profileInitial}>
             {user?.email?.charAt(0).toUpperCase() || 'U'}
@@ -43,7 +44,7 @@ export default function HomeScreen() {
       <View style={styles.actionsGrid}>
         <TouchableOpacity 
           style={[styles.actionCard, { backgroundColor: colors.accentPrimary }]}
-          onPress={() => router.push('/recipients/new')}
+          onPress={() => router.push(ROUTES.RECIPIENTS.NEW)}
         >
           <Plus stroke="white" size={24} />
           <Text style={styles.actionTextLight}>New Recipient</Text>
@@ -51,7 +52,7 @@ export default function HomeScreen() {
         
         <TouchableOpacity 
           style={[styles.actionCard, { backgroundColor: colors.bgSecondary }]}
-          onPress={() => router.push('/(tabs)/recipients')}
+          onPress={() => router.push(ROUTES.TABS.RECIPIENTS)}
         >
           <Gift stroke={colors.accentPrimary} size={24} />
           <Text style={styles.actionTextDark}>My Recipients</Text>
@@ -61,7 +62,7 @@ export default function HomeScreen() {
       <View style={styles.section}>
         <View style={styles.sectionHeader}>
           <Text style={styles.sectionTitle}>Upcoming Occasions</Text>
-          <TouchableOpacity onPress={() => router.push('/(tabs)/recipients')}>
+          <TouchableOpacity onPress={() => router.push(ROUTES.TABS.RECIPIENTS)}>
             <Text style={styles.seeAll}>See All</Text>
           </TouchableOpacity>
         </View>
@@ -71,7 +72,7 @@ export default function HomeScreen() {
             <Card 
               key={recipient.id} 
               style={styles.occasionCard}
-              onPress={() => router.push(`/recipients/${recipient.id}`)}
+              onPress={() => router.push(ROUTES.RECIPIENTS.DETAIL(recipient.id))}
             >
               <View style={styles.occasionIcon}>
                 <Calendar stroke={colors.accentPrimary} size={20} />
@@ -88,7 +89,7 @@ export default function HomeScreen() {
         ) : (
           <Card style={styles.emptyState}>
             <Text style={styles.emptyText}>No upcoming occasions.</Text>
-            <TouchableOpacity onPress={() => router.push('/recipients/new')}>
+            <TouchableOpacity onPress={() => router.push(ROUTES.RECIPIENTS.NEW)}>
               <Text style={styles.emptyLink}>Add a recipient to get started!</Text>
             </TouchableOpacity>
           </Card>

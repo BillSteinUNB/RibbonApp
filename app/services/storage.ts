@@ -50,6 +50,24 @@ const deprecatedKeys: string[] = [
   '@ribbon/old_key_2',
 ];
 
+/**
+ * Storage limits to prevent unbounded data growth
+ */
+export const STORAGE_LIMITS = {
+  /** Maximum total storage size in MB */
+  MAX_STORAGE_SIZE_MB: 50,
+  /** Maximum age for cached data in days */
+  MAX_CACHE_AGE_DAYS: 30,
+  /** Maximum number of error logs to keep */
+  MAX_ERROR_LOGS: 100,
+  /** Maximum number of audit logs to keep */
+  MAX_AUDIT_LOGS: 50,
+  /** Maximum number of gift history items per recipient */
+  MAX_GIFT_HISTORY_PER_RECIPIENT: 100,
+  /** Warning threshold (percentage of max storage) */
+  WARNING_THRESHOLD_PERCENT: 80,
+} as const;
+
 class StorageService {
   private static instance: StorageService;
   private initialized = false;
@@ -277,6 +295,175 @@ class StorageService {
       };
     } catch (error) {
       throw new StorageError('Failed to calculate storage size', 'STORAGE_ERROR', undefined, { originalError: error as Error });
+    }
+  }
+
+  /**
+   * Check if storage is approaching limits and return status
+   */
+  async checkStorageHealth(): Promise<{
+    isHealthy: boolean;
+    currentSizeMb: number;
+    maxSizeMb: number;
+    usagePercent: number;
+    warnings: string[];
+  }> {
+    const { approxSizeMb } = await this.getStorageSize();
+    const usagePercent = (approxSizeMb / STORAGE_LIMITS.MAX_STORAGE_SIZE_MB) * 100;
+    const warnings: string[] = [];
+
+    if (usagePercent >= 100) {
+      warnings.push('Storage limit exceeded. Please clear some data.');
+    } else if (usagePercent >= STORAGE_LIMITS.WARNING_THRESHOLD_PERCENT) {
+      warnings.push(`Storage is ${usagePercent.toFixed(0)}% full. Consider clearing old data.`);
+    }
+
+    return {
+      isHealthy: usagePercent < STORAGE_LIMITS.WARNING_THRESHOLD_PERCENT,
+      currentSizeMb: approxSizeMb,
+      maxSizeMb: STORAGE_LIMITS.MAX_STORAGE_SIZE_MB,
+      usagePercent,
+      warnings,
+    };
+  }
+
+  /**
+   * Run cleanup to enforce storage limits and remove stale data
+   */
+  async runCleanup(): Promise<{
+    freedMb: number;
+    itemsCleaned: number;
+    errors: string[];
+  }> {
+    const initialSize = await this.getStorageSize();
+    let itemsCleaned = 0;
+    const errors: string[] = [];
+
+    try {
+      // Clean old error logs
+      const errorLogsCleaned = await this.cleanupErrorLogs();
+      itemsCleaned += errorLogsCleaned;
+
+      // Clean old audit logs
+      const auditLogsCleaned = await this.cleanupAuditLogs();
+      itemsCleaned += auditLogsCleaned;
+
+      // Clean old drafts (e.g., recipient drafts older than cache age)
+      const draftsCleaned = await this.cleanupOldDrafts();
+      itemsCleaned += draftsCleaned;
+
+      // Clean gift history if too large
+      const giftHistoryCleaned = await this.cleanupGiftHistory();
+      itemsCleaned += giftHistoryCleaned;
+
+      // Clear deprecated keys
+      await this.clearDeprecatedKeys();
+
+    } catch (error) {
+      errors.push(`Cleanup error: ${error instanceof Error ? error.message : String(error)}`);
+    }
+
+    const finalSize = await this.getStorageSize();
+    const freedMb = initialSize.approxSizeMb - finalSize.approxSizeMb;
+
+    logger.log(`[Storage] Cleanup complete: freed ${freedMb.toFixed(2)}MB, cleaned ${itemsCleaned} items`);
+
+    return {
+      freedMb: Math.max(0, freedMb),
+      itemsCleaned,
+      errors,
+    };
+  }
+
+  /**
+   * Clean up error logs to keep within limits
+   */
+  private async cleanupErrorLogs(): Promise<number> {
+    try {
+      const errorLogs = await this.getItem<any[]>(STORAGE_KEYS.ERROR_LOGS);
+      if (!errorLogs || errorLogs.length <= STORAGE_LIMITS.MAX_ERROR_LOGS) {
+        return 0;
+      }
+
+      // Keep most recent logs
+      const trimmedLogs = errorLogs.slice(-STORAGE_LIMITS.MAX_ERROR_LOGS);
+      await this.setItem(STORAGE_KEYS.ERROR_LOGS, trimmedLogs);
+
+      return errorLogs.length - trimmedLogs.length;
+    } catch {
+      return 0;
+    }
+  }
+
+  /**
+   * Clean up audit logs to keep within limits
+   */
+  private async cleanupAuditLogs(): Promise<number> {
+    try {
+      const auditLogs = await this.getItem<any[]>(STORAGE_KEYS.AUDIT_LOGS);
+      if (!auditLogs || auditLogs.length <= STORAGE_LIMITS.MAX_AUDIT_LOGS) {
+        return 0;
+      }
+
+      // Keep most recent logs
+      const trimmedLogs = auditLogs.slice(-STORAGE_LIMITS.MAX_AUDIT_LOGS);
+      await this.setItem(STORAGE_KEYS.AUDIT_LOGS, trimmedLogs);
+
+      return auditLogs.length - trimmedLogs.length;
+    } catch {
+      return 0;
+    }
+  }
+
+  /**
+   * Clean up old drafts (drafts older than MAX_CACHE_AGE_DAYS)
+   */
+  private async cleanupOldDrafts(): Promise<number> {
+    let cleaned = 0;
+    const draftKeys = ['@ribbon/recipient-draft'];
+    const maxAge = STORAGE_LIMITS.MAX_CACHE_AGE_DAYS * 24 * 60 * 60 * 1000;
+    const now = Date.now();
+
+    for (const key of draftKeys) {
+      try {
+        const draft = await this.getItem<{ timestamp?: number }>(key);
+        if (draft?.timestamp && (now - draft.timestamp) > maxAge) {
+          await this.removeItem(key);
+          cleaned++;
+        }
+      } catch {
+        // Skip if can't read
+      }
+    }
+
+    return cleaned;
+  }
+
+  /**
+   * Clean up gift history to keep within limits per recipient
+   */
+  private async cleanupGiftHistory(): Promise<number> {
+    try {
+      const recipients = await this.getItem<any[]>(STORAGE_KEYS.RECIPIENTS);
+      if (!recipients) return 0;
+
+      let totalCleaned = 0;
+
+      for (const recipient of recipients) {
+        if (recipient.giftHistory && recipient.giftHistory.length > STORAGE_LIMITS.MAX_GIFT_HISTORY_PER_RECIPIENT) {
+          const excess = recipient.giftHistory.length - STORAGE_LIMITS.MAX_GIFT_HISTORY_PER_RECIPIENT;
+          recipient.giftHistory = recipient.giftHistory.slice(-STORAGE_LIMITS.MAX_GIFT_HISTORY_PER_RECIPIENT);
+          totalCleaned += excess;
+        }
+      }
+
+      if (totalCleaned > 0) {
+        await this.setItem(STORAGE_KEYS.RECIPIENTS, recipients);
+      }
+
+      return totalCleaned;
+    } catch {
+      return 0;
     }
   }
 }

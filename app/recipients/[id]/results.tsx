@@ -8,6 +8,7 @@ import { useRecipientStore, selectRecipientById } from '../../store/recipientSto
 import { useGiftStore } from '../../store/giftStore';
 import { giftService } from '../../services/giftService';
 import type { GiftIdea } from '../../types/recipient';
+import { ROUTES } from '../../constants/routes';
 
 const CATEGORIES = [
   { label: 'All Categories', value: 'all' },
@@ -116,7 +117,7 @@ export default function GiftResultsScreen() {
   };
 
   const handleRegenerate = () => {
-    router.replace(`/recipients/${recipientId}/ideas`);
+    router.replace(ROUTES.RECIPIENTS.IDEAS(recipientId));
   };
 
   if (!recipient) {
@@ -184,7 +185,7 @@ export default function GiftResultsScreen() {
         />
         <Button
           title="Done"
-          onPress={() => router.replace('/(tabs)/recipients')}
+          onPress={() => router.replace(ROUTES.TABS.RECIPIENTS)}
           style={styles.footerButton}
         />
       </View>

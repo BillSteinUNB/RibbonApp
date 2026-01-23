@@ -161,67 +161,6 @@ class GiftParser {
     }
   }
 
-  /**
-   * Fallback response when AI fails
-   */
-  getFallbackGifts(recipientId: string, count: number = 5): GiftIdea[] {
-    const fallbackGifts = [
-      {
-        name: 'Personalized Photo Frame',
-        description: 'A beautiful photo frame that can be customized with a favorite memory or photo.',
-        reasoning: 'Classic gift that shows thoughtfulness and preserves cherished memories.',
-        price: '$20 - $50',
-        category: 'Home',
-        stores: [],
-        tags: ['personal', 'memorable', 'classic'],
-      },
-      {
-        name: 'Gift Card to Favorite Store',
-        description: 'A gift card to their favorite store, allowing them to choose something they truly want.',
-        reasoning: 'Practical and ensures they get exactly what they need from a place they love.',
-        price: 'Variable',
-        category: 'Gift Cards',
-        stores: [],
-        tags: ['practical', 'flexible', 'useful'],
-      },
-      {
-        name: 'Experience Gift',
-        description: 'Tickets to a show, concert, or experience they would enjoy.',
-        reasoning: 'Creates lasting memories and shows you know their interests.',
-        price: '$25 - $200',
-        category: 'Experience',
-        stores: [],
-        tags: ['memorable', 'fun', 'experiential'],
-      },
-      {
-        name: 'Custom Coffee Mug',
-        description: 'A high-quality coffee mug personalized with their name or favorite quote.',
-        reasoning: 'Practical daily use item with personal touch, great for coffee or tea lovers.',
-        price: '$15 - $30',
-        category: 'Home',
-        stores: [],
-        tags: ['practical', 'personal', 'daily-use'],
-      },
-      {
-        name: 'Book Collection',
-        description: 'A curated collection of books based on their interests or a popular genre they enjoy.',
-        reasoning: 'Shows thoughtfulness and provides entertainment and knowledge.',
-        price: '$25 - $75',
-        category: 'Books',
-        stores: [],
-        tags: ['entertaining', 'thoughtful', 'educational'],
-      },
-    ];
-
-    return fallbackGifts.slice(0, count).map((gift) => ({
-      ...gift,
-      id: this.generateId(),
-      recipientId,
-      isSaved: false,
-      isPurchased: false,
-      generatedAt: getTimestamp(),
-    }));
-  }
 }
 
 // Export singleton instance
