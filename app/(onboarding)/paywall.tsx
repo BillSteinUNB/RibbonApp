@@ -8,7 +8,7 @@
  * HARD PAYWALL: No skip option - user must start trial or restore purchase
  */
 
-import React, { useState } from 'react';
+import React, { useState, useMemo } from 'react';
 import {
   View,
   Text,
@@ -19,10 +19,12 @@ import {
   ScrollView,
   Alert,
   ActivityIndicator,
+  Linking,
 } from 'react-native';
 import { useRouter } from 'expo-router';
-import { COLORS, SPACING, RADIUS } from '../constants';
-import { PRICING_PLANS } from '../types/subscription';
+import { SPACING, RADIUS } from '../constants';
+import { useTheme } from '../hooks/useTheme';
+import { LEGAL_URLS } from '../constants/legal';
 import { useOnboardingStore } from '../store/onboardingStore';
 import { logger } from '../utils/logger';
 
@@ -73,11 +75,14 @@ const FEATURES = [
 
 export default function OnboardingPaywall() {
   const router = useRouter();
+  const { colors, isDark } = useTheme();
   const [selectedPlan, setSelectedPlan] = useState<PlanType>('yearly');
   const [isLoading, setIsLoading] = useState(false);
   const [isRestoring, setIsRestoring] = useState(false);
   
   const { startTrial, completeOnboarding } = useOnboardingStore();
+
+  const styles = useMemo(() => createStyles(colors), [colors]);
 
   const handleStartTrial = async () => {
     setIsLoading(true);
@@ -136,6 +141,24 @@ export default function OnboardingPaywall() {
 
   const handleBack = () => {
     router.back();
+  };
+
+  const handleOpenTerms = async () => {
+    try {
+      await Linking.openURL(LEGAL_URLS.TERMS_OF_SERVICE);
+    } catch (error) {
+      logger.error('[Paywall] Failed to open Terms of Service:', error);
+      Alert.alert('Error', 'Could not open Terms of Service');
+    }
+  };
+
+  const handleOpenPrivacy = async () => {
+    try {
+      await Linking.openURL(LEGAL_URLS.PRIVACY_POLICY);
+    } catch (error) {
+      logger.error('[Paywall] Failed to open Privacy Policy:', error);
+      Alert.alert('Error', 'Could not open Privacy Policy');
+    }
   };
 
   const getTrialDays = () => 3;
@@ -264,7 +287,7 @@ export default function OnboardingPaywall() {
           disabled={isLoading || isRestoring}
         >
           {isLoading ? (
-            <ActivityIndicator color={COLORS.white} />
+            <ActivityIndicator color={colors.white} />
           ) : (
             <>
               <Text style={styles.ctaText}>Start Free Trial</Text>
@@ -284,7 +307,7 @@ export default function OnboardingPaywall() {
           disabled={isLoading || isRestoring}
         >
           {isRestoring ? (
-            <ActivityIndicator size="small" color={COLORS.textMuted} />
+            <ActivityIndicator size="small" color={colors.textMuted} />
           ) : (
             <Text style={styles.restoreText}>Restore Purchase</Text>
           )}
@@ -292,11 +315,11 @@ export default function OnboardingPaywall() {
 
         {/* Legal links */}
         <View style={styles.legalLinks}>
-          <TouchableOpacity>
+          <TouchableOpacity onPress={handleOpenTerms}>
             <Text style={styles.legalLink}>Terms of Service</Text>
           </TouchableOpacity>
           <Text style={styles.legalDot}>•</Text>
-          <TouchableOpacity>
+          <TouchableOpacity onPress={handleOpenPrivacy}>
             <Text style={styles.legalLink}>Privacy Policy</Text>
           </TouchableOpacity>
         </View>
@@ -305,10 +328,10 @@ export default function OnboardingPaywall() {
   );
 }
 
-const styles = StyleSheet.create({
+const createStyles = (colors: ReturnType<typeof import('../hooks/useTheme').useTheme>['colors']) => StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: COLORS.bgPrimary,
+    backgroundColor: colors.bgPrimary,
   },
   progressContainer: {
     flexDirection: 'row',
@@ -322,10 +345,10 @@ const styles = StyleSheet.create({
     width: 8,
     height: 8,
     borderRadius: 4,
-    backgroundColor: COLORS.border,
+    backgroundColor: colors.border,
   },
   progressDotActive: {
-    backgroundColor: COLORS.accentPrimary,
+    backgroundColor: colors.accentPrimary,
     width: 24,
   },
   backButton: {
@@ -335,14 +358,14 @@ const styles = StyleSheet.create({
     width: 40,
     height: 40,
     borderRadius: 20,
-    backgroundColor: COLORS.bgSecondary,
+    backgroundColor: colors.bgSecondary,
     justifyContent: 'center',
     alignItems: 'center',
     zIndex: 10,
   },
   backButtonText: {
     fontSize: 20,
-    color: COLORS.textPrimary,
+    color: colors.textPrimary,
   },
   scrollView: {
     flex: 1,
@@ -359,7 +382,7 @@ const styles = StyleSheet.create({
   giftIcon: {
     width: 64,
     height: 64,
-    backgroundColor: COLORS.accentSoft,
+    backgroundColor: colors.accentSoft,
     borderRadius: 32,
     justifyContent: 'center',
     alignItems: 'center',
@@ -371,17 +394,17 @@ const styles = StyleSheet.create({
   headline: {
     fontSize: 28,
     fontWeight: '800',
-    color: COLORS.textPrimary,
+    color: colors.textPrimary,
     textAlign: 'center',
     lineHeight: 36,
     marginBottom: SPACING.xs,
   },
   headlineAccent: {
-    color: COLORS.accentPrimary,
+    color: colors.accentPrimary,
   },
   subhead: {
     fontSize: 16,
-    color: COLORS.textSecondary,
+    color: colors.textSecondary,
     textAlign: 'center',
   },
   planSelector: {
@@ -391,7 +414,7 @@ const styles = StyleSheet.create({
   planOption: {
     flexDirection: 'row',
     alignItems: 'center',
-    backgroundColor: COLORS.bgSecondary,
+    backgroundColor: colors.bgSecondary,
     borderRadius: RADIUS.lg,
     padding: SPACING.md,
     borderWidth: 2,
@@ -400,8 +423,8 @@ const styles = StyleSheet.create({
     overflow: 'visible',
   },
   planOptionSelected: {
-    borderColor: COLORS.accentPrimary,
-    backgroundColor: COLORS.accentSoft,
+    borderColor: colors.accentPrimary,
+    backgroundColor: colors.accentSoft,
   },
   planOptionPopular: {
     marginTop: SPACING.sm,
@@ -410,7 +433,7 @@ const styles = StyleSheet.create({
     position: 'absolute',
     top: -10,
     right: SPACING.md,
-    backgroundColor: COLORS.accentPrimary,
+    backgroundColor: colors.accentPrimary,
     paddingHorizontal: SPACING.sm,
     paddingVertical: 2,
     borderRadius: RADIUS.sm,
@@ -418,7 +441,7 @@ const styles = StyleSheet.create({
   popularText: {
     fontSize: 10,
     fontWeight: '800',
-    color: COLORS.white,
+    color: colors.white,
     letterSpacing: 0.5,
   },
   planRadio: {
@@ -429,18 +452,18 @@ const styles = StyleSheet.create({
     height: 24,
     borderRadius: 12,
     borderWidth: 2,
-    borderColor: COLORS.border,
+    borderColor: colors.border,
     justifyContent: 'center',
     alignItems: 'center',
   },
   radioOuterSelected: {
-    borderColor: COLORS.accentPrimary,
+    borderColor: colors.accentPrimary,
   },
   radioInner: {
     width: 12,
     height: 12,
     borderRadius: 6,
-    backgroundColor: COLORS.accentPrimary,
+    backgroundColor: colors.accentPrimary,
   },
   planDetails: {
     flex: 1,
@@ -453,13 +476,13 @@ const styles = StyleSheet.create({
   planName: {
     fontSize: 16,
     fontWeight: '600',
-    color: COLORS.textPrimary,
+    color: colors.textPrimary,
   },
   planNameSelected: {
-    color: COLORS.accentPrimary,
+    color: colors.accentPrimary,
   },
   savingsBadge: {
-    backgroundColor: COLORS.accentSuccess,
+    backgroundColor: colors.accentSuccess,
     paddingHorizontal: SPACING.sm,
     paddingVertical: 2,
     borderRadius: RADIUS.sm,
@@ -467,26 +490,26 @@ const styles = StyleSheet.create({
   savingsText: {
     fontSize: 10,
     fontWeight: '700',
-    color: COLORS.white,
+    color: colors.white,
   },
   planPrice: {
     fontSize: 20,
     fontWeight: '800',
-    color: COLORS.textPrimary,
+    color: colors.textPrimary,
     marginTop: 2,
   },
   planPeriod: {
     fontSize: 14,
     fontWeight: '500',
-    color: COLORS.textSecondary,
+    color: colors.textSecondary,
   },
   pricePerWeek: {
     fontSize: 12,
-    color: COLORS.textMuted,
+    color: colors.textMuted,
     marginTop: 2,
   },
   featuresBox: {
-    backgroundColor: COLORS.bgSecondary,
+    backgroundColor: colors.bgSecondary,
     borderRadius: RADIUS.lg,
     padding: SPACING.lg,
     marginBottom: SPACING.lg,
@@ -494,7 +517,7 @@ const styles = StyleSheet.create({
   featuresTitle: {
     fontSize: 11,
     fontWeight: '700',
-    color: COLORS.textMuted,
+    color: colors.textMuted,
     letterSpacing: 1,
     marginBottom: SPACING.md,
   },
@@ -505,17 +528,17 @@ const styles = StyleSheet.create({
   },
   featureCheck: {
     fontSize: 16,
-    color: COLORS.accentSuccess,
+    color: colors.accentSuccess,
     marginRight: SPACING.sm,
     fontWeight: '700',
   },
   featureText: {
     fontSize: 15,
-    color: COLORS.textPrimary,
+    color: colors.textPrimary,
   },
   guaranteeBox: {
     flexDirection: 'row',
-    backgroundColor: COLORS.bgSubtle,
+    backgroundColor: colors.bgSubtle,
     borderRadius: RADIUS.lg,
     padding: SPACING.md,
     gap: SPACING.md,
@@ -529,31 +552,31 @@ const styles = StyleSheet.create({
   guaranteeTitle: {
     fontSize: 14,
     fontWeight: '700',
-    color: COLORS.textPrimary,
+    color: colors.textPrimary,
     marginBottom: 4,
   },
   guaranteeText: {
     fontSize: 12,
-    color: COLORS.textSecondary,
+    color: colors.textSecondary,
     lineHeight: 18,
   },
   footer: {
     paddingHorizontal: SPACING.xl,
     paddingBottom: SPACING.xl,
     paddingTop: SPACING.md,
-    backgroundColor: COLORS.bgPrimary,
+    backgroundColor: colors.bgPrimary,
     borderTopWidth: 1,
-    borderTopColor: COLORS.border,
+    borderTopColor: colors.border,
   },
   ctaButton: {
-    backgroundColor: COLORS.accentPrimary,
+    backgroundColor: colors.accentPrimary,
     borderRadius: RADIUS.lg,
     paddingVertical: SPACING.lg,
     paddingHorizontal: SPACING.xl,
     flexDirection: 'row',
     justifyContent: 'center',
     alignItems: 'center',
-    shadowColor: COLORS.accentPrimary,
+    shadowColor: colors.accentPrimary,
     shadowOffset: { width: 0, height: 4 },
     shadowOpacity: 0.3,
     shadowRadius: 8,
@@ -565,11 +588,11 @@ const styles = StyleSheet.create({
   ctaText: {
     fontSize: 18,
     fontWeight: '700',
-    color: COLORS.white,
+    color: colors.white,
   },
   trialNote: {
     fontSize: 12,
-    color: COLORS.textMuted,
+    color: colors.textMuted,
     textAlign: 'center',
     marginTop: SPACING.sm,
   },
@@ -580,7 +603,7 @@ const styles = StyleSheet.create({
   },
   restoreText: {
     fontSize: 14,
-    color: COLORS.textMuted,
+    color: colors.textMuted,
     textDecorationLine: 'underline',
   },
   legalLinks: {
@@ -592,10 +615,10 @@ const styles = StyleSheet.create({
   },
   legalLink: {
     fontSize: 11,
-    color: COLORS.textMuted,
+    color: colors.textMuted,
   },
   legalDot: {
     fontSize: 11,
-    color: COLORS.textMuted,
+    color: colors.textMuted,
   },
 });

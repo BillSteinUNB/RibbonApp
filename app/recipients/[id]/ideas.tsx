@@ -1,8 +1,9 @@
-import React, { useState, useEffect, useRef } from 'react';
+import React, { useState, useEffect, useRef, useMemo } from 'react';
 import { View, Text, StyleSheet, Animated, Easing, Dimensions } from 'react-native';
 import { useRouter, useLocalSearchParams } from 'expo-router';
 import ConfettiCannon from 'react-native-confetti-cannon';
-import { COLORS, SPACING, FONTS, RADIUS } from '../../constants';
+import { SPACING, FONTS, RADIUS } from '../../constants';
+import { useTheme } from '../../hooks/useTheme';
 import { Button } from '../../components/Button';
 import { useRecipientStore, selectRecipientById } from '../../store/recipientStore';
 import { useGiftStore } from '../../store/giftStore';
@@ -21,6 +22,9 @@ const PROGRESS_MESSAGES = [
   'Finalizing gift list...',
 ];
 
+// Confetti colors that work in both light and dark mode
+const CONFETTI_COLORS = ['#FFD700', '#FF6B6B', '#4ECDC4', '#45B7D1', '#96E6A1', '#DDA0DD'];
+
 type ScreenState = 'loading' | 'celebration' | 'error';
 
 export default function GiftGenerationScreen() {
@@ -29,6 +33,7 @@ export default function GiftGenerationScreen() {
   const recipientId = typeof id === 'string' ? id : '';
   const recipient = useRecipientStore(selectRecipientById(recipientId));
   const { setCurrentGifts, setAllGifts, createGenerationSession, setIsGenerating, setError } = useGiftStore();
+  const { colors, isDark } = useTheme();
 
   const [screenState, setScreenState] = useState<ScreenState>('loading');
   const [progressMessage, setProgressMessage] = useState(PROGRESS_MESSAGES[0]);
@@ -44,6 +49,8 @@ export default function GiftGenerationScreen() {
   const celebrationScale = useRef(new Animated.Value(0)).current;
   const celebrationOpacity = useRef(new Animated.Value(0)).current;
   const confettiRef = useRef<ConfettiCannon>(null);
+
+  const styles = useMemo(() => createStyles(colors, isDark), [colors, isDark]);
 
   useEffect(() => {
     if (screenState !== 'loading') return;
@@ -249,7 +256,7 @@ export default function GiftGenerationScreen() {
           fadeOut
           fallSpeed={2500}
           explosionSpeed={350}
-          colors={['#FFD700', '#FF6B6B', '#4ECDC4', '#45B7D1', '#96E6A1', '#DDA0DD']}
+          colors={CONFETTI_COLORS}
         />
         
         <View style={styles.celebrationContent}>
@@ -374,10 +381,10 @@ export default function GiftGenerationScreen() {
   );
 }
 
-const styles = StyleSheet.create({
+const createStyles = (colors: ReturnType<typeof import('../../hooks/useTheme').useTheme>['colors'], isDark: boolean) => StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: COLORS.bgPrimary,
+    backgroundColor: colors.bgPrimary,
   },
   content: {
     flex: 1,
@@ -398,8 +405,8 @@ const styles = StyleSheet.create({
     height: 120,
     borderRadius: 60,
     borderWidth: 4,
-    borderColor: COLORS.border,
-    borderTopColor: COLORS.accentPrimary,
+    borderColor: colors.border,
+    borderTopColor: colors.accentPrimary,
   },
   spinnerInner: {
     width: '100%',
@@ -409,7 +416,7 @@ const styles = StyleSheet.create({
     width: 60,
     height: 60,
     borderRadius: 30,
-    backgroundColor: COLORS.bgSecondary,
+    backgroundColor: colors.bgSecondary,
     alignItems: 'center',
     justifyContent: 'center',
   },
@@ -419,14 +426,14 @@ const styles = StyleSheet.create({
   title: {
     fontSize: 24,
     fontWeight: '700',
-    color: COLORS.textPrimary,
+    color: colors.textPrimary,
     textAlign: 'center',
     marginBottom: SPACING.xs,
     fontFamily: FONTS.display,
   },
   subtitle: {
     fontSize: 16,
-    color: COLORS.textSecondary,
+    color: colors.textSecondary,
     textAlign: 'center',
     marginBottom: SPACING.xl,
     fontFamily: FONTS.body,
@@ -437,19 +444,19 @@ const styles = StyleSheet.create({
   },
   progressBar: {
     height: 6,
-    backgroundColor: COLORS.border,
+    backgroundColor: colors.border,
     borderRadius: 3,
     overflow: 'hidden',
     marginBottom: SPACING.md,
   },
   progressFill: {
     height: '100%',
-    backgroundColor: COLORS.accentPrimary,
+    backgroundColor: colors.accentPrimary,
     borderRadius: 3,
   },
   progressMessage: {
     fontSize: 14,
-    color: COLORS.accentPrimary,
+    color: colors.accentPrimary,
     textAlign: 'center',
     fontFamily: FONTS.body,
     fontWeight: '500',
@@ -467,24 +474,24 @@ const styles = StyleSheet.create({
     width: 8,
     height: 8,
     borderRadius: 4,
-    backgroundColor: COLORS.border,
+    backgroundColor: colors.border,
     marginRight: SPACING.md,
   },
   stepDotActive: {
-    backgroundColor: COLORS.accentSuccess,
+    backgroundColor: colors.accentSuccess,
   },
   stepText: {
     fontSize: 13,
-    color: COLORS.textMuted,
+    color: colors.textMuted,
     fontFamily: FONTS.body,
   },
   stepTextActive: {
-    color: COLORS.textSecondary,
+    color: colors.textSecondary,
   },
   footer: {
     padding: SPACING.xl,
     borderTopWidth: 1,
-    borderTopColor: COLORS.border,
+    borderTopColor: colors.border,
   },
   cancelButton: {
     width: '100%',
@@ -500,7 +507,7 @@ const styles = StyleSheet.create({
     width: 80,
     height: 80,
     borderRadius: 40,
-    backgroundColor: '#FEE2E2',
+    backgroundColor: isDark ? '#4A2020' : '#FEE2E2',
     alignItems: 'center',
     justifyContent: 'center',
     marginBottom: SPACING.lg,
@@ -508,18 +515,18 @@ const styles = StyleSheet.create({
   errorIconText: {
     fontSize: 40,
     fontWeight: '700',
-    color: COLORS.error,
+    color: colors.error,
   },
   errorTitle: {
     fontSize: 20,
     fontWeight: '700',
-    color: COLORS.textPrimary,
+    color: colors.textPrimary,
     marginBottom: SPACING.sm,
     fontFamily: FONTS.display,
   },
   errorMessage: {
     fontSize: 14,
-    color: COLORS.textSecondary,
+    color: colors.textSecondary,
     textAlign: 'center',
     marginBottom: SPACING.xl,
     fontFamily: FONTS.body,
@@ -537,14 +544,14 @@ const styles = StyleSheet.create({
     padding: SPACING.xl,
   },
   celebrationCard: {
-    backgroundColor: COLORS.bgSecondary,
+    backgroundColor: colors.bgSecondary,
     borderRadius: RADIUS.xl,
     padding: SPACING.xl,
     alignItems: 'center',
     width: '100%',
     maxWidth: 320,
     borderWidth: 1,
-    borderColor: COLORS.border,
+    borderColor: colors.border,
     shadowColor: '#000',
     shadowOffset: { width: 0, height: 4 },
     shadowOpacity: 0.1,
@@ -558,32 +565,32 @@ const styles = StyleSheet.create({
   celebrationTitle: {
     fontSize: 24,
     fontWeight: '700',
-    color: COLORS.textPrimary,
+    color: colors.textPrimary,
     textAlign: 'center',
     fontFamily: FONTS.display,
     marginBottom: SPACING.xs,
   },
   celebrationSubtitle: {
     fontSize: 16,
-    color: COLORS.textSecondary,
+    color: colors.textSecondary,
     textAlign: 'center',
     fontFamily: FONTS.body,
     marginBottom: SPACING.lg,
   },
   topGiftPreview: {
-    backgroundColor: COLORS.accentSoft,
+    backgroundColor: colors.accentSoft,
     borderRadius: RADIUS.lg,
     padding: SPACING.md,
     width: '100%',
     alignItems: 'center',
     marginBottom: SPACING.lg,
     borderWidth: 1,
-    borderColor: COLORS.accentPrimary,
+    borderColor: colors.accentPrimary,
   },
   topGiftLabel: {
     fontSize: 11,
     fontWeight: '600',
-    color: COLORS.accentPrimary,
+    color: colors.accentPrimary,
     textTransform: 'uppercase',
     letterSpacing: 0.5,
     marginBottom: SPACING.xs,
@@ -592,7 +599,7 @@ const styles = StyleSheet.create({
   topGiftName: {
     fontSize: 16,
     fontWeight: '600',
-    color: COLORS.textPrimary,
+    color: colors.textPrimary,
     textAlign: 'center',
     fontFamily: FONTS.display,
     marginBottom: SPACING.xs,
@@ -600,12 +607,12 @@ const styles = StyleSheet.create({
   topGiftPrice: {
     fontSize: 14,
     fontWeight: '600',
-    color: COLORS.accentPrimary,
+    color: colors.accentPrimary,
     fontFamily: FONTS.body,
   },
   celebrationHint: {
     fontSize: 13,
-    color: COLORS.textMuted,
+    color: colors.textMuted,
     fontFamily: FONTS.body,
     fontStyle: 'italic',
   },

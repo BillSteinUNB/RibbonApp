@@ -1,13 +1,26 @@
-import React, { useState, useEffect, useCallback } from 'react';
-import { View, Text, ScrollView, StyleSheet, KeyboardAvoidingView, Platform, Alert } from 'react-native';
+import React, { useState, useEffect, useMemo } from 'react';
+import { 
+  View, 
+  Text, 
+  ScrollView, 
+  StyleSheet, 
+  KeyboardAvoidingView, 
+  Platform, 
+  TouchableOpacity,
+  LayoutAnimation,
+  UIManager,
+  Alert,
+} from 'react-native';
 import { useRouter, useLocalSearchParams } from 'expo-router';
-import { COLORS, SPACING, FONTS, RADIUS } from '../../constants';
+import { useSafeAreaInsets } from 'react-native-safe-area-context';
+import { ChevronDown, ChevronUp, AlertCircle } from 'lucide-react-native';
+import { SPACING, FONTS, RADIUS } from '../../constants';
+import { useTheme } from '../../hooks/useTheme';
 import { Button } from '../../components/Button';
 import { Input } from '../../components/Input';
-import { FormSelect, MultiSelect, RangeSlider, DatePicker, ProgressStepper } from '../../components/forms';
+import { FormSelect, RangeSlider, DatePicker, ProgressStepper } from '../../components/forms';
 import {
   RecipientFormData,
-  Recipient,
   RELATIONSHIPS,
   AGE_RANGES,
   GENDERS,
@@ -19,27 +32,61 @@ import { getTimestamp } from '../../utils/helpers';
 import { ROUTES } from '../../constants/routes';
 import { useUnsavedChanges, hasFormChanged } from '../../hooks/useUnsavedChanges';
 
+// Enable LayoutAnimation on Android
+if (Platform.OS === 'android' && UIManager.setLayoutAnimationEnabledExperimental) {
+  UIManager.setLayoutAnimationEnabledExperimental(true);
+}
+
+// Simplified 2-step form (matching new.tsx)
 const STEPS = [
-  { title: 'Basic', description: 'Tell us about who this gift is for' },
-  { title: 'Interests', description: "What do they enjoy?" },
-  { title: 'Budget', description: 'Set your budget and occasion' },
-  { title: 'Review', description: 'Review and save' },
+  { title: 'Basics', description: 'Who is this gift for?' },
+  { title: 'Details', description: 'Budget & occasion' },
 ];
+
+// Interest icons for the grid
+const INTEREST_ICONS: Record<string, string> = {
+  'Technology': '💻',
+  'Sports': '⚽',
+  'Music': '🎵',
+  'Cooking': '👨‍🍳',
+  'Travel': '✈️',
+  'Reading': '📚',
+  'Fashion': '👗',
+  'Fitness': '💪',
+  'Gaming': '🎮',
+  'Art': '🎨',
+  'Photography': '📷',
+  'Gardening': '🌱',
+  'DIY/Crafts': '🔨',
+  'Movies/TV': '🎬',
+  'Food & Dining': '🍽️',
+  'Outdoor Activities': '🏕️',
+  'Science': '🔬',
+  'History': '📜',
+  'Pets': '🐾',
+  'Fashion & Beauty': '💄',
+};
 
 export default function EditRecipientScreen() {
   const router = useRouter();
+  const insets = useSafeAreaInsets();
   const { id } = useLocalSearchParams();
   const recipientId = typeof id === 'string' ? id : '';
   const recipient = useRecipientStore(selectRecipientById(recipientId));
   const updateRecipient = useRecipientStore(state => state.updateRecipient);
   const removeRecipient = useRecipientStore(state => state.removeRecipient);
+  const { colors, isDark } = useTheme();
 
   const [currentStep, setCurrentStep] = useState(0);
   const [formData, setFormData] = useState<RecipientFormData | null>(null);
   const [initialFormData, setInitialFormData] = useState<RecipientFormData | null>(null);
   const [errors, setErrors] = useState<Record<string, string>>({});
+  const [warnings, setWarnings] = useState<Record<string, string>>({});
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [isDeleting, setIsDeleting] = useState(false);
+  const [showAdvancedOptions, setShowAdvancedOptions] = useState(false);
+
+  const styles = useMemo(() => createStyles(colors, isDark), [colors, isDark]);
 
   useEffect(() => {
     if (recipient) {
@@ -57,6 +104,12 @@ export default function EditRecipientScreen() {
       };
       setFormData(recipientFormData);
       setInitialFormData(recipientFormData);
+      
+      // Auto-expand advanced options if any advanced fields have values
+      if (recipient.ageRange || recipient.gender || recipient.dislikes || 
+          (recipient.pastGifts && recipient.pastGifts.length > 0) || recipient.notes) {
+        setShowAdvancedOptions(true);
+      }
     }
   }, [recipient]);
 
@@ -67,6 +120,23 @@ export default function EditRecipientScreen() {
     title: 'Discard Changes?',
     message: 'You have unsaved changes to this recipient. Are you sure you want to leave?',
   });
+
+  const toggleInterest = (interest: string) => {
+    if (!formData) return;
+    const newInterests = formData.interests.includes(interest)
+      ? formData.interests.filter(i => i !== interest)
+      : [...formData.interests, interest];
+    setFormData({ ...formData, interests: newInterests });
+    // Clear warning when interests are added
+    if (newInterests.length > 0 && warnings.interests) {
+      setWarnings({ ...warnings, interests: '' });
+    }
+  };
+
+  const toggleAdvancedOptions = () => {
+    LayoutAnimation.configureNext(LayoutAnimation.Presets.easeInEaseOut);
+    setShowAdvancedOptions(!showAdvancedOptions);
+  };
 
   if (!recipient || !formData) {
     return (
@@ -81,16 +151,18 @@ export default function EditRecipientScreen() {
 
   const validateStep = (step: number): boolean => {
     const newErrors: Record<string, string> = {};
+    const newWarnings: Record<string, string> = {};
 
     switch (step) {
       case 0:
         if (!formData.name.trim()) newErrors.name = 'Name is required';
         if (!formData.relationship) newErrors.relationship = 'Relationship is required';
+        // Interests are now optional with a warning instead of blocking
+        if (formData.interests.length === 0) {
+          newWarnings.interests = 'Adding interests helps us find better gifts';
+        }
         break;
       case 1:
-        if (formData.interests.length === 0) newErrors.interests = 'Select at least one interest';
-        break;
-      case 2:
         if (formData.budget.minimum > formData.budget.maximum) {
           newErrors.budget = 'Minimum cannot exceed maximum';
         }
@@ -98,6 +170,7 @@ export default function EditRecipientScreen() {
     }
 
     setErrors(newErrors);
+    setWarnings(newWarnings);
     return Object.keys(newErrors).length === 0;
   };
 
@@ -163,6 +236,7 @@ export default function EditRecipientScreen() {
       case 0:
         return (
           <View style={styles.stepContent}>
+            {/* Essential Fields */}
             <Input
               label="Recipient Name"
               value={formData.name}
@@ -180,63 +254,57 @@ export default function EditRecipientScreen() {
               error={errors.relationship}
             />
 
-            <FormSelect
-              label="Age Range (Optional)"
-              value={formData.ageRange || ''}
-              options={AGE_RANGES.map(a => ({ label: a.label, value: a.value }))}
-              onSelect={(value) => setFormData({ ...formData, ageRange: value })}
-              placeholder="Select age range"
-            />
-
-            <FormSelect
-              label="Gender (Optional)"
-              value={formData.gender || ''}
-              options={GENDERS.map(g => ({ label: g.label, value: g.value }))}
-              onSelect={(value) => setFormData({ ...formData, gender: value })}
-              placeholder="Select gender"
-            />
+            {/* Interest Grid */}
+            <View style={styles.interestSection}>
+              <Text style={styles.inputLabel}>Interests</Text>
+              {warnings.interests && (
+                <View style={styles.warningBanner}>
+                  <AlertCircle stroke={colors.accentWarning} size={16} />
+                  <Text style={styles.warningText}>{warnings.interests}</Text>
+                </View>
+              )}
+              <View style={styles.interestGrid}>
+                {COMMON_INTERESTS.map((interest) => {
+                  const isSelected = formData.interests.includes(interest);
+                  return (
+                    <TouchableOpacity
+                      key={interest}
+                      style={[
+                        styles.interestChip,
+                        isSelected && styles.interestChipSelected,
+                      ]}
+                      onPress={() => toggleInterest(interest)}
+                      activeOpacity={0.7}
+                    >
+                      <Text style={styles.interestIcon}>
+                        {INTEREST_ICONS[interest] || '✨'}
+                      </Text>
+                      <Text
+                        style={[
+                          styles.interestText,
+                          isSelected && styles.interestTextSelected,
+                        ]}
+                        numberOfLines={1}
+                      >
+                        {interest}
+                      </Text>
+                    </TouchableOpacity>
+                  );
+                })}
+              </View>
+              {formData.interests.length > 0 && (
+                <Text style={styles.selectedCount}>
+                  {formData.interests.length} selected
+                </Text>
+              )}
+            </View>
           </View>
         );
 
       case 1:
         return (
           <View style={styles.stepContent}>
-            <MultiSelect
-              label="Interests"
-              selected={formData.interests}
-              options={[...COMMON_INTERESTS]}
-              onSelectionChange={(selected) => setFormData({ ...formData, interests: selected })}
-              placeholder="Search or add interests..."
-              error={errors.interests}
-              allowCustom
-            />
-
-            <Input
-              label="Dislikes or Allergies (Optional)"
-              value={formData.dislikes}
-              onChangeText={(text) => setFormData({ ...formData, dislikes: text })}
-              placeholder="e.g., No nuts, doesn't like blue..."
-              multiline
-              numberOfLines={3}
-            />
-
-            <Input
-              label="Past Gifts (Optional)"
-              value={formData.pastGifts.join('; ')}
-              onChangeText={(text) => setFormData({
-                ...formData,
-                pastGifts: text.split(';').map(s => s.trim()).filter(Boolean)
-              })}
-              placeholder="e.g., Watch; Books; Nike Air Max 90, Red..."
-              multiline
-              numberOfLines={2}
-            />
-          </View>
-        );
-
-      case 2:
-        return (
-          <View style={styles.stepContent}>
+            {/* Essential Fields */}
             <RangeSlider
               label="Budget Range"
               minValue={formData.budget.minimum}
@@ -273,69 +341,103 @@ export default function EditRecipientScreen() {
               placeholder="Select date"
             />
 
-            <Input
-              label="Additional Notes (Optional)"
-              value={formData.notes || ''}
-              onChangeText={(text) => setFormData({ ...formData, notes: text })}
-              placeholder="Any other details that might help..."
-              multiline
-              numberOfLines={3}
-            />
-          </View>
-        );
+            {/* Collapsible Advanced Options */}
+            <TouchableOpacity
+              style={styles.advancedToggle}
+              onPress={toggleAdvancedOptions}
+              activeOpacity={0.7}
+            >
+              <Text style={styles.advancedToggleText}>Advanced Options</Text>
+              {showAdvancedOptions ? (
+                <ChevronUp stroke={colors.textSecondary} size={20} />
+              ) : (
+                <ChevronDown stroke={colors.textSecondary} size={20} />
+              )}
+            </TouchableOpacity>
 
-      case 3:
-        return (
-          <View style={styles.stepContent}>
-            <View style={styles.reviewCard}>
-              <Text style={styles.reviewTitle}>Review Details</Text>
+            {showAdvancedOptions && (
+              <View style={styles.advancedOptions}>
+                <FormSelect
+                  label="Age Range"
+                  value={formData.ageRange || ''}
+                  options={AGE_RANGES.map(a => ({ label: a.label, value: a.value }))}
+                  onSelect={(value) => setFormData({ ...formData, ageRange: value })}
+                  placeholder="Select age range"
+                />
 
-              <View style={styles.reviewSection}>
-                <Text style={styles.reviewLabel}>Name</Text>
-                <Text style={styles.reviewValue}>{formData.name}</Text>
+                <FormSelect
+                  label="Gender"
+                  value={formData.gender || ''}
+                  options={GENDERS.map(g => ({ label: g.label, value: g.value }))}
+                  onSelect={(value) => setFormData({ ...formData, gender: value })}
+                  placeholder="Select gender"
+                />
+
+                <Input
+                  label="Dislikes or Allergies"
+                  value={formData.dislikes}
+                  onChangeText={(text) => setFormData({ ...formData, dislikes: text })}
+                  placeholder="e.g., No nuts, doesn't like blue..."
+                  multiline
+                  numberOfLines={2}
+                />
+
+                <Input
+                  label="Past Gifts"
+                  value={formData.pastGifts.join('; ')}
+                  onChangeText={(text) => setFormData({
+                    ...formData,
+                    pastGifts: text.split(';').map(s => s.trim()).filter(Boolean)
+                  })}
+                  placeholder="e.g., Watch; Books; Nike Air Max 90..."
+                  multiline
+                  numberOfLines={2}
+                />
+
+                <Input
+                  label="Additional Notes"
+                  value={formData.notes || ''}
+                  onChangeText={(text) => setFormData({ ...formData, notes: text })}
+                  placeholder="Any other details that might help..."
+                  multiline
+                  numberOfLines={3}
+                />
               </View>
+            )}
 
-              <View style={styles.reviewSection}>
-                <Text style={styles.reviewLabel}>Relationship</Text>
-                <Text style={styles.reviewValue}>
-                  {RELATIONSHIPS.find(r => r.value === formData.relationship)?.label}
+            {/* Mini Summary */}
+            <View style={styles.summaryCard}>
+              <Text style={styles.summaryTitle}>Quick Summary</Text>
+              <View style={styles.summaryRow}>
+                <Text style={styles.summaryLabel}>Recipient:</Text>
+                <Text style={styles.summaryValue}>{formData.name || '—'}</Text>
+              </View>
+              <View style={styles.summaryRow}>
+                <Text style={styles.summaryLabel}>Relationship:</Text>
+                <Text style={styles.summaryValue}>
+                  {RELATIONSHIPS.find(r => r.value === formData.relationship)?.label || '—'}
                 </Text>
               </View>
-
-              {formData.ageRange && (
-                <View style={styles.reviewSection}>
-                  <Text style={styles.reviewLabel}>Age Range</Text>
-                  <Text style={styles.reviewValue}>
-                    {AGE_RANGES.find(a => a.value === formData.ageRange)?.label}
-                  </Text>
-                </View>
-              )}
-
-              <View style={styles.reviewSection}>
-                <Text style={styles.reviewLabel}>Interests</Text>
-                <Text style={styles.reviewValue}>{formData.interests.join(', ')}</Text>
+              <View style={styles.summaryRow}>
+                <Text style={styles.summaryLabel}>Interests:</Text>
+                <Text style={styles.summaryValue} numberOfLines={1}>
+                  {formData.interests.length > 0 
+                    ? formData.interests.slice(0, 3).join(', ') + (formData.interests.length > 3 ? '...' : '')
+                    : '—'}
+                </Text>
               </View>
-
-              <View style={styles.reviewSection}>
-                <Text style={styles.reviewLabel}>Budget</Text>
-                <Text style={styles.reviewValue}>
+              <View style={styles.summaryRow}>
+                <Text style={styles.summaryLabel}>Budget:</Text>
+                <Text style={styles.summaryValue}>
                   ${formData.budget.minimum} - ${formData.budget.maximum}
                 </Text>
               </View>
-
-              <View style={styles.reviewSection}>
-                <Text style={styles.reviewLabel}>Occasion</Text>
-                <Text style={styles.reviewValue}>
-                  {OCCASION_TYPES.find(o => o.value === formData.occasion.type)?.label}
+              <View style={styles.summaryRow}>
+                <Text style={styles.summaryLabel}>Occasion:</Text>
+                <Text style={styles.summaryValue}>
+                  {OCCASION_TYPES.find(o => o.value === formData.occasion.type)?.label || '—'}
                 </Text>
               </View>
-
-              {formData.dislikes && (
-                <View style={styles.reviewSection}>
-                  <Text style={styles.reviewLabel}>Dislikes</Text>
-                  <Text style={styles.reviewValue}>{formData.dislikes}</Text>
-                </View>
-              )}
             </View>
 
             {errors.submit && (
@@ -354,7 +456,7 @@ export default function EditRecipientScreen() {
       behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
       style={styles.container}
     >
-      <View style={styles.header}>
+      <View style={[styles.header, { paddingTop: insets.top + SPACING.lg }]}>
         <Text style={styles.title}>Edit Recipient</Text>
         <ProgressStepper steps={STEPS} currentStep={currentStep} />
       </View>
@@ -372,7 +474,7 @@ export default function EditRecipientScreen() {
           title="Delete"
           onPress={handleDelete}
           variant="outline"
-          style={styles.footerButton}
+          style={[styles.footerButton, styles.deleteButton]}
           disabled={isDeleting}
         />
         <Button
@@ -392,10 +494,10 @@ export default function EditRecipientScreen() {
   );
 }
 
-const styles = StyleSheet.create({
+const createStyles = (colors: ReturnType<typeof import('../../hooks/useTheme').useTheme>['colors'], isDark: boolean) => StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: COLORS.bgPrimary,
+    backgroundColor: colors.bgPrimary,
   },
   centerContainer: {
     flex: 1,
@@ -405,7 +507,7 @@ const styles = StyleSheet.create({
   },
   errorText: {
     fontSize: 16,
-    color: COLORS.textSecondary,
+    color: colors.textSecondary,
     marginBottom: SPACING.lg,
     fontFamily: FONTS.body,
   },
@@ -414,15 +516,14 @@ const styles = StyleSheet.create({
   },
   header: {
     padding: SPACING.xl,
-    paddingTop: 60,
-    backgroundColor: COLORS.bgSecondary,
+    backgroundColor: colors.bgSecondary,
     borderBottomWidth: 1,
-    borderBottomColor: COLORS.border,
+    borderBottomColor: colors.border,
   },
   title: {
     fontSize: 28,
     fontWeight: '700',
-    color: COLORS.textPrimary,
+    color: colors.textPrimary,
     marginBottom: SPACING.lg,
     fontFamily: FONTS.display,
   },
@@ -436,50 +537,143 @@ const styles = StyleSheet.create({
   stepContent: {
     flex: 1,
   },
+  inputLabel: {
+    fontSize: 14,
+    fontWeight: '600',
+    color: colors.textPrimary,
+    marginBottom: SPACING.sm,
+    fontFamily: FONTS.body,
+  },
+  // Interest Grid Styles
+  interestSection: {
+    marginTop: SPACING.md,
+  },
+  interestGrid: {
+    flexDirection: 'row',
+    flexWrap: 'wrap',
+    gap: SPACING.sm,
+  },
+  interestChip: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    paddingVertical: SPACING.sm,
+    paddingHorizontal: SPACING.md,
+    borderRadius: RADIUS.full,
+    backgroundColor: colors.bgSecondary,
+    borderWidth: 1,
+    borderColor: colors.border,
+    gap: SPACING.xs,
+  },
+  interestChipSelected: {
+    backgroundColor: colors.accentSoft,
+    borderColor: colors.accentPrimary,
+  },
+  interestIcon: {
+    fontSize: 16,
+  },
+  interestText: {
+    fontSize: 13,
+    color: colors.textSecondary,
+    fontFamily: FONTS.body,
+  },
+  interestTextSelected: {
+    color: colors.accentPrimary,
+    fontWeight: '600',
+  },
+  selectedCount: {
+    fontSize: 12,
+    color: colors.textMuted,
+    marginTop: SPACING.sm,
+    fontFamily: FONTS.body,
+  },
+  // Warning Banner
+  warningBanner: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    backgroundColor: isDark ? '#3D3520' : '#FEF3C7',
+    borderRadius: RADIUS.md,
+    padding: SPACING.sm,
+    marginBottom: SPACING.sm,
+    gap: SPACING.xs,
+  },
+  warningText: {
+    fontSize: 13,
+    color: isDark ? '#FCD34D' : '#92400E',
+    fontFamily: FONTS.body,
+    flex: 1,
+  },
+  // Advanced Options
+  advancedToggle: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    paddingVertical: SPACING.md,
+    marginTop: SPACING.md,
+    borderTopWidth: 1,
+    borderTopColor: colors.border,
+  },
+  advancedToggleText: {
+    fontSize: 14,
+    fontWeight: '600',
+    color: colors.textSecondary,
+    fontFamily: FONTS.body,
+  },
+  advancedOptions: {
+    marginTop: SPACING.sm,
+  },
+  // Summary Card
+  summaryCard: {
+    backgroundColor: colors.bgSecondary,
+    borderRadius: RADIUS.lg,
+    padding: SPACING.lg,
+    borderWidth: 1,
+    borderColor: colors.border,
+    marginTop: SPACING.lg,
+  },
+  summaryTitle: {
+    fontSize: 16,
+    fontWeight: '600',
+    color: colors.textPrimary,
+    marginBottom: SPACING.md,
+    fontFamily: FONTS.display,
+  },
+  summaryRow: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    paddingVertical: SPACING.xs,
+  },
+  summaryLabel: {
+    fontSize: 13,
+    color: colors.textMuted,
+    fontFamily: FONTS.body,
+  },
+  summaryValue: {
+    fontSize: 13,
+    color: colors.textPrimary,
+    fontFamily: FONTS.body,
+    fontWeight: '500',
+    flex: 1,
+    textAlign: 'right',
+    marginLeft: SPACING.sm,
+  },
+  // Footer
   footer: {
     flexDirection: 'row',
     padding: SPACING.lg,
-    gap: SPACING.md,
-    backgroundColor: COLORS.bgSecondary,
+    gap: SPACING.sm,
+    backgroundColor: colors.bgSecondary,
     borderTopWidth: 1,
-    borderTopColor: COLORS.border,
+    borderTopColor: colors.border,
   },
   footerButton: {
     flex: 1,
   },
-  reviewCard: {
-    backgroundColor: COLORS.bgSecondary,
-    borderRadius: RADIUS.lg,
-    padding: SPACING.lg,
-    borderWidth: 1,
-    borderColor: COLORS.border,
-  },
-  reviewTitle: {
-    fontSize: 18,
-    fontWeight: '600',
-    color: COLORS.textPrimary,
-    marginBottom: SPACING.lg,
-    fontFamily: FONTS.display,
-  },
-  reviewSection: {
-    marginBottom: SPACING.md,
-  },
-  reviewLabel: {
-    fontSize: 12,
-    color: COLORS.textMuted,
-    marginBottom: SPACING.xs,
-    fontFamily: FONTS.body,
-    textTransform: 'uppercase',
-    letterSpacing: 0.5,
-  },
-  reviewValue: {
-    fontSize: 16,
-    color: COLORS.textPrimary,
-    fontFamily: FONTS.body,
+  deleteButton: {
+    borderColor: colors.error,
   },
   submitError: {
     fontSize: 14,
-    color: COLORS.error,
+    color: colors.error,
     textAlign: 'center',
     marginTop: SPACING.md,
     fontFamily: FONTS.body,

@@ -1,7 +1,8 @@
 import React, { useState, useMemo } from 'react';
-import { View, Text, StyleSheet, ScrollView, TouchableOpacity, FlatList } from 'react-native';
+import { View, Text, StyleSheet, TouchableOpacity, FlatList } from 'react-native';
 import { useRouter, useLocalSearchParams } from 'expo-router';
-import { COLORS, SPACING, FONTS, RADIUS } from '../../constants';
+import { SPACING, FONTS, RADIUS } from '../../constants';
+import { useTheme } from '../../hooks/useTheme';
 import { Button } from '../../components/Button';
 import { FormSelect } from '../../components/forms';
 import { useRecipientStore, selectRecipientById } from '../../store/recipientStore';
@@ -29,51 +30,55 @@ interface GiftCardProps {
   gift: GiftIdea;
   onSave: () => void;
   onMarkPurchased: () => void;
+  colors: ReturnType<typeof import('../../hooks/useTheme').useTheme>['colors'];
+  isDark: boolean;
 }
 
-function GiftCard({ gift, onSave, onMarkPurchased }: GiftCardProps) {
+function GiftCard({ gift, onSave, onMarkPurchased, colors, isDark }: GiftCardProps) {
+  const cardStyles = useMemo(() => createCardStyles(colors, isDark), [colors, isDark]);
+  
   return (
-    <View style={styles.giftCard}>
-      <View style={styles.giftHeader}>
-        <View style={styles.giftCategoryBadge}>
-          <Text style={styles.giftCategoryText}>{gift.category}</Text>
+    <View style={cardStyles.giftCard}>
+      <View style={cardStyles.giftHeader}>
+        <View style={cardStyles.giftCategoryBadge}>
+          <Text style={cardStyles.giftCategoryText}>{gift.category}</Text>
         </View>
-        <Text style={styles.giftPrice}>{gift.price}</Text>
+        <Text style={cardStyles.giftPrice}>{gift.price}</Text>
       </View>
       
-      <Text style={styles.giftName}>{gift.name}</Text>
-      <Text style={styles.giftDescription}>{gift.description}</Text>
+      <Text style={cardStyles.giftName}>{gift.name}</Text>
+      <Text style={cardStyles.giftDescription}>{gift.description}</Text>
       
-      <View style={styles.reasoningContainer}>
-        <Text style={styles.reasoningLabel}>Why this works:</Text>
-        <Text style={styles.reasoningText}>{gift.reasoning}</Text>
+      <View style={cardStyles.reasoningContainer}>
+        <Text style={cardStyles.reasoningLabel}>Why this works:</Text>
+        <Text style={cardStyles.reasoningText}>{gift.reasoning}</Text>
       </View>
       
       {gift.tags.length > 0 && (
-        <View style={styles.tagsContainer}>
+        <View style={cardStyles.tagsContainer}>
           {gift.tags.slice(0, 4).map((tag, index) => (
-            <View key={index} style={styles.tag}>
-              <Text style={styles.tagText}>{tag}</Text>
+            <View key={index} style={cardStyles.tag}>
+              <Text style={cardStyles.tagText}>{tag}</Text>
             </View>
           ))}
         </View>
       )}
       
-      <View style={styles.giftActions}>
+      <View style={cardStyles.giftActions}>
         <TouchableOpacity
-          style={[styles.actionButton, gift.isSaved && styles.actionButtonActive]}
+          style={[cardStyles.actionButton, gift.isSaved && cardStyles.actionButtonActive]}
           onPress={onSave}
         >
-          <Text style={[styles.actionButtonText, gift.isSaved && styles.actionButtonTextActive]}>
+          <Text style={[cardStyles.actionButtonText, gift.isSaved && cardStyles.actionButtonTextActive]}>
             {gift.isSaved ? 'Saved' : 'Save'}
           </Text>
         </TouchableOpacity>
         
         <TouchableOpacity
-          style={[styles.actionButton, gift.isPurchased && styles.actionButtonPurchased]}
+          style={[cardStyles.actionButton, gift.isPurchased && cardStyles.actionButtonPurchased]}
           onPress={onMarkPurchased}
         >
-          <Text style={[styles.actionButtonText, gift.isPurchased && styles.actionButtonTextPurchased]}>
+          <Text style={[cardStyles.actionButtonText, gift.isPurchased && cardStyles.actionButtonTextPurchased]}>
             {gift.isPurchased ? 'Purchased' : 'Mark Purchased'}
           </Text>
         </TouchableOpacity>
@@ -88,9 +93,12 @@ export default function GiftResultsScreen() {
   const recipientId = typeof id === 'string' ? id : '';
   const recipient = useRecipientStore(selectRecipientById(recipientId));
   const { currentGifts, saveGift, unsaveGift, markAsPurchased } = useGiftStore();
+  const { colors, isDark } = useTheme();
   
   const [categoryFilter, setCategoryFilter] = useState('all');
   const [sortBy, setSortBy] = useState<'low-to-high' | 'high-to-low'>('low-to-high');
+
+  const styles = useMemo(() => createStyles(colors), [colors]);
 
   const filteredAndSortedGifts = useMemo(() => {
     let gifts = [...currentGifts];
@@ -166,6 +174,8 @@ export default function GiftResultsScreen() {
             gift={item}
             onSave={() => handleSave(item.id, item.isSaved)}
             onMarkPurchased={() => handleMarkPurchased(item.id)}
+            colors={colors}
+            isDark={isDark}
           />
         )}
         contentContainerStyle={styles.giftsList}
@@ -193,26 +203,26 @@ export default function GiftResultsScreen() {
   );
 }
 
-const styles = StyleSheet.create({
+const createStyles = (colors: ReturnType<typeof import('../../hooks/useTheme').useTheme>['colors']) => StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: COLORS.bgPrimary,
+    backgroundColor: colors.bgPrimary,
   },
   header: {
     padding: SPACING.xl,
     paddingTop: 60,
     borderBottomWidth: 1,
-    borderBottomColor: COLORS.border,
+    borderBottomColor: colors.border,
   },
   title: {
     fontSize: 24,
     fontWeight: '700',
-    color: COLORS.textPrimary,
+    color: colors.textPrimary,
     fontFamily: FONTS.display,
   },
   subtitle: {
     fontSize: 16,
-    color: COLORS.textSecondary,
+    color: colors.textSecondary,
     marginBottom: SPACING.lg,
     fontFamily: FONTS.body,
   },
@@ -231,7 +241,7 @@ const styles = StyleSheet.create({
   },
   errorText: {
     fontSize: 16,
-    color: COLORS.textSecondary,
+    color: colors.textSecondary,
     marginBottom: SPACING.lg,
     fontFamily: FONTS.body,
   },
@@ -247,16 +257,30 @@ const styles = StyleSheet.create({
   },
   emptyText: {
     fontSize: 16,
-    color: COLORS.textSecondary,
+    color: colors.textSecondary,
     fontFamily: FONTS.body,
   },
+  footer: {
+    flexDirection: 'row',
+    padding: SPACING.lg,
+    gap: SPACING.md,
+    borderTopWidth: 1,
+    borderTopColor: colors.border,
+    backgroundColor: colors.bgSecondary,
+  },
+  footerButton: {
+    flex: 1,
+  },
+});
+
+const createCardStyles = (colors: ReturnType<typeof import('../../hooks/useTheme').useTheme>['colors'], isDark: boolean) => StyleSheet.create({
   giftCard: {
-    backgroundColor: COLORS.bgSecondary,
+    backgroundColor: colors.bgSecondary,
     borderRadius: RADIUS.lg,
     padding: SPACING.lg,
     marginBottom: SPACING.md,
     borderWidth: 1,
-    borderColor: COLORS.border,
+    borderColor: colors.border,
   },
   giftHeader: {
     flexDirection: 'row',
@@ -265,14 +289,14 @@ const styles = StyleSheet.create({
     marginBottom: SPACING.sm,
   },
   giftCategoryBadge: {
-    backgroundColor: COLORS.bgSubtle,
+    backgroundColor: colors.bgSubtle,
     paddingHorizontal: SPACING.sm,
     paddingVertical: SPACING.xs,
     borderRadius: RADIUS.sm,
   },
   giftCategoryText: {
     fontSize: 12,
-    color: COLORS.textSecondary,
+    color: colors.textSecondary,
     fontWeight: '500',
     fontFamily: FONTS.body,
     textTransform: 'uppercase',
@@ -280,25 +304,25 @@ const styles = StyleSheet.create({
   giftPrice: {
     fontSize: 16,
     fontWeight: '600',
-    color: COLORS.accentPrimary,
+    color: colors.accentPrimary,
     fontFamily: FONTS.body,
   },
   giftName: {
     fontSize: 18,
     fontWeight: '600',
-    color: COLORS.textPrimary,
+    color: colors.textPrimary,
     marginBottom: SPACING.xs,
     fontFamily: FONTS.display,
   },
   giftDescription: {
     fontSize: 14,
-    color: COLORS.textSecondary,
+    color: colors.textSecondary,
     lineHeight: 20,
     marginBottom: SPACING.md,
     fontFamily: FONTS.body,
   },
   reasoningContainer: {
-    backgroundColor: COLORS.bgSubtle,
+    backgroundColor: colors.bgSubtle,
     padding: SPACING.md,
     borderRadius: RADIUS.md,
     marginBottom: SPACING.md,
@@ -306,14 +330,14 @@ const styles = StyleSheet.create({
   reasoningLabel: {
     fontSize: 12,
     fontWeight: '600',
-    color: COLORS.textMuted,
+    color: colors.textMuted,
     marginBottom: SPACING.xs,
     fontFamily: FONTS.body,
     textTransform: 'uppercase',
   },
   reasoningText: {
     fontSize: 13,
-    color: COLORS.textSecondary,
+    color: colors.textSecondary,
     fontFamily: FONTS.body,
     fontStyle: 'italic',
   },
@@ -324,16 +348,16 @@ const styles = StyleSheet.create({
     marginBottom: SPACING.md,
   },
   tag: {
-    backgroundColor: COLORS.bgPrimary,
+    backgroundColor: colors.bgPrimary,
     paddingHorizontal: SPACING.sm,
     paddingVertical: SPACING.xs,
     borderRadius: RADIUS.full,
     borderWidth: 1,
-    borderColor: COLORS.border,
+    borderColor: colors.border,
   },
   tagText: {
     fontSize: 11,
-    color: COLORS.textMuted,
+    color: colors.textMuted,
     fontFamily: FONTS.body,
   },
   giftActions: {
@@ -346,38 +370,27 @@ const styles = StyleSheet.create({
     paddingHorizontal: SPACING.md,
     borderRadius: RADIUS.md,
     borderWidth: 1,
-    borderColor: COLORS.border,
+    borderColor: colors.border,
     alignItems: 'center',
   },
   actionButtonActive: {
-    backgroundColor: COLORS.accentSoft,
-    borderColor: COLORS.accentPrimary,
+    backgroundColor: colors.accentSoft,
+    borderColor: colors.accentPrimary,
   },
   actionButtonPurchased: {
-    backgroundColor: '#DCFCE7',
-    borderColor: COLORS.accentSuccess,
+    backgroundColor: isDark ? '#1A3D2A' : '#DCFCE7',
+    borderColor: colors.accentSuccess,
   },
   actionButtonText: {
     fontSize: 14,
     fontWeight: '500',
-    color: COLORS.textSecondary,
+    color: colors.textSecondary,
     fontFamily: FONTS.body,
   },
   actionButtonTextActive: {
-    color: COLORS.accentPrimary,
+    color: colors.accentPrimary,
   },
   actionButtonTextPurchased: {
-    color: '#166534',
-  },
-  footer: {
-    flexDirection: 'row',
-    padding: SPACING.lg,
-    gap: SPACING.md,
-    borderTopWidth: 1,
-    borderTopColor: COLORS.border,
-    backgroundColor: COLORS.bgSecondary,
-  },
-  footerButton: {
-    flex: 1,
+    color: isDark ? '#86EFAC' : '#166534',
   },
 });

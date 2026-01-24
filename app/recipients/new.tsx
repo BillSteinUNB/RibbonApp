@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useCallback } from 'react';
+import React, { useState, useEffect, useCallback, useMemo } from 'react';
 import { 
   View, 
   Text, 
@@ -14,7 +14,8 @@ import { useRouter } from 'expo-router';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { ChevronDown, ChevronUp, AlertCircle } from 'lucide-react-native';
 import { getSafeStorage } from '../lib/safeStorage';
-import { COLORS, SPACING, FONTS, RADIUS } from '../constants';
+import { SPACING, FONTS, RADIUS } from '../constants';
+import { useTheme } from '../hooks/useTheme';
 import { Button } from '../components/Button';
 import { Input } from '../components/Input';
 import { FormSelect, RangeSlider, DatePicker, ProgressStepper } from '../components/forms';
@@ -85,6 +86,7 @@ const initialFormData: RecipientFormData = {
 export default function NewRecipientScreen() {
   const router = useRouter();
   const insets = useSafeAreaInsets();
+  const { colors, isDark } = useTheme();
   const addRecipient = useRecipientStore(state => state.addRecipient);
   const [currentStep, setCurrentStep] = useState(0);
   const [formData, setFormData] = useState<RecipientFormData>(initialFormData);
@@ -93,6 +95,8 @@ export default function NewRecipientScreen() {
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [isDraftLoaded, setIsDraftLoaded] = useState(false);
   const [showAdvancedOptions, setShowAdvancedOptions] = useState(false);
+
+  const styles = useMemo(() => createStyles(colors, isDark), [colors, isDark]);
 
   // Warn user when navigating away with unsaved changes
   const isDirty = hasFormChanged(formData, initialFormData);
@@ -253,7 +257,7 @@ export default function NewRecipientScreen() {
               <Text style={styles.inputLabel}>Interests</Text>
               {warnings.interests && (
                 <View style={styles.warningBanner}>
-                  <AlertCircle stroke={COLORS.accentWarning} size={16} />
+                  <AlertCircle stroke={colors.accentWarning} size={16} />
                   <Text style={styles.warningText}>{warnings.interests}</Text>
                 </View>
               )}
@@ -343,9 +347,9 @@ export default function NewRecipientScreen() {
             >
               <Text style={styles.advancedToggleText}>Advanced Options</Text>
               {showAdvancedOptions ? (
-                <ChevronUp stroke={COLORS.textSecondary} size={20} />
+                <ChevronUp stroke={colors.textSecondary} size={20} />
               ) : (
-                <ChevronDown stroke={COLORS.textSecondary} size={20} />
+                <ChevronDown stroke={colors.textSecondary} size={20} />
               )}
             </TouchableOpacity>
 
@@ -481,21 +485,21 @@ export default function NewRecipientScreen() {
   );
 }
 
-const styles = StyleSheet.create({
+const createStyles = (colors: ReturnType<typeof import('../hooks/useTheme').useTheme>['colors'], isDark: boolean) => StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: COLORS.bgPrimary,
+    backgroundColor: colors.bgPrimary,
   },
   header: {
     padding: SPACING.xl,
-    backgroundColor: COLORS.bgSecondary,
+    backgroundColor: colors.bgSecondary,
     borderBottomWidth: 1,
-    borderBottomColor: COLORS.border,
+    borderBottomColor: colors.border,
   },
   title: {
     fontSize: 28,
     fontWeight: '700',
-    color: COLORS.textPrimary,
+    color: colors.textPrimary,
     marginBottom: SPACING.lg,
     fontFamily: FONTS.display,
   },
@@ -512,7 +516,7 @@ const styles = StyleSheet.create({
   inputLabel: {
     fontSize: 14,
     fontWeight: '600',
-    color: COLORS.textPrimary,
+    color: colors.textPrimary,
     marginBottom: SPACING.sm,
     fontFamily: FONTS.body,
   },
@@ -531,30 +535,30 @@ const styles = StyleSheet.create({
     paddingVertical: SPACING.sm,
     paddingHorizontal: SPACING.md,
     borderRadius: RADIUS.full,
-    backgroundColor: COLORS.bgSecondary,
+    backgroundColor: colors.bgSecondary,
     borderWidth: 1,
-    borderColor: COLORS.border,
+    borderColor: colors.border,
     gap: SPACING.xs,
   },
   interestChipSelected: {
-    backgroundColor: COLORS.accentSoft,
-    borderColor: COLORS.accentPrimary,
+    backgroundColor: colors.accentSoft,
+    borderColor: colors.accentPrimary,
   },
   interestIcon: {
     fontSize: 16,
   },
   interestText: {
     fontSize: 13,
-    color: COLORS.textSecondary,
+    color: colors.textSecondary,
     fontFamily: FONTS.body,
   },
   interestTextSelected: {
-    color: COLORS.accentPrimary,
+    color: colors.accentPrimary,
     fontWeight: '600',
   },
   selectedCount: {
     fontSize: 12,
-    color: COLORS.textMuted,
+    color: colors.textMuted,
     marginTop: SPACING.sm,
     fontFamily: FONTS.body,
   },
@@ -562,7 +566,7 @@ const styles = StyleSheet.create({
   warningBanner: {
     flexDirection: 'row',
     alignItems: 'center',
-    backgroundColor: '#FEF3C7',
+    backgroundColor: isDark ? '#3D3520' : '#FEF3C7',
     borderRadius: RADIUS.md,
     padding: SPACING.sm,
     marginBottom: SPACING.sm,
@@ -570,7 +574,7 @@ const styles = StyleSheet.create({
   },
   warningText: {
     fontSize: 13,
-    color: '#92400E',
+    color: isDark ? '#FCD34D' : '#92400E',
     fontFamily: FONTS.body,
     flex: 1,
   },
@@ -582,12 +586,12 @@ const styles = StyleSheet.create({
     paddingVertical: SPACING.md,
     marginTop: SPACING.md,
     borderTopWidth: 1,
-    borderTopColor: COLORS.border,
+    borderTopColor: colors.border,
   },
   advancedToggleText: {
     fontSize: 14,
     fontWeight: '600',
-    color: COLORS.textSecondary,
+    color: colors.textSecondary,
     fontFamily: FONTS.body,
   },
   advancedOptions: {
@@ -595,17 +599,17 @@ const styles = StyleSheet.create({
   },
   // Summary Card
   summaryCard: {
-    backgroundColor: COLORS.bgSecondary,
+    backgroundColor: colors.bgSecondary,
     borderRadius: RADIUS.lg,
     padding: SPACING.lg,
     borderWidth: 1,
-    borderColor: COLORS.border,
+    borderColor: colors.border,
     marginTop: SPACING.lg,
   },
   summaryTitle: {
     fontSize: 16,
     fontWeight: '600',
-    color: COLORS.textPrimary,
+    color: colors.textPrimary,
     marginBottom: SPACING.md,
     fontFamily: FONTS.display,
   },
@@ -616,12 +620,12 @@ const styles = StyleSheet.create({
   },
   summaryLabel: {
     fontSize: 13,
-    color: COLORS.textMuted,
+    color: colors.textMuted,
     fontFamily: FONTS.body,
   },
   summaryValue: {
     fontSize: 13,
-    color: COLORS.textPrimary,
+    color: colors.textPrimary,
     fontFamily: FONTS.body,
     fontWeight: '500',
     flex: 1,
@@ -633,16 +637,16 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     padding: SPACING.lg,
     gap: SPACING.md,
-    backgroundColor: COLORS.bgSecondary,
+    backgroundColor: colors.bgSecondary,
     borderTopWidth: 1,
-    borderTopColor: COLORS.border,
+    borderTopColor: colors.border,
   },
   footerButton: {
     flex: 1,
   },
   submitError: {
     fontSize: 14,
-    color: COLORS.error,
+    color: colors.error,
     textAlign: 'center',
     marginTop: SPACING.md,
     fontFamily: FONTS.body,
