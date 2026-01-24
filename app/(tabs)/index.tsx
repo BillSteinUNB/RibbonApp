@@ -2,12 +2,13 @@ import React, { useMemo } from 'react';
 import { View, Text, StyleSheet, ScrollView, TouchableOpacity } from 'react-native';
 import { useRouter } from 'expo-router';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
-import { Gift, Plus, Sparkles, Calendar } from 'lucide-react-native';
+import { Gift, Plus, Sparkles, Calendar, Clock } from 'lucide-react-native';
 import { SPACING, FONTS, RADIUS } from '../constants';
 import { useTheme } from '../hooks/useTheme';
 import { Card } from '../components/Card';
 import { useRecipientStore } from '../store/recipientStore';
 import { useAuthStore } from '../store/authStore';
+import { useOnboardingStore } from '../store/onboardingStore';
 import { ROUTES } from '../constants/routes';
 
 export default function HomeScreen() {
@@ -16,6 +17,19 @@ export default function HomeScreen() {
   const { colors, isDark } = useTheme();
   const { user } = useAuthStore();
   const { recipients } = useRecipientStore();
+  const { hasStartedTrial, trialEndDate, isTrialActive } = useOnboardingStore();
+
+  // Calculate days remaining in trial
+  const trialDaysRemaining = useMemo(() => {
+    if (!hasStartedTrial || !trialEndDate) return 0;
+    const now = new Date();
+    const end = new Date(trialEndDate);
+    const diffTime = end.getTime() - now.getTime();
+    const diffDays = Math.ceil(diffTime / (1000 * 60 * 60 * 24));
+    return Math.max(0, diffDays);
+  }, [hasStartedTrial, trialEndDate]);
+
+  const showTrialBadge = hasStartedTrial && isTrialActive() && !user?.isPremium;
 
   const upcomingOccasions = recipients
     .filter(r => r.occasion?.date)
@@ -26,6 +40,16 @@ export default function HomeScreen() {
 
   return (
     <ScrollView style={styles.container} contentContainerStyle={[styles.content, { paddingTop: insets.top + SPACING.lg }]}>
+      {/* Trial Status Badge */}
+      {showTrialBadge && (
+        <View style={styles.trialBadge}>
+          <Clock stroke={colors.accentPrimary} size={16} />
+          <Text style={styles.trialBadgeText}>
+            Trial: {trialDaysRemaining} {trialDaysRemaining === 1 ? 'day' : 'days'} left
+          </Text>
+        </View>
+      )}
+
       <View style={styles.header}>
         <View>
           <Text style={styles.greeting}>Hello, {user?.profile?.name || 'Friend'}!</Text>
@@ -117,6 +141,26 @@ const createStyles = (colors: ReturnType<typeof import('../hooks/useTheme').useT
   content: {
     padding: SPACING.lg,
     paddingBottom: 40,
+  },
+  trialBadge: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    backgroundColor: colors.accentSoft,
+    paddingVertical: SPACING.sm,
+    paddingHorizontal: SPACING.md,
+    borderRadius: RADIUS.full,
+    alignSelf: 'center',
+    marginBottom: SPACING.sm,
+    gap: SPACING.xs,
+    borderWidth: 1,
+    borderColor: colors.accentPrimary,
+  },
+  trialBadgeText: {
+    fontSize: 13,
+    fontWeight: '600',
+    color: colors.accentPrimary,
+    fontFamily: FONTS.body,
   },
   header: {
     flexDirection: 'row',

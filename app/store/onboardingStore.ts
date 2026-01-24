@@ -7,11 +7,17 @@ import { create } from 'zustand';
 import { persist, createJSONStorage } from 'zustand/middleware';
 import { getSafeStorage } from '../lib/safeStorage';
 import { logger } from '../utils/logger';
+import type { GiftIdea } from '../types/recipient';
 
 interface OnboardingState {
   // Onboarding flow state
   hasCompletedOnboarding: boolean;
   currentStep: number;
+  
+  // Quick Start state
+  hasCompletedQuickStart: boolean;
+  quickStartRecipientId: string | null;
+  quickStartGifts: GiftIdea[];
   
   // Trial/Subscription state
   hasStartedTrial: boolean;
@@ -28,6 +34,11 @@ interface OnboardingState {
   startTrial: (plan: 'weekly' | 'monthly' | 'yearly') => void;
   setSelectedPlan: (plan: 'weekly' | 'monthly' | 'yearly') => void;
   isTrialActive: () => boolean;
+  
+  // Quick Start actions
+  setQuickStartRecipientId: (id: string) => void;
+  setQuickStartGifts: (gifts: GiftIdea[]) => void;
+  completeQuickStart: () => void;
 }
 
 const TRIAL_DURATION_DAYS = 3;
@@ -38,6 +49,9 @@ export const useOnboardingStore = create<OnboardingState>()(
       // Initial state
       hasCompletedOnboarding: false,
       currentStep: 0,
+      hasCompletedQuickStart: false,
+      quickStartRecipientId: null,
+      quickStartGifts: [],
       hasStartedTrial: false,
       trialStartDate: null,
       trialEndDate: null,
@@ -71,6 +85,9 @@ export const useOnboardingStore = create<OnboardingState>()(
         set({
           hasCompletedOnboarding: false,
           currentStep: 0,
+          hasCompletedQuickStart: false,
+          quickStartRecipientId: null,
+          quickStartGifts: [],
           hasStartedTrial: false,
           trialStartDate: null,
           trialEndDate: null,
@@ -89,7 +106,7 @@ export const useOnboardingStore = create<OnboardingState>()(
           trialStartDate: now.toISOString(),
           trialEndDate: endDate.toISOString(),
           selectedPlan: plan,
-          hasCompletedOnboarding: true,
+          // Don't complete onboarding yet - wait for Quick Start
         });
 
         logger.info('[Onboarding] Trial started:', {
@@ -111,6 +128,25 @@ export const useOnboardingStore = create<OnboardingState>()(
         const now = new Date();
         const end = new Date(trialEndDate);
         return now < end;
+      },
+
+      // Quick Start actions
+      setQuickStartRecipientId: (id) => {
+        set({ quickStartRecipientId: id });
+        logger.info('[Onboarding] Quick Start recipient ID set:', id);
+      },
+
+      setQuickStartGifts: (gifts) => {
+        set({ quickStartGifts: gifts });
+        logger.info('[Onboarding] Quick Start gifts set:', gifts.length);
+      },
+
+      completeQuickStart: () => {
+        set({ 
+          hasCompletedQuickStart: true,
+          hasCompletedOnboarding: true,
+        });
+        logger.info('[Onboarding] Quick Start completed');
       },
     }),
     {

@@ -91,8 +91,8 @@ export default function OnboardingPaywall() {
       // Start trial in store
       startTrial(selectedPlan);
       
-      // Navigate to main app
-      router.replace('/');
+      // Navigate to Quick Start flow instead of main app
+      router.replace('/(onboarding)/quick-start');
       
     } catch (error) {
       logger.error('[Paywall] Trial start failed:', error);

@@ -14,16 +14,25 @@ export default function RecipientsTab() {
   const insets = useSafeAreaInsets();
   const { colors } = useTheme();
   const recipients = useRecipientStore(selectRecipients);
-  const { isLoading, error } = useRecipientStore();
+  const { isLoading, error, setLoading } = useRecipientStore();
 
   const [refreshing, setRefreshing] = React.useState(false);
 
   const styles = useMemo(() => createStyles(colors), [colors]);
 
-  const onRefresh = useCallback(() => {
+  const onRefresh = useCallback(async () => {
     setRefreshing(true);
-    setTimeout(() => setRefreshing(false), 1000);
-  }, []);
+    setLoading(true);
+    try {
+      // Rehydrate the store from persisted storage
+      await useRecipientStore.persist.rehydrate();
+    } catch (err) {
+      console.warn('Failed to refresh recipients:', err);
+    } finally {
+      setRefreshing(false);
+      setLoading(false);
+    }
+  }, [setLoading]);
 
   const getRelationshipLabel = (value: string) => {
     return RELATIONSHIPS.find(r => r.value === value)?.label || value;

@@ -1,53 +1,58 @@
-import React, { useState, useEffect, useRef } from 'react';
-import { View, Text, StyleSheet, Animated, Easing, Dimensions } from 'react-native';
-import { useRouter, useLocalSearchParams } from 'expo-router';
-import ConfettiCannon from 'react-native-confetti-cannon';
-import { COLORS, SPACING, FONTS, RADIUS } from '../../constants';
-import { Button } from '../../components/Button';
-import { useRecipientStore, selectRecipientById } from '../../store/recipientStore';
-import { useGiftStore } from '../../store/giftStore';
-import { giftService } from '../../services/giftService';
-import type { GiftIdea } from '../../types/recipient';
-import { ROUTES } from '../../constants/routes';
+/**
+ * Quick Generating - Loading Animation for Quick Start
+ * Shows while AI generates gift ideas
+ * 
+ * Reuses animation patterns from ideas.tsx but in onboarding context
+ */
 
-const { width: SCREEN_WIDTH } = Dimensions.get('window');
+import React, { useState, useEffect, useRef } from 'react';
+import {
+  View,
+  Text,
+  StyleSheet,
+  SafeAreaView,
+  Animated,
+  Easing,
+} from 'react-native';
+import { useRouter, useLocalSearchParams } from 'expo-router';
+import { COLORS, SPACING, RADIUS } from '../constants';
+import { Button } from '../components/Button';
+import { useRecipientStore, selectRecipientById } from '../store/recipientStore';
+import { useGiftStore } from '../store/giftStore';
+import { useOnboardingStore } from '../store/onboardingStore';
+import { giftService } from '../services/giftService';
+import type { GiftIdea } from '../types/recipient';
+import { logger } from '../utils/logger';
 
 const PROGRESS_MESSAGES = [
-  'Analyzing recipient preferences...',
-  'Understanding lifestyle and interests...',
-  'Brainstorming gift ideas...',
-  'Considering budget constraints...',
-  'Refining suggestions for personalization...',
-  'Finalizing gift list...',
+  'Analyzing preferences...',
+  'Understanding their style...',
+  'Brainstorming ideas...',
+  'Finding perfect matches...',
+  'Finalizing suggestions...',
 ];
 
-type ScreenState = 'loading' | 'celebration' | 'error';
-
-export default function GiftGenerationScreen() {
+export default function QuickGeneratingScreen() {
   const router = useRouter();
   const { id } = useLocalSearchParams();
   const recipientId = typeof id === 'string' ? id : '';
+  
   const recipient = useRecipientStore(selectRecipientById(recipientId));
-  const { setCurrentGifts, setAllGifts, createGenerationSession, setIsGenerating, setError } = useGiftStore();
+  const { setCurrentGifts, setAllGifts, createGenerationSession, setIsGenerating } = useGiftStore();
+  const { setQuickStartGifts, completeQuickStart } = useOnboardingStore();
 
-  const [screenState, setScreenState] = useState<ScreenState>('loading');
   const [progressMessage, setProgressMessage] = useState(PROGRESS_MESSAGES[0]);
   const [currentMessageIndex, setCurrentMessageIndex] = useState(0);
-  const [error, setLocalError] = useState<string | null>(null);
+  const [error, setError] = useState<string | null>(null);
   const [isCancelled, setIsCancelled] = useState(false);
-  const [retryToken, setRetryToken] = useState(0);
-  const [generatedGifts, setGeneratedGifts] = useState<GiftIdea[]>([]);
 
+  // Animations
   const spinValue = useRef(new Animated.Value(0)).current;
   const pulseValue = useRef(new Animated.Value(1)).current;
   const progressValue = useRef(new Animated.Value(0)).current;
-  const celebrationScale = useRef(new Animated.Value(0)).current;
-  const celebrationOpacity = useRef(new Animated.Value(0)).current;
-  const confettiRef = useRef<ConfettiCannon>(null);
 
+  // Spin animation
   useEffect(() => {
-    if (screenState !== 'loading') return;
-
     const spin = Animated.loop(
       Animated.timing(spinValue, {
         toValue: 1,
@@ -80,11 +85,10 @@ export default function GiftGenerationScreen() {
       spin.stop();
       pulse.stop();
     };
-  }, [spinValue, pulseValue, screenState]);
+  }, []);
 
+  // Progress message cycling
   useEffect(() => {
-    if (screenState !== 'loading') return;
-
     const interval = setInterval(() => {
       setCurrentMessageIndex((prev) => {
         const next = (prev + 1) % PROGRESS_MESSAGES.length;
@@ -99,45 +103,17 @@ export default function GiftGenerationScreen() {
     }, 2000);
 
     return () => clearInterval(interval);
-  }, [progressValue, screenState]);
+  }, []);
 
-  // Start celebration animation
-  const startCelebration = (gifts: GiftIdea[]) => {
-    setGeneratedGifts(gifts);
-    setScreenState('celebration');
-
-    // Fire confetti
-    setTimeout(() => {
-      confettiRef.current?.start();
-    }, 100);
-
-    // Animate the celebration card
-    Animated.parallel([
-      Animated.spring(celebrationScale, {
-        toValue: 1,
-        friction: 8,
-        tension: 40,
-        useNativeDriver: true,
-      }),
-      Animated.timing(celebrationOpacity, {
-        toValue: 1,
-        duration: 300,
-        useNativeDriver: true,
-      }),
-    ]).start();
-
-    // Auto-navigate to results after delay
-    setTimeout(() => {
-      router.replace(ROUTES.RECIPIENTS.RESULTS(recipientId));
-    }, 2500);
-  };
-
+  // Generate gifts
   useEffect(() => {
     if (!recipient || isCancelled) return;
 
     const generateGifts = async () => {
       setIsGenerating(true);
       try {
+        logger.info('[QuickGenerating] Starting generation for:', recipient.name);
+        
         const result = await giftService.generateGifts(recipient, 5);
         
         if (isCancelled) return;
@@ -157,43 +133,46 @@ export default function GiftGenerationScreen() {
         setCurrentGifts(giftsWithSession);
         setIsGenerating(false);
 
-        // Show celebration instead of immediately navigating
-        startCelebration(giftsWithSession);
+        // Store gifts in onboarding store for success screen
+        setQuickStartGifts(giftsWithSession);
+
+        logger.info('[QuickGenerating] Generation complete, navigating to success');
+        
+        // Navigate to success screen
+        router.replace(`/(onboarding)/quick-success?id=${recipientId}`);
+        
       } catch (err) {
         if (isCancelled) return;
         
+        logger.error('[QuickGenerating] Generation failed:', err);
         const errorMessage = err instanceof Error ? err.message : 'Failed to generate gift ideas';
-        setLocalError(errorMessage);
         setError(errorMessage);
         setIsGenerating(false);
-        setScreenState('error');
       }
     };
 
     generateGifts();
-  }, [recipient, isCancelled, retryToken, recipientId, router, setCurrentGifts, setAllGifts, createGenerationSession, setIsGenerating, setError]);
+  }, [recipient, isCancelled, recipientId]);
 
   const handleCancel = () => {
     setIsCancelled(true);
     setIsGenerating(false);
+    // Go back to quick-recipient
     router.back();
   };
 
   const handleRetry = () => {
-    setLocalError(null);
-    setScreenState('loading');
-    setIsCancelled(false);
     setError(null);
+    setIsCancelled(false);
     setCurrentMessageIndex(0);
     setProgressMessage(PROGRESS_MESSAGES[0]);
     progressValue.setValue(0);
-    celebrationScale.setValue(0);
-    celebrationOpacity.setValue(0);
-    setRetryToken((prev) => prev + 1);
   };
 
-  const handleViewResults = () => {
-    router.replace(ROUTES.RECIPIENTS.RESULTS(recipientId));
+  const handleSkip = () => {
+    // Complete quick start without gifts and go to main app
+    completeQuickStart();
+    router.replace('/(tabs)');
   };
 
   const spinAnimation = spinValue.interpolate({
@@ -201,128 +180,66 @@ export default function GiftGenerationScreen() {
     outputRange: ['0deg', '360deg'],
   });
 
-  if (!recipient) {
+  // Error state
+  if (error) {
     return (
-      <View style={styles.container}>
-        <View style={styles.errorContainer}>
-          <Text style={styles.errorTitle}>Recipient Not Found</Text>
-          <Text style={styles.errorMessage}>
-            Could not find the recipient you're looking for.
-          </Text>
-          <Button title="Go Back" onPress={() => router.back()} style={styles.button} />
-        </View>
-      </View>
-    );
-  }
-
-  if (screenState === 'error') {
-    return (
-      <View style={styles.container}>
+      <SafeAreaView style={styles.container}>
         <View style={styles.errorContainer}>
           <View style={styles.errorIcon}>
-            <Text style={styles.errorIconText}>!</Text>
+            <Text style={styles.errorIconText}>😕</Text>
           </View>
-          <Text style={styles.errorTitle}>Generation Failed</Text>
+          <Text style={styles.errorTitle}>Oops! Something went wrong</Text>
           <Text style={styles.errorMessage}>{error}</Text>
-          <Button title="Try Again" onPress={handleRetry} style={styles.button} />
+          <Button title="Try Again" onPress={handleRetry} style={styles.errorButton} />
           <Button
-            title="Go Back"
-            onPress={() => router.back()}
+            title="Skip for now"
+            onPress={handleSkip}
             variant="outline"
-            style={styles.button}
+            style={styles.errorButton}
           />
         </View>
-      </View>
+      </SafeAreaView>
     );
   }
 
-  // Celebration State
-  if (screenState === 'celebration') {
-    const topGift = generatedGifts[0];
+  // Recipient not found
+  if (!recipient) {
     return (
-      <View style={styles.container}>
-        <ConfettiCannon
-          ref={confettiRef}
-          count={150}
-          origin={{ x: SCREEN_WIDTH / 2, y: -20 }}
-          autoStart={false}
-          fadeOut
-          fallSpeed={2500}
-          explosionSpeed={350}
-          colors={['#FFD700', '#FF6B6B', '#4ECDC4', '#45B7D1', '#96E6A1', '#DDA0DD']}
-        />
-        
-        <View style={styles.celebrationContent}>
-          <Animated.View
-            style={[
-              styles.celebrationCard,
-              {
-                transform: [{ scale: celebrationScale }],
-                opacity: celebrationOpacity,
-              },
-            ]}
-          >
-            <Text style={styles.celebrationEmoji}>🎉</Text>
-            <Text style={styles.celebrationTitle}>
-              Found {generatedGifts.length} Perfect Gifts!
-            </Text>
-            <Text style={styles.celebrationSubtitle}>
-              for {recipient.name}
-            </Text>
-
-            {topGift && (
-              <View style={styles.topGiftPreview}>
-                <Text style={styles.topGiftLabel}>Top Pick</Text>
-                <Text style={styles.topGiftName}>{topGift.name}</Text>
-                <Text style={styles.topGiftPrice}>{topGift.price}</Text>
-              </View>
-            )}
-
-            <Text style={styles.celebrationHint}>
-              Taking you to your results...
-            </Text>
-          </Animated.View>
-
-          <Button
-            title="View All Gifts Now"
-            onPress={handleViewResults}
-            style={styles.celebrationButton}
-          />
+      <SafeAreaView style={styles.container}>
+        <View style={styles.errorContainer}>
+          <Text style={styles.errorTitle}>Recipient not found</Text>
+          <Button title="Go Back" onPress={() => router.back()} style={styles.errorButton} />
         </View>
-      </View>
+      </SafeAreaView>
     );
   }
 
-  // Loading State
   return (
-    <View style={styles.container}>
+    <SafeAreaView style={styles.container}>
       <View style={styles.content}>
+        {/* Animated Spinner */}
         <Animated.View
           style={[
             styles.spinnerContainer,
-            {
-              transform: [{ scale: pulseValue }],
-            },
+            { transform: [{ scale: pulseValue }] }
           ]}
         >
           <Animated.View
             style={[
               styles.spinner,
-              {
-                transform: [{ rotate: spinAnimation }],
-              },
+              { transform: [{ rotate: spinAnimation }] }
             ]}
-          >
-            <View style={styles.spinnerInner} />
-          </Animated.View>
+          />
           <View style={styles.giftIcon}>
             <Text style={styles.giftEmoji}>🎁</Text>
           </View>
         </Animated.View>
 
+        {/* Title */}
         <Text style={styles.title}>Finding Perfect Gifts</Text>
         <Text style={styles.subtitle}>for {recipient.name}</Text>
 
+        {/* Progress Bar */}
         <View style={styles.progressContainer}>
           <View style={styles.progressBar}>
             <Animated.View
@@ -340,6 +257,7 @@ export default function GiftGenerationScreen() {
           <Text style={styles.progressMessage}>{progressMessage}</Text>
         </View>
 
+        {/* Step Indicators */}
         <View style={styles.stepsContainer}>
           {PROGRESS_MESSAGES.map((message, index) => (
             <View key={index} style={styles.stepItem}>
@@ -362,6 +280,7 @@ export default function GiftGenerationScreen() {
         </View>
       </View>
 
+      {/* Cancel Button */}
       <View style={styles.footer}>
         <Button
           title="Cancel"
@@ -370,7 +289,7 @@ export default function GiftGenerationScreen() {
           style={styles.cancelButton}
         />
       </View>
-    </View>
+    </SafeAreaView>
   );
 }
 
@@ -401,10 +320,6 @@ const styles = StyleSheet.create({
     borderColor: COLORS.border,
     borderTopColor: COLORS.accentPrimary,
   },
-  spinnerInner: {
-    width: '100%',
-    height: '100%',
-  },
   giftIcon: {
     width: 60,
     height: 60,
@@ -422,14 +337,12 @@ const styles = StyleSheet.create({
     color: COLORS.textPrimary,
     textAlign: 'center',
     marginBottom: SPACING.xs,
-    fontFamily: FONTS.display,
   },
   subtitle: {
     fontSize: 16,
     color: COLORS.textSecondary,
     textAlign: 'center',
     marginBottom: SPACING.xl,
-    fontFamily: FONTS.body,
   },
   progressContainer: {
     width: '100%',
@@ -451,7 +364,6 @@ const styles = StyleSheet.create({
     fontSize: 14,
     color: COLORS.accentPrimary,
     textAlign: 'center',
-    fontFamily: FONTS.body,
     fontWeight: '500',
   },
   stepsContainer: {
@@ -476,7 +388,6 @@ const styles = StyleSheet.create({
   stepText: {
     fontSize: 13,
     color: COLORS.textMuted,
-    fontFamily: FONTS.body,
   },
   stepTextActive: {
     color: COLORS.textSecondary,
@@ -489,7 +400,6 @@ const styles = StyleSheet.create({
   cancelButton: {
     width: '100%',
   },
-  // Error State
   errorContainer: {
     flex: 1,
     alignItems: 'center',
@@ -500,118 +410,30 @@ const styles = StyleSheet.create({
     width: 80,
     height: 80,
     borderRadius: 40,
-    backgroundColor: '#FEE2E2',
+    backgroundColor: COLORS.accentSoft,
     alignItems: 'center',
     justifyContent: 'center',
     marginBottom: SPACING.lg,
   },
   errorIconText: {
     fontSize: 40,
-    fontWeight: '700',
-    color: COLORS.error,
   },
   errorTitle: {
     fontSize: 20,
     fontWeight: '700',
     color: COLORS.textPrimary,
     marginBottom: SPACING.sm,
-    fontFamily: FONTS.display,
+    textAlign: 'center',
   },
   errorMessage: {
     fontSize: 14,
     color: COLORS.textSecondary,
     textAlign: 'center',
     marginBottom: SPACING.xl,
-    fontFamily: FONTS.body,
     lineHeight: 20,
   },
-  button: {
+  errorButton: {
     width: '100%',
     marginBottom: SPACING.md,
-  },
-  // Celebration State
-  celebrationContent: {
-    flex: 1,
-    alignItems: 'center',
-    justifyContent: 'center',
-    padding: SPACING.xl,
-  },
-  celebrationCard: {
-    backgroundColor: COLORS.bgSecondary,
-    borderRadius: RADIUS.xl,
-    padding: SPACING.xl,
-    alignItems: 'center',
-    width: '100%',
-    maxWidth: 320,
-    borderWidth: 1,
-    borderColor: COLORS.border,
-    shadowColor: '#000',
-    shadowOffset: { width: 0, height: 4 },
-    shadowOpacity: 0.1,
-    shadowRadius: 12,
-    elevation: 5,
-  },
-  celebrationEmoji: {
-    fontSize: 60,
-    marginBottom: SPACING.md,
-  },
-  celebrationTitle: {
-    fontSize: 24,
-    fontWeight: '700',
-    color: COLORS.textPrimary,
-    textAlign: 'center',
-    fontFamily: FONTS.display,
-    marginBottom: SPACING.xs,
-  },
-  celebrationSubtitle: {
-    fontSize: 16,
-    color: COLORS.textSecondary,
-    textAlign: 'center',
-    fontFamily: FONTS.body,
-    marginBottom: SPACING.lg,
-  },
-  topGiftPreview: {
-    backgroundColor: COLORS.accentSoft,
-    borderRadius: RADIUS.lg,
-    padding: SPACING.md,
-    width: '100%',
-    alignItems: 'center',
-    marginBottom: SPACING.lg,
-    borderWidth: 1,
-    borderColor: COLORS.accentPrimary,
-  },
-  topGiftLabel: {
-    fontSize: 11,
-    fontWeight: '600',
-    color: COLORS.accentPrimary,
-    textTransform: 'uppercase',
-    letterSpacing: 0.5,
-    marginBottom: SPACING.xs,
-    fontFamily: FONTS.body,
-  },
-  topGiftName: {
-    fontSize: 16,
-    fontWeight: '600',
-    color: COLORS.textPrimary,
-    textAlign: 'center',
-    fontFamily: FONTS.display,
-    marginBottom: SPACING.xs,
-  },
-  topGiftPrice: {
-    fontSize: 14,
-    fontWeight: '600',
-    color: COLORS.accentPrimary,
-    fontFamily: FONTS.body,
-  },
-  celebrationHint: {
-    fontSize: 13,
-    color: COLORS.textMuted,
-    fontFamily: FONTS.body,
-    fontStyle: 'italic',
-  },
-  celebrationButton: {
-    marginTop: SPACING.xl,
-    width: '100%',
-    maxWidth: 280,
   },
 });
