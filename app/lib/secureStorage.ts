@@ -22,7 +22,7 @@ async function getSecureStore() {
     SecureStoreModule = await import('expo-secure-store');
     return SecureStoreModule;
   } catch (e) {
-    console.warn('[SecureStorage] expo-secure-store not available:', e);
+    if (__DEV__) console.warn('[SecureStorage] expo-secure-store not available:', e);
     return null;
   }
 }
@@ -33,7 +33,7 @@ async function getAsyncStorage() {
     AsyncStorageModule = await import('@react-native-async-storage/async-storage');
     return AsyncStorageModule.default;
   } catch (e) {
-    console.warn('[SecureStorage] AsyncStorage not available:', e);
+    if (__DEV__) console.warn('[SecureStorage] AsyncStorage not available:', e);
     return null;
   }
 }
@@ -62,7 +62,7 @@ export const secureStorage: StorageAdapter = {
       }
       return null;
     } catch (error) {
-      console.warn(`[SecureStorage] getItem error for "${key}":`, error);
+      if (__DEV__) console.warn(`[SecureStorage] getItem error for "${key}":`, error);
       try {
         const AsyncStorage = await getAsyncStorage();
         if (AsyncStorage) {
@@ -91,14 +91,14 @@ export const secureStorage: StorageAdapter = {
         await AsyncStorage.setItem(key, value);
       }
     } catch (error) {
-      console.warn(`[SecureStorage] setItem error for "${key}":`, error);
+      if (__DEV__) console.warn(`[SecureStorage] setItem error for "${key}":`, error);
       try {
         const AsyncStorage = await getAsyncStorage();
         if (AsyncStorage) {
           await AsyncStorage.setItem(key, value);
         }
       } catch (fallbackError) {
-        console.error(`[SecureStorage] AsyncStorage fallback also failed:`, fallbackError);
+        if (__DEV__) console.error(`[SecureStorage] AsyncStorage fallback also failed:`, fallbackError);
       }
     }
   },

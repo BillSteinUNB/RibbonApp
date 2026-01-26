@@ -17,7 +17,7 @@ async function getErrorLogger() {
     try {
       _errorLoggerModule = await import('./errorLogger');
     } catch (e) {
-      console.warn('[EncryptedStorage] errorLogger not available:', e);
+      if (__DEV__) console.warn('[EncryptedStorage] errorLogger not available:', e);
       return null;
     }
   }
@@ -27,7 +27,7 @@ async function getErrorLogger() {
 // Synchronous fallback for error logging (won't block on import)
 function logError(error: unknown, context: Record<string, unknown>) {
   getErrorLogger().then(el => el?.log(error, context)).catch(() => {});
-  console.error('[EncryptedStorage]', context, error);
+  if (__DEV__) console.error('[EncryptedStorage]', context, error);
 }
 
 const ENCRYPTION_KEY_ID = '@ribbon/encryption_key';
@@ -49,7 +49,7 @@ async function getCrypto() {
     CryptoModule = await import('expo-crypto');
     return CryptoModule;
   } catch (e) {
-    console.warn('[EncryptedStorage] expo-crypto not available:', e);
+    if (__DEV__) console.warn('[EncryptedStorage] expo-crypto not available:', e);
     return null;
   }
 }
@@ -60,7 +60,7 @@ async function getSecureStore() {
     SecureStoreModule = await import('expo-secure-store');
     return SecureStoreModule;
   } catch (e) {
-    console.warn('[EncryptedStorage] expo-secure-store not available:', e);
+    if (__DEV__) console.warn('[EncryptedStorage] expo-secure-store not available:', e);
     return null;
   }
 }

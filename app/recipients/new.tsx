@@ -117,7 +117,7 @@ export default function NewRecipientScreen() {
           setCurrentStep(step);
         }
       } catch (error) {
-        console.warn('Failed to load draft:', error);
+        if (__DEV__) console.warn('Failed to load draft:', error);
       } finally {
         setIsDraftLoaded(true);
       }
@@ -130,7 +130,7 @@ export default function NewRecipientScreen() {
       const storage = getSafeStorage();
       await storage.setItem(DRAFT_STORAGE_KEY, JSON.stringify({ formData: data, step }));
     } catch (error) {
-      console.warn('Failed to save draft:', error);
+      if (__DEV__) console.warn('Failed to save draft:', error);
     }
   }, []);
 
@@ -139,7 +139,7 @@ export default function NewRecipientScreen() {
       const storage = getSafeStorage();
       await storage.removeItem(DRAFT_STORAGE_KEY);
     } catch (error) {
-      console.warn('Failed to clear draft:', error);
+      if (__DEV__) console.warn('Failed to clear draft:', error);
     }
   }, []);
 

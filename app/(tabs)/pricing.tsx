@@ -34,7 +34,7 @@ export default function PricingScreen() {
         setPackages(offerings.current.availablePackages);
       }
     } catch (error) {
-      console.error('Failed to load offerings:', error);
+      if (__DEV__) console.error('Failed to load offerings:', error);
     } finally {
       setIsLoading(false);
     }

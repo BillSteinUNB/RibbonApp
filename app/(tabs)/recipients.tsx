@@ -27,7 +27,7 @@ export default function RecipientsTab() {
       // Rehydrate the store from persisted storage
       await useRecipientStore.persist.rehydrate();
     } catch (err) {
-      console.warn('Failed to refresh recipients:', err);
+      if (__DEV__) console.warn('Failed to refresh recipients:', err);
     } finally {
       setRefreshing(false);
       setLoading(false);
