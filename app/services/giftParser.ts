@@ -91,13 +91,20 @@ class GiftParser {
       reasoning: gift.reasoning,
       price: gift.price,
       category: this.normalizeCategory(gift.category),
-      url: gift.url ?? undefined,
+      url: gift.url ?? this.generateShoppingUrl(gift.name),
       stores: gift.stores ?? [],
       tags: this.normalizeTags(gift.tags),
       isSaved: false,
       isPurchased: false,
       generatedAt: getTimestamp(),
     }));
+  }
+
+  /**
+   * Generate Google Shopping search URL for a gift
+   */
+  private generateShoppingUrl(giftName: string): string {
+    return `https://www.google.com/search?tbm=shop&q=${encodeURIComponent(giftName)}`;
   }
 
   /**

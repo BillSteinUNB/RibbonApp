@@ -1,5 +1,6 @@
 import React, { useState, useMemo } from 'react';
-import { View, Text, StyleSheet, TouchableOpacity, FlatList } from 'react-native';
+import { View, Text, StyleSheet, TouchableOpacity, FlatList, Linking } from 'react-native';
+import { ExternalLink } from 'lucide-react-native';
 import { useRouter, useLocalSearchParams } from 'expo-router';
 import { SPACING, FONTS, RADIUS } from '../../constants';
 import { useTheme } from '../../hooks/useTheme';
@@ -30,11 +31,12 @@ interface GiftCardProps {
   gift: GiftIdea;
   onSave: () => void;
   onMarkPurchased: () => void;
+  onShop: () => void;
   colors: ReturnType<typeof import('../../hooks/useTheme').useTheme>['colors'];
   isDark: boolean;
 }
 
-function GiftCard({ gift, onSave, onMarkPurchased, colors, isDark }: GiftCardProps) {
+function GiftCard({ gift, onSave, onMarkPurchased, onShop, colors, isDark }: GiftCardProps) {
   const cardStyles = useMemo(() => createCardStyles(colors, isDark), [colors, isDark]);
   
   return (
@@ -66,6 +68,16 @@ function GiftCard({ gift, onSave, onMarkPurchased, colors, isDark }: GiftCardPro
       
       <View style={cardStyles.giftActions}>
         <TouchableOpacity
+          style={[cardStyles.actionButton, cardStyles.actionButtonShop]}
+          onPress={onShop}
+        >
+          <View style={cardStyles.shopButtonContent}>
+            <ExternalLink size={14} color={colors.white} />
+            <Text style={cardStyles.actionButtonTextShop}>Shop</Text>
+          </View>
+        </TouchableOpacity>
+
+        <TouchableOpacity
           style={[cardStyles.actionButton, gift.isSaved && cardStyles.actionButtonActive]}
           onPress={onSave}
         >
@@ -73,7 +85,7 @@ function GiftCard({ gift, onSave, onMarkPurchased, colors, isDark }: GiftCardPro
             {gift.isSaved ? 'Saved' : 'Save'}
           </Text>
         </TouchableOpacity>
-        
+
         <TouchableOpacity
           style={[cardStyles.actionButton, gift.isPurchased && cardStyles.actionButtonPurchased]}
           onPress={onMarkPurchased}
@@ -122,6 +134,12 @@ export default function GiftResultsScreen() {
 
   const handleMarkPurchased = (giftId: string) => {
     markAsPurchased(giftId);
+  };
+
+  const handleShop = (url: string | undefined) => {
+    if (url) {
+      Linking.openURL(url);
+    }
   };
 
   const handleRegenerate = () => {
@@ -174,6 +192,7 @@ export default function GiftResultsScreen() {
             gift={item}
             onSave={() => handleSave(item.id, item.isSaved)}
             onMarkPurchased={() => handleMarkPurchased(item.id)}
+            onShop={() => handleShop(item.url)}
             colors={colors}
             isDark={isDark}
           />
@@ -392,5 +411,20 @@ const createCardStyles = (colors: ReturnType<typeof import('../../hooks/useTheme
   },
   actionButtonTextPurchased: {
     color: isDark ? '#86EFAC' : '#166534',
+  },
+  actionButtonShop: {
+    backgroundColor: colors.accentPrimary,
+    borderColor: colors.accentPrimary,
+  },
+  shopButtonContent: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 4,
+  },
+  actionButtonTextShop: {
+    fontSize: 14,
+    fontWeight: '500',
+    color: colors.white,
+    fontFamily: FONTS.body,
   },
 });
