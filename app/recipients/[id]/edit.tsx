@@ -256,7 +256,7 @@ export default function EditRecipientScreen() {
 
             {/* Interest Grid */}
             <View style={styles.interestSection}>
-              <Text style={styles.inputLabel}>Interests</Text>
+              <Text style={styles.inputLabel}>Interests (Recommended)</Text>
               {warnings.interests && (
                 <View style={styles.warningBanner}>
                   <AlertCircle stroke={colors.accentWarning} size={16} />
@@ -339,6 +339,7 @@ export default function EditRecipientScreen() {
                 occasion: { ...formData.occasion, date: date.toISOString() }
               })}
               placeholder="Select date"
+              minDate={new Date()}
             />
 
             {/* Collapsible Advanced Options */}
@@ -590,15 +591,17 @@ const createStyles = (colors: ReturnType<typeof import('../../hooks/useTheme').u
   warningBanner: {
     flexDirection: 'row',
     alignItems: 'center',
-    backgroundColor: isDark ? '#3D3520' : '#FEF3C7',
+    backgroundColor: colors.warningBg,
     borderRadius: RADIUS.md,
     padding: SPACING.sm,
     marginBottom: SPACING.sm,
     gap: SPACING.xs,
+    borderWidth: 1,
+    borderColor: colors.warningBorder,
   },
   warningText: {
     fontSize: 13,
-    color: isDark ? '#FCD34D' : '#92400E',
+    color: colors.warningText,
     fontFamily: FONTS.body,
     flex: 1,
   },

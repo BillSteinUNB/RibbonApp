@@ -18,7 +18,7 @@ const CHECK_INTERVAL_MS = 30000; // Check every 30 seconds when app is active
 export function useNetworkStatus(): NetworkStatus {
   const [status, setStatus] = useState<NetworkStatus>({
     isConnected: true, // Assume connected initially
-    isChecking: false,
+    isChecking: true,  // Indicates verification in progress
     lastChecked: null,
   });
 

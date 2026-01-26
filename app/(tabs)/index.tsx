@@ -25,7 +25,7 @@ export default function HomeScreen() {
     const now = new Date();
     const end = new Date(trialEndDate);
     const diffTime = end.getTime() - now.getTime();
-    const diffDays = Math.ceil(diffTime / (1000 * 60 * 60 * 24));
+    const diffDays = Math.floor(diffTime / (1000 * 60 * 60 * 24));
     return Math.max(0, diffDays);
   }, [hasStartedTrial, trialEndDate]);
 
@@ -122,9 +122,9 @@ export default function HomeScreen() {
 
       <View style={styles.section}>
         <Text style={styles.sectionTitle}>Gift Giving Tips</Text>
-        <Card style={[styles.tipCard, isDark && styles.tipCardDark]}>
-          <Text style={[styles.tipTitle, isDark && styles.tipTitleDark]}>Did you know?</Text>
-          <Text style={[styles.tipText, isDark && styles.tipTextDark]}>
+        <Card style={styles.tipCard}>
+          <Text style={styles.tipTitle}>Did you know?</Text>
+          <Text style={styles.tipText}>
             Adding specific interests like "Hiking" or "Watercolor Painting" helps our AI suggest much more personalized gifts!
           </Text>
         </Card>
@@ -291,29 +291,19 @@ const createStyles = (colors: ReturnType<typeof import('../hooks/useTheme').useT
     fontWeight: '600',
   },
   tipCard: {
-    backgroundColor: '#FFFBEB',
-    borderColor: '#FCD34D',
+    backgroundColor: colors.tipBg,
+    borderColor: colors.tipBorder,
     borderWidth: 1,
-  },
-  tipCardDark: {
-    backgroundColor: '#3D3520',
-    borderColor: '#92702A',
   },
   tipTitle: {
     fontSize: 16,
     fontWeight: '600',
-    color: '#92400E',
+    color: colors.tipTitle,
     marginBottom: SPACING.xs,
-  },
-  tipTitleDark: {
-    color: '#FCD34D',
   },
   tipText: {
     fontSize: 14,
-    color: '#B45309',
+    color: colors.tipText,
     lineHeight: 20,
-  },
-  tipTextDark: {
-    color: '#E5C07A',
   },
 });

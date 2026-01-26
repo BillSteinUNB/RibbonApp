@@ -1,5 +1,5 @@
 import React, { useCallback, useMemo } from 'react';
-import { View, Text, StyleSheet, TouchableOpacity, RefreshControl, FlatList } from 'react-native';
+import { View, Text, StyleSheet, TouchableOpacity, RefreshControl, FlatList, ActivityIndicator } from 'react-native';
 import { useRouter } from 'expo-router';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { Button } from '../components/Button';
@@ -78,6 +78,13 @@ export default function RecipientsTab() {
     </View>
   );
 
+  const renderLoadingState = () => (
+    <View style={styles.loadingContainer}>
+      <ActivityIndicator size="large" color={colors.accentPrimary} />
+      <Text style={styles.loadingText}>Loading recipients...</Text>
+    </View>
+  );
+
   const renderErrorState = () => (
     <View style={styles.errorContainer}>
       <Text style={styles.errorText}>
@@ -105,6 +112,8 @@ export default function RecipientsTab() {
 
       {error ? (
         renderErrorState()
+      ) : isLoading && recipients.length === 0 ? (
+        renderLoadingState()
       ) : recipients.length === 0 ? (
         renderEmptyState()
       ) : (
@@ -248,5 +257,17 @@ const createStyles = (colors: ReturnType<typeof import('../hooks/useTheme').useT
   },
   errorButton: {
     width: 150,
+  },
+  loadingContainer: {
+    flex: 1,
+    alignItems: 'center',
+    justifyContent: 'center',
+    padding: SPACING.xl,
+  },
+  loadingText: {
+    fontSize: 14,
+    color: colors.textSecondary,
+    marginTop: SPACING.md,
+    fontFamily: FONTS.body,
   },
 });
