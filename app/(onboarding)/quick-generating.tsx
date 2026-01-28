@@ -13,6 +13,7 @@ import {
   SafeAreaView,
   Animated,
   Easing,
+  Alert,
 } from 'react-native';
 import { useRouter, useLocalSearchParams } from 'expo-router';
 import { COLORS, SPACING, RADIUS } from '../constants';
@@ -87,22 +88,41 @@ export default function QuickGeneratingScreen() {
     };
   }, []);
 
-  // Progress message cycling
+  // Progress message cycling with variable timing (faster at start, slower toward end)
+  // Cap progress at 80% until completion
   useEffect(() => {
-    const interval = setInterval(() => {
-      setCurrentMessageIndex((prev) => {
-        const next = (prev + 1) % PROGRESS_MESSAGES.length;
-        setProgressMessage(PROGRESS_MESSAGES[next]);
+    const baseIntervals = [1500, 2000, 2500, 3000, 4000]; // Slower as we progress
+    let timeoutId: ReturnType<typeof setTimeout>;
+
+    const cycleMessage = (index: number) => {
+      if (index >= PROGRESS_MESSAGES.length) return;
+
+      const nextIndex = index + 1;
+      const intervalDuration = baseIntervals[Math.min(index, baseIntervals.length - 1)];
+
+      timeoutId = setTimeout(() => {
+        setCurrentMessageIndex(nextIndex);
+        setProgressMessage(PROGRESS_MESSAGES[nextIndex] || PROGRESS_MESSAGES[PROGRESS_MESSAGES.length - 1]);
+
+        // Cap visual progress at 80% until actual completion
+        const visualProgress = Math.min(((nextIndex + 1) / PROGRESS_MESSAGES.length) * 100, 80);
         Animated.timing(progressValue, {
-          toValue: ((next + 1) / PROGRESS_MESSAGES.length) * 100,
+          toValue: visualProgress,
           duration: 500,
           useNativeDriver: false,
         }).start();
-        return next;
-      });
-    }, 2000);
 
-    return () => clearInterval(interval);
+        if (nextIndex < PROGRESS_MESSAGES.length - 1) {
+          cycleMessage(nextIndex);
+        }
+      }, intervalDuration);
+    };
+
+    cycleMessage(0);
+
+    return () => {
+      if (timeoutId) clearTimeout(timeoutId);
+    };
   }, []);
 
   // Generate gifts
@@ -170,9 +190,20 @@ export default function QuickGeneratingScreen() {
   };
 
   const handleSkip = () => {
-    // Complete quick start without gifts and go to main app
-    completeQuickStart();
-    router.replace('/(tabs)');
+    Alert.alert(
+      'Skip Gift Generation?',
+      'Your recipient has been saved. You can generate gift ideas for them later from the Recipients tab.',
+      [
+        { text: 'Cancel', style: 'cancel' },
+        {
+          text: 'Skip',
+          onPress: () => {
+            completeQuickStart();
+            router.replace('/(tabs)');
+          },
+        },
+      ]
+    );
   };
 
   const spinAnimation = spinValue.interpolate({

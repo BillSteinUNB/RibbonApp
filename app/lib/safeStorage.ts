@@ -37,7 +37,7 @@ async function loadAsyncStorage(): Promise<any> {
         return asyncStorageModule;
       }
     } catch (e) {
-      console.warn('[SafeStorage] AsyncStorage not available, using memory fallback:', e);
+      if (__DEV__) console.warn('[SafeStorage] AsyncStorage not available, using memory fallback:', e);
     }
     return null;
   })();
@@ -60,7 +60,7 @@ export const safeStorage: StorageAdapter = {
       const storage = getStorageSync();
       return await storage.getItem(key);
     } catch (e) {
-      console.warn('[SafeStorage] getItem failed, using memory:', e);
+      if (__DEV__) console.warn('[SafeStorage] getItem failed, using memory:', e);
       return memoryStorageAdapter.getItem(key);
     }
   },
@@ -73,7 +73,7 @@ export const safeStorage: StorageAdapter = {
       const storage = getStorageSync();
       return await storage.setItem(key, value);
     } catch (e) {
-      console.warn('[SafeStorage] setItem failed, using memory:', e);
+      if (__DEV__) console.warn('[SafeStorage] setItem failed, using memory:', e);
       return memoryStorageAdapter.setItem(key, value);
     }
   },
@@ -86,7 +86,7 @@ export const safeStorage: StorageAdapter = {
       const storage = getStorageSync();
       return await storage.removeItem(key);
     } catch (e) {
-      console.warn('[SafeStorage] removeItem failed, using memory:', e);
+      if (__DEV__) console.warn('[SafeStorage] removeItem failed, using memory:', e);
       return memoryStorageAdapter.removeItem(key);
     }
   },

@@ -23,13 +23,39 @@ export function DatePicker({
   onChange,
   placeholder = 'Select date',
   error,
+  minDate,
+  maxDate,
 }: DatePickerProps) {
   const [isOpen, setIsOpen] = useState(false);
   const [selectedMonth, setSelectedMonth] = useState(value?.getMonth() ?? new Date().getMonth());
   const [selectedDay, setSelectedDay] = useState(value?.getDate() ?? 1);
 
-  const daysInMonth = new Date(new Date().getFullYear(), selectedMonth + 1, 0).getDate();
+  const currentYear = new Date().getFullYear();
+  const daysInMonth = new Date(currentYear, selectedMonth + 1, 0).getDate();
   const days = Array.from({ length: daysInMonth }, (_, i) => i + 1);
+
+  // Check if a date is disabled based on minDate/maxDate
+  const isDateDisabled = (month: number, day: number): boolean => {
+    const checkDate = new Date(currentYear, month, day);
+    if (minDate && checkDate < new Date(minDate.getFullYear(), minDate.getMonth(), minDate.getDate())) {
+      return true;
+    }
+    if (maxDate && checkDate > new Date(maxDate.getFullYear(), maxDate.getMonth(), maxDate.getDate())) {
+      return true;
+    }
+    return false;
+  };
+
+  const isMonthDisabled = (month: number): boolean => {
+    // A month is disabled if all days in it are disabled
+    const daysInThisMonth = new Date(currentYear, month + 1, 0).getDate();
+    for (let day = 1; day <= daysInThisMonth; day++) {
+      if (!isDateDisabled(month, day)) {
+        return false;
+      }
+    }
+    return true;
+  };
 
   const handleConfirm = () => {
     const year = new Date().getFullYear();
@@ -75,44 +101,56 @@ export function DatePicker({
 
             <Text style={styles.sectionLabel}>Month</Text>
             <View style={styles.monthGrid}>
-              {MONTHS.map((month, index) => (
-                <TouchableOpacity
-                  key={month}
-                  style={[
-                    styles.monthButton,
-                    selectedMonth === index && styles.monthButtonSelected,
-                  ]}
-                  onPress={() => setSelectedMonth(index)}
-                >
-                  <Text style={[
-                    styles.monthText,
-                    selectedMonth === index && styles.monthTextSelected,
-                  ]}>
-                    {month.slice(0, 3)}
-                  </Text>
-                </TouchableOpacity>
-              ))}
+              {MONTHS.map((month, index) => {
+                const disabled = isMonthDisabled(index);
+                return (
+                  <TouchableOpacity
+                    key={month}
+                    style={[
+                      styles.monthButton,
+                      selectedMonth === index && styles.monthButtonSelected,
+                      disabled && styles.monthButtonDisabled,
+                    ]}
+                    onPress={() => !disabled && setSelectedMonth(index)}
+                    disabled={disabled}
+                  >
+                    <Text style={[
+                      styles.monthText,
+                      selectedMonth === index && styles.monthTextSelected,
+                      disabled && styles.monthTextDisabled,
+                    ]}>
+                      {month.slice(0, 3)}
+                    </Text>
+                  </TouchableOpacity>
+                );
+              })}
             </View>
 
             <Text style={styles.sectionLabel}>Day</Text>
             <View style={styles.dayGrid}>
-              {days.map((day) => (
-                <TouchableOpacity
-                  key={day}
-                  style={[
-                    styles.dayButton,
-                    selectedDay === day && styles.dayButtonSelected,
-                  ]}
-                  onPress={() => setSelectedDay(day)}
-                >
-                  <Text style={[
-                    styles.dayText,
-                    selectedDay === day && styles.dayTextSelected,
-                  ]}>
-                    {day}
-                  </Text>
-                </TouchableOpacity>
-              ))}
+              {days.map((day) => {
+                const disabled = isDateDisabled(selectedMonth, day);
+                return (
+                  <TouchableOpacity
+                    key={day}
+                    style={[
+                      styles.dayButton,
+                      selectedDay === day && styles.dayButtonSelected,
+                      disabled && styles.dayButtonDisabled,
+                    ]}
+                    onPress={() => !disabled && setSelectedDay(day)}
+                    disabled={disabled}
+                  >
+                    <Text style={[
+                      styles.dayText,
+                      selectedDay === day && styles.dayTextSelected,
+                      disabled && styles.dayTextDisabled,
+                    ]}>
+                      {day}
+                    </Text>
+                  </TouchableOpacity>
+                );
+              })}
             </View>
 
             <View style={styles.buttonRow}>
@@ -222,6 +260,9 @@ const styles = StyleSheet.create({
   monthButtonSelected: {
     backgroundColor: COLORS.accentPrimary,
   },
+  monthButtonDisabled: {
+    opacity: 0.4,
+  },
   monthText: {
     fontSize: 14,
     color: COLORS.textPrimary,
@@ -230,6 +271,9 @@ const styles = StyleSheet.create({
   monthTextSelected: {
     color: COLORS.white,
     fontWeight: '600',
+  },
+  monthTextDisabled: {
+    color: COLORS.textMuted,
   },
   dayGrid: {
     flexDirection: 'row',
@@ -248,6 +292,9 @@ const styles = StyleSheet.create({
   dayButtonSelected: {
     backgroundColor: COLORS.accentPrimary,
   },
+  dayButtonDisabled: {
+    opacity: 0.4,
+  },
   dayText: {
     fontSize: 14,
     color: COLORS.textPrimary,
@@ -256,6 +303,9 @@ const styles = StyleSheet.create({
   dayTextSelected: {
     color: COLORS.white,
     fontWeight: '600',
+  },
+  dayTextDisabled: {
+    color: COLORS.textMuted,
   },
   buttonRow: {
     flexDirection: 'row',

@@ -32,7 +32,7 @@ export default function SettingsTab() {
 
   const [isProfileModalOpen, setIsProfileModalOpen] = useState(false);
   const [profileName, setProfileName] = useState(user?.profile?.name || '');
-  const [isSavingProfile, setIsSavingProfile] = useState(false);
+  const [nameError, setNameError] = useState<string | null>(null);
 
   const styles = useMemo(() => createStyles(colors), [colors]);
 
@@ -66,13 +66,20 @@ export default function SettingsTab() {
 
   const handleEditProfile = () => {
     setProfileName(user?.profile?.name || '');
+    setNameError(null);
     setIsProfileModalOpen(true);
   };
 
   const handleSaveProfile = () => {
     if (!user) return;
-    setIsSavingProfile(true);
     const trimmedName = profileName.trim();
+
+    if (!trimmedName) {
+      setNameError('Please enter your name');
+      return;
+    }
+
+    setNameError(null);
     setUser({
       ...user,
       profile: {
@@ -80,7 +87,6 @@ export default function SettingsTab() {
         name: trimmedName,
       },
     });
-    setIsSavingProfile(false);
     setIsProfileModalOpen(false);
   };
 
@@ -157,15 +163,26 @@ export default function SettingsTab() {
         animationType="fade"
         onRequestClose={() => setIsProfileModalOpen(false)}
       >
-        <View style={styles.modalOverlay}>
-          <View style={styles.modalContent}>
+        <TouchableOpacity
+          style={styles.modalOverlay}
+          activeOpacity={1}
+          onPress={() => setIsProfileModalOpen(false)}
+          accessible={true}
+          accessibilityLabel="Close modal"
+          accessibilityRole="button"
+        >
+          <View style={styles.modalContent} onStartShouldSetResponder={() => true}>
             <Text style={styles.modalTitle}>Edit Profile</Text>
             <Input
               label="Name"
               value={profileName}
-              onChangeText={setProfileName}
+              onChangeText={(text) => {
+                setProfileName(text);
+                if (nameError) setNameError(null);
+              }}
               placeholder="Your name"
               autoCapitalize="words"
+              error={nameError || undefined}
             />
             <View style={styles.modalButtons}>
               <Button
@@ -174,13 +191,12 @@ export default function SettingsTab() {
                 variant="outline"
               />
               <Button
-                title={isSavingProfile ? 'Saving...' : 'Save'}
+                title="Save"
                 onPress={handleSaveProfile}
-                disabled={isSavingProfile}
               />
             </View>
           </View>
-        </View>
+        </TouchableOpacity>
       </Modal>
     </View>
   );

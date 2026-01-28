@@ -18,6 +18,14 @@ export const LIGHT_COLORS = {
   border: '#E8E8E8',
   white: '#FFFFFF',
   shadow: 'rgba(0,0,0,0.06)',
+  // Warning/Tip colors for light mode
+  warningBg: '#FFFBEB',
+  warningBorder: '#FCD34D',
+  warningText: '#92400E',
+  tipBg: '#FFFBEB',
+  tipBorder: '#FCD34D',
+  tipTitle: '#92400E',
+  tipText: '#B45309',
 };
 
 export const DARK_COLORS = {
@@ -36,6 +44,14 @@ export const DARK_COLORS = {
   border: '#333333',
   white: '#FFFFFF',
   shadow: 'rgba(0,0,0,0.3)',
+  // Warning/Tip colors for dark mode
+  warningBg: '#3D3520',
+  warningBorder: '#92702A',
+  warningText: '#FCD34D',
+  tipBg: '#3D3520',
+  tipBorder: '#92702A',
+  tipTitle: '#FCD34D',
+  tipText: '#E5C07A',
 };
 
 export const COLORS = LIGHT_COLORS;
