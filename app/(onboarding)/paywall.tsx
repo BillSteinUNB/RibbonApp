@@ -31,6 +31,7 @@ import { useAuthStore } from '../store/authStore';
 import { subscriptionService } from '../services/subscriptionService';
 import { logger } from '../utils/logger';
 import { ROUTES } from '../constants/routes';
+import { analyticsOnboarding, analyticsPaywall } from '../utils/analytics';
 
 type PlanType = 'weekly' | 'monthly' | 'yearly';
 
@@ -92,9 +93,11 @@ export default function OnboardingPaywall() {
 
   const styles = useMemo(() => createStyles(colors), [colors]);
 
-  // Fetch RevenueCat offerings on mount
+  // Fetch RevenueCat offerings on mount and track paywall view
   useEffect(() => {
     loadOfferings();
+    analyticsOnboarding.stepViewed('paywall');
+    analyticsPaywall.viewed();
   }, []);
 
   const loadOfferings = async () => {
@@ -144,6 +147,9 @@ export default function OnboardingPaywall() {
   };
 
   const handleStartTrial = async () => {
+    // Track purchase started
+    analyticsPaywall.purchaseStarted(selectedPlan);
+    
     const pkg = getSelectedPackage();
     
     if (!pkg) {
@@ -171,24 +177,30 @@ export default function OnboardingPaywall() {
 
     try {
       const result = await subscriptionService.purchasePackage(pkg);
-      
+
       if (result.success) {
+        // Track purchase completed
+        analyticsPaywall.purchaseCompleted(selectedPlan);
+        analyticsOnboarding.completed(selectedPlan);
+
         // Update auth store with subscription
         const activeUser = user ?? getOrCreateUser();
         const subscription = await subscriptionService.getSubscription(activeUser.id);
         setSubscription(subscription);
-        
+
         // Start trial in onboarding store (for tracking)
         startTrial(selectedPlan);
-        
+
         logger.info('[Paywall] Purchase successful');
-        
+
         // Navigate to Quick Start flow
         router.replace('/(onboarding)/quick-start');
       } else if (result.error === 'Purchase cancelled') {
         // User cancelled - do nothing
         logger.info('[Paywall] Purchase cancelled by user');
       } else {
+        // Track purchase failed
+        analyticsPaywall.purchaseFailed(selectedPlan, result.error || 'Unknown error');
         logger.error('[Paywall] Purchase failed:', result.error);
         Alert.alert(
           'Purchase failed',
@@ -197,6 +209,9 @@ export default function OnboardingPaywall() {
         );
       }
     } catch (error) {
+      // Track purchase failed
+      const errorMessage = error instanceof Error ? error.message : 'Unknown error';
+      analyticsPaywall.purchaseFailed(selectedPlan, errorMessage);
       logger.error('[Paywall] Trial start failed:', error);
       Alert.alert(
         'Something went wrong',
@@ -211,6 +226,7 @@ export default function OnboardingPaywall() {
   const handleRestorePurchase = async () => {
     setIsRestoring(true);
     logger.info('[Paywall] Restoring purchase');
+    analyticsPaywall.restoreTapped();
 
     try {
       const result = await subscriptionService.restorePurchases();
@@ -287,12 +303,12 @@ export default function OnboardingPaywall() {
       <StatusBar barStyle="dark-content" />
       
       {/* Progress indicator */}
-      <View style={styles.progressContainer}>
-        <View style={styles.progressDot} />
-        <View style={styles.progressDot} />
-        <View style={styles.progressDot} />
-        <View style={styles.progressDot} />
-        <View style={[styles.progressDot, styles.progressDotActive]} />
+      <View style={styles.progressContainer} accessibilityRole="progressbar" accessibilityLabel="Step 5 of 5">
+        <View style={styles.progressDot} accessibilityLabel="Step 1 of 5" />
+        <View style={styles.progressDot} accessibilityLabel="Step 2 of 5" />
+        <View style={styles.progressDot} accessibilityLabel="Step 3 of 5" />
+        <View style={styles.progressDot} accessibilityLabel="Step 4 of 5" />
+        <View style={[styles.progressDot, styles.progressDotActive]} accessibilityLabel="Step 5 of 5" />
       </View>
 
       <ScrollView
@@ -302,8 +318,8 @@ export default function OnboardingPaywall() {
       >
         {/* Header */}
         <View style={styles.header}>
-          <View style={styles.giftIcon}>
-            <Text style={styles.giftEmoji}>🎁</Text>
+          <View style={styles.giftIcon} accessibilityElementsHidden={true} importantForAccessibility="no">
+            <Text style={styles.giftEmoji} accessibilityElementsHidden={true} importantForAccessibility="no">🎁</Text>
           </View>
           <Text style={styles.headline}>
             Start Your{'\n'}
@@ -330,15 +346,21 @@ export default function OnboardingPaywall() {
                 selectedPlan === plan.id && styles.planOptionSelected,
                 plan.popular && styles.planOptionPopular,
               ]}
-              onPress={() => setSelectedPlan(plan.id)}
-              activeOpacity={0.8}
+            onPress={() => {
+              setSelectedPlan(plan.id);
+              analyticsPaywall.planSelected(plan.id);
+            }}
+            activeOpacity={0.8}
+            accessibilityRole="radio"
+            accessibilityLabel={`${plan.name} plan, ${getPriceForPlan(plan.id)} per ${plan.period}`}
+            accessibilityState={{ selected: selectedPlan === plan.id }}
             >
               {plan.popular && (
                 <View style={styles.popularBadge}>
                   <Text style={styles.popularText}>BEST VALUE</Text>
                 </View>
               )}
-              
+
               <View style={styles.planRadio}>
                 <View style={[
                   styles.radioOuter,
@@ -347,7 +369,7 @@ export default function OnboardingPaywall() {
                   {selectedPlan === plan.id && <View style={styles.radioInner} />}
                 </View>
               </View>
-              
+
               <View style={styles.planDetails}>
                 <View style={styles.planNameRow}>
                   <Text style={[
@@ -376,19 +398,19 @@ export default function OnboardingPaywall() {
         </View>
 
         {/* Features list */}
-        <View style={styles.featuresBox}>
+        <View style={styles.featuresBox} accessibilityRole="text">
           <Text style={styles.featuresTitle}>RIBBON PRO INCLUDES</Text>
           {FEATURES.map((feature, index) => (
-            <View key={index} style={styles.featureRow}>
-              <Text style={styles.featureCheck}>✓</Text>
+            <View key={index} style={styles.featureRow} accessibilityRole="text">
+              <Text style={styles.featureCheck} accessibilityElementsHidden={true} importantForAccessibility="no">✓</Text>
               <Text style={styles.featureText}>{feature}</Text>
             </View>
           ))}
         </View>
 
         {/* Guarantee */}
-        <View style={styles.guaranteeBox}>
-          <Text style={styles.guaranteeIcon}>🛡️</Text>
+        <View style={styles.guaranteeBox} accessibilityRole="text">
+          <Text style={styles.guaranteeIcon} accessibilityElementsHidden={true} importantForAccessibility="no">🛡️</Text>
           <View style={styles.guaranteeContent}>
             <Text style={styles.guaranteeTitle}>Risk-Free Guarantee</Text>
             <Text style={styles.guaranteeText}>
@@ -406,6 +428,9 @@ export default function OnboardingPaywall() {
           onPress={handleStartTrial}
           activeOpacity={0.9}
           disabled={isLoading || isRestoring}
+          accessibilityRole="button"
+          accessibilityLabel="Start Free Trial"
+          accessibilityState={{ busy: isLoading || false }}
         >
           {isLoading ? (
             <ActivityIndicator color={colors.white} />
@@ -426,6 +451,9 @@ export default function OnboardingPaywall() {
           style={styles.restoreButton}
           onPress={handleRestorePurchase}
           disabled={isLoading || isRestoring}
+          accessibilityRole="button"
+          accessibilityLabel="Restore Purchase"
+          accessibilityState={{ busy: isRestoring || false }}
         >
           {isRestoring ? (
             <ActivityIndicator size="small" color={colors.textMuted} />
@@ -436,11 +464,11 @@ export default function OnboardingPaywall() {
 
         {/* Legal links */}
         <View style={styles.legalLinks}>
-          <TouchableOpacity onPress={handleOpenTerms}>
+          <TouchableOpacity onPress={handleOpenTerms} accessibilityRole="button" accessibilityLabel="Terms of Service">
             <Text style={styles.legalLink}>Terms of Service</Text>
           </TouchableOpacity>
-          <Text style={styles.legalDot}>•</Text>
-          <TouchableOpacity onPress={handleOpenPrivacy}>
+          <Text style={styles.legalDot} accessibilityElementsHidden={true} importantForAccessibility="no">•</Text>
+          <TouchableOpacity onPress={handleOpenPrivacy} accessibilityRole="button" accessibilityLabel="Privacy Policy">
             <Text style={styles.legalLink}>Privacy Policy</Text>
           </TouchableOpacity>
         </View>

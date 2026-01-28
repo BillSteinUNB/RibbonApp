@@ -33,6 +33,7 @@ export default function TabLayout() {
         name="index"
         options={{
           title: 'Home',
+          tabBarAccessibilityLabel: 'Home tab',
           tabBarIcon: ({ color, size }: { color: string; size: number }) => <Home size={size} color={color} />,
         }}
       />
@@ -41,6 +42,7 @@ export default function TabLayout() {
         name="recipients"
         options={{
           title: 'Recipients',
+          tabBarAccessibilityLabel: 'Recipients tab',
           tabBarIcon: ({ color, size }: { color: string; size: number }) => <Users size={size} color={color} />,
         }}
       />
@@ -49,6 +51,7 @@ export default function TabLayout() {
         name="pricing"
         options={{
           title: 'Premium',
+          tabBarAccessibilityLabel: 'Premium tab',
           tabBarIcon: ({ color, size }: { color: string; size: number }) => <Crown size={size} color={color} />,
         }}
       />
@@ -57,6 +60,7 @@ export default function TabLayout() {
         name="settings"
         options={{
           title: 'Settings',
+          tabBarAccessibilityLabel: 'Settings tab',
           tabBarIcon: ({ color, size }: { color: string; size: number }) => <Settings size={size} color={color} />,
         }}
       />

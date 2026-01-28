@@ -10,6 +10,7 @@ import { useGiftStore } from '../store/giftStore';
 import { useAuthStore } from '../store/authStore';
 import { logger } from '../utils/logger';
 import { sanitizeForPrompt, sanitizeArrayForPrompt } from '../utils/validation';
+import { analyticsGifts, analyticsRefinement } from '../utils/analytics';
 
 /**
  * Gift Generation Service
@@ -27,9 +28,13 @@ class GiftService {
     duration: number;
   }> {
     const startTime = Date.now();
-
-    // Get user info for rate limiting
     const user = useAuthStore.getState().getOrCreateUser();
+
+    // Track generation started
+    analyticsGifts.generationStart({
+      occasion: recipient.occasion.type,
+      recipientId: recipient.id,
+    }, user.id);
 
     const userId = user.id;
     const isPremium = user.isPremium;
@@ -76,6 +81,13 @@ class GiftService {
 
       const duration = Date.now() - startTime;
 
+      // Track generation completed
+      analyticsGifts.generationComplete({
+        giftCount: gifts.length,
+        durationMs: duration,
+        recipientId: recipient.id,
+      }, userId);
+
       return {
         gifts,
         duration,
@@ -84,6 +96,13 @@ class GiftService {
       // Log the error but don't decrement credits - AI failed
       errorLogger.log(error, { context: 'generateGifts', recipientId: recipient.id });
       logger.warn('AI generation failed');
+
+      // Track generation failed
+      const errorMessage = error instanceof Error ? error.message : 'Unknown error';
+      analyticsGifts.generationFail({
+        error: errorMessage,
+        recipientId: recipient.id,
+      }, userId);
 
       // Re-throw specific errors (rate limit, etc.)
       if (error instanceof AppError) {
@@ -393,6 +412,9 @@ Return a JSON array of gift ideas with this exact structure (no markdown, no ext
       const userId = user.id;
       const isPremium = user.isPremium;
 
+      // Track refinement started
+      analyticsRefinement.started(sessionId, userId);
+
       // PREMIUM-ONLY FEATURE: Check if user has premium subscription
       // Note: This is client-side validation. For complete security, server-side validation
       // should be implemented if the API is exposed to external callers.
@@ -458,6 +480,12 @@ Return a JSON array of gift ideas with this exact structure (no markdown, no ext
       // and the user already used a generation for the initial gifts
 
       const duration = Date.now() - startTime;
+
+      // Track refinement completed
+      analyticsRefinement.completed({
+        likedCount: likedGifts.length,
+        dislikedCount: dislikedGifts.length,
+      }, userId);
 
       return {
         gifts: giftsWithRefinementFlag,

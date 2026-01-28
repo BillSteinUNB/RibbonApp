@@ -20,6 +20,7 @@ import {
 import { useRouter } from 'expo-router';
 import { COLORS, SPACING, RADIUS } from '../constants';
 import { ROUTES } from '../constants/routes';
+import { analyticsOnboarding } from '../utils/analytics';
 
 const TESTIMONIALS = [
   {
@@ -50,7 +51,12 @@ const TESTIMONIALS = [
 
 export default function OnboardingSocialProof() {
   const router = useRouter();
-  
+
+  // Track onboarding step viewed
+  React.useEffect(() => {
+    analyticsOnboarding.stepViewed('social-proof');
+  }, []);
+
   // Animation values
   const fadeIn = useRef(new Animated.Value(0)).current;
   const scaleIn = useRef(new Animated.Value(0.9)).current;
@@ -84,17 +90,17 @@ export default function OnboardingSocialProof() {
       <StatusBar barStyle="dark-content" />
       
       {/* Progress indicator */}
-      <View style={styles.progressContainer}>
-        <View style={styles.progressDot} />
-        <View style={styles.progressDot} />
-        <View style={styles.progressDot} />
-        <View style={[styles.progressDot, styles.progressDotActive]} />
-        <View style={styles.progressDot} />
+      <View style={styles.progressContainer} accessibilityRole="progressbar" accessibilityLabel="Step 4 of 5">
+        <View style={styles.progressDot} accessibilityLabel="Step 1 of 5" />
+        <View style={styles.progressDot} accessibilityLabel="Step 2 of 5" />
+        <View style={styles.progressDot} accessibilityLabel="Step 3 of 5" />
+        <View style={[styles.progressDot, styles.progressDotActive]} accessibilityLabel="Step 4 of 5" />
+        <View style={styles.progressDot} accessibilityLabel="Step 5 of 5" />
       </View>
 
       {/* Back button */}
-      <TouchableOpacity style={styles.backButton} onPress={handleBack}>
-        <Text style={styles.backButtonText}>←</Text>
+      <TouchableOpacity style={styles.backButton} onPress={handleBack} accessibilityRole="button" accessibilityLabel="Go back">
+        <Text style={styles.backButtonText} accessibilityElementsHidden={true} importantForAccessibility="no">←</Text>
       </TouchableOpacity>
 
       {/* Main content */}
@@ -139,7 +145,7 @@ export default function OnboardingSocialProof() {
         </View>
 
         {/* Testimonials */}
-        <View style={styles.testimonialSection}>
+        <View style={styles.testimonialSection} accessibilityRole="text">
           <Text style={styles.sectionTitle}>REAL USERS, REAL RESULTS</Text>
           
           {TESTIMONIALS.map((testimonial, index) => (
@@ -157,12 +163,13 @@ export default function OnboardingSocialProof() {
                   }],
                 },
               ]}
+              accessibilityRole="text"
             >
-              <View style={styles.testimonialEmoji}>
-                <Text style={styles.emoji}>{testimonial.emoji}</Text>
+              <View style={styles.testimonialEmoji} accessibilityElementsHidden={true} importantForAccessibility="no">
+                <Text style={styles.emoji} accessibilityElementsHidden={true} importantForAccessibility="no">{testimonial.emoji}</Text>
               </View>
               <View style={styles.testimonialContent}>
-                <Text style={styles.testimonialQuote}>
+                <Text style={styles.testimonialQuote} accessibilityRole="text">
                   "{testimonial.quote}"
                 </Text>
                 <View style={styles.testimonialMeta}>
@@ -175,17 +182,17 @@ export default function OnboardingSocialProof() {
         </View>
 
         {/* Trust badges */}
-        <View style={styles.trustBadges}>
-          <View style={styles.trustBadge}>
-            <Text style={styles.trustIcon}>🔒</Text>
+        <View style={styles.trustBadges} accessibilityRole="text">
+          <View style={styles.trustBadge} accessibilityRole="text">
+            <Text style={styles.trustIcon} accessibilityElementsHidden={true} importantForAccessibility="no">🔒</Text>
             <Text style={styles.trustText}>Secure</Text>
           </View>
-          <View style={styles.trustBadge}>
-            <Text style={styles.trustIcon}>⚡</Text>
+          <View style={styles.trustBadge} accessibilityRole="text">
+            <Text style={styles.trustIcon} accessibilityElementsHidden={true} importantForAccessibility="no">⚡</Text>
             <Text style={styles.trustText}>Fast</Text>
           </View>
-          <View style={styles.trustBadge}>
-            <Text style={styles.trustIcon}>🎯</Text>
+          <View style={styles.trustBadge} accessibilityRole="text">
+            <Text style={styles.trustIcon} accessibilityElementsHidden={true} importantForAccessibility="no">🎯</Text>
             <Text style={styles.trustText}>Accurate</Text>
           </View>
         </View>
@@ -197,9 +204,11 @@ export default function OnboardingSocialProof() {
           style={styles.ctaButton}
           onPress={handleContinue}
           activeOpacity={0.9}
+          accessibilityRole="button"
+          accessibilityLabel="Start Finding Gifts, continue to next step"
         >
           <Text style={styles.ctaText}>Start Finding Gifts</Text>
-          <Text style={styles.ctaArrow}>→</Text>
+          <Text style={styles.ctaArrow} accessibilityElementsHidden={true} importantForAccessibility="no">→</Text>
         </TouchableOpacity>
       </View>
     </SafeAreaView>

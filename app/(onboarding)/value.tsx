@@ -18,9 +18,15 @@ import {
 import { useRouter } from 'expo-router';
 import { COLORS, SPACING, RADIUS } from '../constants';
 import { ROUTES } from '../constants/routes';
+import { analyticsOnboarding } from '../utils/analytics';
 
 export default function OnboardingValue() {
   const router = useRouter();
+
+  // Track onboarding step viewed
+  React.useEffect(() => {
+    analyticsOnboarding.stepViewed('value');
+  }, []);
 
   const handleContinue = () => {
     router.push(ROUTES.ONBOARDING.HOW_IT_WORKS);
@@ -35,29 +41,29 @@ export default function OnboardingValue() {
       <StatusBar barStyle="dark-content" />
       
       {/* Progress indicator */}
-      <View style={styles.progressContainer}>
-        <View style={styles.progressDot} />
-        <View style={[styles.progressDot, styles.progressDotActive]} />
-        <View style={styles.progressDot} />
-        <View style={styles.progressDot} />
-        <View style={styles.progressDot} />
+      <View style={styles.progressContainer} accessibilityRole="progressbar" accessibilityLabel="Step 2 of 5">
+        <View style={styles.progressDot} accessibilityLabel="Step 1 of 5" />
+        <View style={[styles.progressDot, styles.progressDotActive]} accessibilityLabel="Step 2 of 5" />
+        <View style={styles.progressDot} accessibilityLabel="Step 3 of 5" />
+        <View style={styles.progressDot} accessibilityLabel="Step 4 of 5" />
+        <View style={styles.progressDot} accessibilityLabel="Step 5 of 5" />
       </View>
 
       {/* Back button */}
-      <TouchableOpacity style={styles.backButton} onPress={handleBack}>
-        <Text style={styles.backButtonText}>←</Text>
+      <TouchableOpacity style={styles.backButton} onPress={handleBack} accessibilityRole="button" accessibilityLabel="Go back">
+        <Text style={styles.backButtonText} accessibilityElementsHidden={true} importantForAccessibility="no">←</Text>
       </TouchableOpacity>
 
       {/* Main content */}
       <View style={styles.content}>
         {/* Visual - Happy reaction */}
-        <View style={styles.visualContainer}>
+        <View style={styles.visualContainer} accessibilityElementsHidden={true} importantForAccessibility="no">
           <View style={styles.reactionCircle}>
-            <Text style={styles.reactionEmoji}>🥹</Text>
+            <Text style={styles.reactionEmoji} accessibilityElementsHidden={true} importantForAccessibility="no">🥹</Text>
           </View>
           <View style={styles.sparkles}>
-            <Text style={styles.sparkle}>✨</Text>
-            <Text style={[styles.sparkle, styles.sparkleRight]}>✨</Text>
+            <Text style={styles.sparkle} accessibilityElementsHidden={true} importantForAccessibility="no">✨</Text>
+            <Text style={[styles.sparkle, styles.sparkleRight]} accessibilityElementsHidden={true} importantForAccessibility="no">✨</Text>
           </View>
         </View>
 
@@ -75,38 +81,38 @@ export default function OnboardingValue() {
         </Text>
 
         {/* Value bullets */}
-        <View style={styles.valueBullets}>
-          <View style={styles.bulletRow}>
-            <View style={styles.bulletIcon}>
-              <Text style={styles.bulletEmoji}>🎯</Text>
+        <View style={styles.valueBullets} accessibilityRole="text">
+          <View style={styles.bulletRow} accessibilityRole="text">
+            <View style={styles.bulletIcon} accessibilityElementsHidden={true} importantForAccessibility="no">
+              <Text style={styles.bulletEmoji} accessibilityElementsHidden={true} importantForAccessibility="no">🎯</Text>
             </View>
             <View style={styles.bulletContent}>
-              <Text style={styles.bulletTitle}>Personalized, Not Generic</Text>
-              <Text style={styles.bulletText}>
+              <Text style={styles.bulletTitle} accessibilityRole="text">Personalized, Not Generic</Text>
+              <Text style={styles.bulletText} accessibilityRole="text">
                 Based on their actual interests, not random suggestions
               </Text>
             </View>
           </View>
 
-          <View style={styles.bulletRow}>
-            <View style={styles.bulletIcon}>
-              <Text style={styles.bulletEmoji}>💰</Text>
+          <View style={styles.bulletRow} accessibilityRole="text">
+            <View style={styles.bulletIcon} accessibilityElementsHidden={true} importantForAccessibility="no">
+              <Text style={styles.bulletEmoji} accessibilityElementsHidden={true} importantForAccessibility="no">💰</Text>
             </View>
             <View style={styles.bulletContent}>
-              <Text style={styles.bulletTitle}>Budget-Smart</Text>
-              <Text style={styles.bulletText}>
+              <Text style={styles.bulletTitle} accessibilityRole="text">Budget-Smart</Text>
+              <Text style={styles.bulletText} accessibilityRole="text">
                 Options that feel expensive without breaking the bank
               </Text>
             </View>
           </View>
 
-          <View style={styles.bulletRow}>
-            <View style={styles.bulletIcon}>
-              <Text style={styles.bulletEmoji}>🏆</Text>
+          <View style={styles.bulletRow} accessibilityRole="text">
+            <View style={styles.bulletIcon} accessibilityElementsHidden={true} importantForAccessibility="no">
+              <Text style={styles.bulletEmoji} accessibilityElementsHidden={true} importantForAccessibility="no">🏆</Text>
             </View>
             <View style={styles.bulletContent}>
-              <Text style={styles.bulletTitle}>Be the Best Gift Giver</Text>
-              <Text style={styles.bulletText}>
+              <Text style={styles.bulletTitle} accessibilityRole="text">Be the Best Gift Giver</Text>
+              <Text style={styles.bulletText} accessibilityRole="text">
                 Get the credit for finding something perfect
               </Text>
             </View>
@@ -120,9 +126,11 @@ export default function OnboardingValue() {
           style={styles.ctaButton}
           onPress={handleContinue}
           activeOpacity={0.9}
+          accessibilityRole="button"
+          accessibilityLabel="See How It Works, continue to next step"
         >
           <Text style={styles.ctaText}>See How It Works</Text>
-          <Text style={styles.ctaArrow}>→</Text>
+          <Text style={styles.ctaArrow} accessibilityElementsHidden={true} importantForAccessibility="no">→</Text>
         </TouchableOpacity>
       </View>
     </SafeAreaView>

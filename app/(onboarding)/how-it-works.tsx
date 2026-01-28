@@ -19,10 +19,16 @@ import {
 import { useRouter } from 'expo-router';
 import { COLORS, SPACING, RADIUS } from '../constants';
 import { ROUTES } from '../constants/routes';
+import { analyticsOnboarding } from '../utils/analytics';
 
 export default function OnboardingHowItWorks() {
   const router = useRouter();
-  
+
+  // Track onboarding step viewed
+  React.useEffect(() => {
+    analyticsOnboarding.stepViewed('how-it-works');
+  }, []);
+
   // Animation values for the steps
   const step1Opacity = useRef(new Animated.Value(0)).current;
   const step2Opacity = useRef(new Animated.Value(0)).current;
@@ -62,24 +68,25 @@ export default function OnboardingHowItWorks() {
       <StatusBar barStyle="dark-content" />
       
       {/* Progress indicator */}
-      <View style={styles.progressContainer}>
-        <View style={styles.progressDot} />
-        <View style={styles.progressDot} />
-        <View style={[styles.progressDot, styles.progressDotActive]} />
-        <View style={styles.progressDot} />
-        <View style={styles.progressDot} />
+      <View style={styles.progressContainer} accessibilityRole="progressbar" accessibilityLabel="Step 3 of 5">
+        <View style={styles.progressDot} accessibilityLabel="Step 1 of 5" />
+        <View style={styles.progressDot} accessibilityLabel="Step 2 of 5" />
+        <View style={[styles.progressDot, styles.progressDotActive]} accessibilityLabel="Step 3 of 5" />
+        <View style={styles.progressDot} accessibilityLabel="Step 4 of 5" />
+        <View style={styles.progressDot} accessibilityLabel="Step 5 of 5" />
       </View>
 
       {/* Back button */}
-      <TouchableOpacity style={styles.backButton} onPress={handleBack}>
-        <Text style={styles.backButtonText}>←</Text>
+      <TouchableOpacity style={styles.backButton} onPress={handleBack} accessibilityRole="button" accessibilityLabel="Go back">
+        <Text style={styles.backButtonText} accessibilityElementsHidden={true} importantForAccessibility="no">←</Text>
       </TouchableOpacity>
 
       {/* Main content */}
       <View style={styles.content}>
         {/* Badge */}
-        <View style={styles.badge}>
-          <Text style={styles.badgeText}>⚡ QUICK & EASY</Text>
+        <View style={styles.badge} accessibilityRole="text">
+          <Text style={styles.badgeText} accessibilityElementsHidden={true} importantForAccessibility="no">⚡</Text>
+          <Text style={styles.badgeText}> QUICK & EASY</Text>
         </View>
 
         {/* Headline */}
@@ -91,18 +98,18 @@ export default function OnboardingHowItWorks() {
         {/* Steps */}
         <View style={styles.stepsContainer}>
           {/* Step 1 */}
-          <Animated.View style={[styles.step, { opacity: step1Opacity }]}>
+          <Animated.View style={[styles.step, { opacity: step1Opacity }]} accessibilityRole="text">
             <View style={styles.stepNumber}>
               <Text style={styles.stepNumberText}>1</Text>
             </View>
             <View style={styles.stepContent}>
-              <Text style={styles.stepTitle}>Tell us about them</Text>
-              <Text style={styles.stepDescription}>
+              <Text style={styles.stepTitle} accessibilityRole="text">Tell us about them</Text>
+              <Text style={styles.stepDescription} accessibilityRole="text">
                 Their interests, your relationship, your budget
               </Text>
             </View>
-            <View style={styles.stepVisual}>
-              <Text style={styles.stepEmoji}>📝</Text>
+            <View style={styles.stepVisual} accessibilityElementsHidden={true} importantForAccessibility="no">
+              <Text style={styles.stepEmoji} accessibilityElementsHidden={true} importantForAccessibility="no">📝</Text>
             </View>
           </Animated.View>
 
@@ -112,18 +119,18 @@ export default function OnboardingHowItWorks() {
           </View>
 
           {/* Step 2 */}
-          <Animated.View style={[styles.step, { opacity: step2Opacity }]}>
+          <Animated.View style={[styles.step, { opacity: step2Opacity }]} accessibilityRole="text">
             <View style={styles.stepNumber}>
               <Text style={styles.stepNumberText}>2</Text>
             </View>
             <View style={styles.stepContent}>
-              <Text style={styles.stepTitle}>AI works its magic</Text>
-              <Text style={styles.stepDescription}>
+              <Text style={styles.stepTitle} accessibilityRole="text">AI works its magic</Text>
+              <Text style={styles.stepDescription} accessibilityRole="text">
                 Analyzes personality and brainstorms ideas
               </Text>
             </View>
-            <View style={styles.stepVisual}>
-              <Text style={styles.stepEmoji}>🤖</Text>
+            <View style={styles.stepVisual} accessibilityElementsHidden={true} importantForAccessibility="no">
+              <Text style={styles.stepEmoji} accessibilityElementsHidden={true} importantForAccessibility="no">🤖</Text>
             </View>
           </Animated.View>
 
@@ -133,36 +140,36 @@ export default function OnboardingHowItWorks() {
           </View>
 
           {/* Step 3 */}
-          <Animated.View style={[styles.step, { opacity: step3Opacity }]}>
+          <Animated.View style={[styles.step, { opacity: step3Opacity }]} accessibilityRole="text">
             <View style={[styles.stepNumber, styles.stepNumberHighlight]}>
               <Text style={styles.stepNumberText}>3</Text>
             </View>
             <View style={styles.stepContent}>
-              <Text style={styles.stepTitle}>Get perfect suggestions</Text>
-              <Text style={styles.stepDescription}>
+              <Text style={styles.stepTitle} accessibilityRole="text">Get perfect suggestions</Text>
+              <Text style={styles.stepDescription} accessibilityRole="text">
                 5 personalized ideas with reasoning
               </Text>
             </View>
-            <View style={styles.stepVisual}>
-              <Text style={styles.stepEmoji}>🎁</Text>
+            <View style={styles.stepVisual} accessibilityElementsHidden={true} importantForAccessibility="no">
+              <Text style={styles.stepEmoji} accessibilityElementsHidden={true} importantForAccessibility="no">🎁</Text>
             </View>
           </Animated.View>
         </View>
 
         {/* Result preview */}
-        <View style={styles.resultPreview}>
+        <View style={styles.resultPreview} accessibilityRole="text">
           <View style={styles.resultHeader}>
             <Text style={styles.resultLabel}>EXAMPLE RESULT</Text>
           </View>
           <View style={styles.resultCard}>
             <Text style={styles.resultTitle}>For: Mom (Birthday)</Text>
-            <Text style={styles.resultItem}>
+            <Text style={styles.resultItem} accessibilityElementsHidden={true} importantForAccessibility="no">
               ✓ Personalized star map of her birthday sky
             </Text>
-            <Text style={styles.resultItem}>
+            <Text style={styles.resultItem} accessibilityElementsHidden={true} importantForAccessibility="no">
               ✓ Spa day experience gift card
             </Text>
-            <Text style={styles.resultItem}>
+            <Text style={styles.resultItem} accessibilityElementsHidden={true} importantForAccessibility="no">
               ✓ Custom photo book of family memories
             </Text>
             <Text style={styles.resultMore}>+ 2 more ideas...</Text>
@@ -176,9 +183,11 @@ export default function OnboardingHowItWorks() {
           style={styles.ctaButton}
           onPress={handleContinue}
           activeOpacity={0.9}
+          accessibilityRole="button"
+          accessibilityLabel="See Real Results, continue to next step"
         >
           <Text style={styles.ctaText}>See Real Results</Text>
-          <Text style={styles.ctaArrow}>→</Text>
+          <Text style={styles.ctaArrow} accessibilityElementsHidden={true} importantForAccessibility="no">→</Text>
         </TouchableOpacity>
       </View>
     </SafeAreaView>

@@ -19,11 +19,19 @@ import {
 import { useRouter } from 'expo-router';
 import { COLORS, SPACING, RADIUS } from '../constants';
 import { ROUTES } from '../constants/routes';
+import { analyticsOnboarding, setAnalyticsConsent } from '../utils/analytics';
 
 const { width, height } = Dimensions.get('window');
 
 export default function OnboardingHook() {
   const router = useRouter();
+
+  // Track onboarding step viewed
+  React.useEffect(() => {
+    // Enable analytics by default for new users during onboarding
+    setAnalyticsConsent(true);
+    analyticsOnboarding.stepViewed('hook');
+  }, []);
 
   const handleContinue = () => {
     router.push(ROUTES.ONBOARDING.VALUE);
@@ -34,22 +42,22 @@ export default function OnboardingHook() {
       <StatusBar barStyle="dark-content" />
       
       {/* Progress indicator */}
-      <View style={styles.progressContainer}>
-        <View style={[styles.progressDot, styles.progressDotActive]} />
-        <View style={styles.progressDot} />
-        <View style={styles.progressDot} />
-        <View style={styles.progressDot} />
-        <View style={styles.progressDot} />
+      <View style={styles.progressContainer} accessibilityRole="progressbar" accessibilityLabel="Step 1 of 5">
+        <View style={[styles.progressDot, styles.progressDotActive]} accessibilityLabel="Step 1 of 5" />
+        <View style={styles.progressDot} accessibilityLabel="Step 2 of 5" />
+        <View style={styles.progressDot} accessibilityLabel="Step 3 of 5" />
+        <View style={styles.progressDot} accessibilityLabel="Step 4 of 5" />
+        <View style={styles.progressDot} accessibilityLabel="Step 5 of 5" />
       </View>
 
       {/* Main content */}
       <View style={styles.content}>
         {/* Visual - Gift with question mark */}
-        <View style={styles.visualContainer}>
+        <View style={styles.visualContainer} accessibilityElementsHidden={true} importantForAccessibility="no">
           <View style={styles.giftBox}>
-            <Text style={styles.giftEmoji}>🎁</Text>
+            <Text style={styles.giftEmoji} accessibilityElementsHidden={true} importantForAccessibility="no">🎁</Text>
             <View style={styles.questionMark}>
-              <Text style={styles.questionMarkText}>?</Text>
+              <Text style={styles.questionMarkText} accessibilityElementsHidden={true} importantForAccessibility="no">?</Text>
             </View>
           </View>
         </View>
@@ -67,14 +75,14 @@ export default function OnboardingHook() {
         </Text>
 
         {/* Pain points */}
-        <View style={styles.painPoints}>
-          <Text style={styles.painPoint}>
+        <View style={styles.painPoints} accessibilityRole="text">
+          <Text style={styles.painPoint} accessibilityRole="text">
             😅 "Oh... it's nice. Thanks."
           </Text>
-          <Text style={styles.painPoint}>
+          <Text style={styles.painPoint} accessibilityRole="text">
             🤔 Hours of scrolling, still no idea
           </Text>
-          <Text style={styles.painPoint}>
+          <Text style={styles.painPoint} accessibilityRole="text">
             💸 Spent too much on something meh
           </Text>
         </View>
@@ -86,9 +94,11 @@ export default function OnboardingHook() {
           style={styles.ctaButton}
           onPress={handleContinue}
           activeOpacity={0.9}
+          accessibilityRole="button"
+          accessibilityLabel="Find the Perfect Gift, continue to next step"
         >
           <Text style={styles.ctaText}>Find the Perfect Gift</Text>
-          <Text style={styles.ctaArrow}>→</Text>
+          <Text style={styles.ctaArrow} accessibilityElementsHidden={true} importantForAccessibility="no">→</Text>
         </TouchableOpacity>
       </View>
     </SafeAreaView>

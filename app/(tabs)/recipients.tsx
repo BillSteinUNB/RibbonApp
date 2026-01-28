@@ -43,6 +43,8 @@ export default function RecipientsTab() {
       style={styles.card}
       onPress={() => router.push(ROUTES.RECIPIENTS.DETAIL(item.id))}
       activeOpacity={0.7}
+      accessibilityRole="button"
+      accessibilityLabel={`${item.name}, ${getRelationshipLabel(item.relationship)}`}
     >
       <Text style={styles.name}>{item.name}</Text>
       <Text style={styles.relationship}>{getRelationshipLabel(item.relationship)}</Text>
@@ -63,8 +65,8 @@ export default function RecipientsTab() {
 
   const renderEmptyState = () => (
     <View style={styles.emptyContainer}>
-      <View style={styles.emptyIcon}>
-        <Text style={styles.emptyIconText}>👥</Text>
+      <View style={styles.emptyIcon} accessibilityElementsHidden={true} importantForAccessibility="no">
+        <Text style={styles.emptyIconText} accessibilityElementsHidden={true} importantForAccessibility="no">👥</Text>
       </View>
       <Text style={styles.emptyTitle}>No Recipients Yet</Text>
       <Text style={styles.emptySubtitle}>

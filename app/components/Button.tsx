@@ -9,9 +9,10 @@ interface ButtonProps {
   icon?: React.ReactNode;
   style?: any;
   disabled?: boolean;
+  isLoading?: boolean;
 }
 
-export function Button({ title, onPress, variant = 'primary', icon, style, disabled }: ButtonProps) {
+export function Button({ title, onPress, variant = 'primary', icon, style, disabled, isLoading }: ButtonProps) {
   const getBgColor = () => {
     if (disabled) return COLORS.bgSubtle;
     switch (variant) {
@@ -37,8 +38,11 @@ export function Button({ title, onPress, variant = 'primary', icon, style, disab
   return (
     <TouchableOpacity
       onPress={onPress}
-      disabled={disabled}
+      disabled={disabled || isLoading}
       activeOpacity={0.8}
+      accessibilityRole="button"
+      accessibilityLabel={title}
+      accessibilityState={{ busy: isLoading || false, disabled: disabled || false }}
       style={[
         styles.button,
         {

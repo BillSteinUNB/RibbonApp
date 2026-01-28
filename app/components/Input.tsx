@@ -57,6 +57,9 @@ export function Input({
         editable={!disabled}
         multiline={multiline}
         numberOfLines={numberOfLines}
+        accessibilityLabel={label}
+        accessibilityHint={placeholder}
+        accessibilityState={{ disabled: disabled || false }}
       />
       {error && (
         <Text style={styles.errorText}>{error}</Text>

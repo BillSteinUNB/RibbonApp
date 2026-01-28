@@ -32,6 +32,7 @@ import { useRecipientStore } from '../store/recipientStore';
 import { generateId, getTimestamp } from '../utils/helpers';
 import { ROUTES } from '../constants/routes';
 import { useUnsavedChanges, hasFormChanged } from '../hooks/useUnsavedChanges';
+import { analyticsRecipient } from '../utils/analytics';
 
 // Enable LayoutAnimation on Android
 if (Platform.OS === 'android' && UIManager.setLayoutAnimationEnabledExperimental) {
@@ -221,6 +222,13 @@ export default function NewRecipientScreen() {
       };
       addRecipient(recipient);
       await clearDraft();
+
+      // Track recipient created
+      analyticsRecipient.create({
+        relationship: formData.relationship,
+        interestCount: formData.interests.length,
+      });
+
       router.replace(ROUTES.TABS.RECIPIENTS);
     } catch (error) {
       setErrors({ submit: 'Failed to save recipient. Please try again.' });

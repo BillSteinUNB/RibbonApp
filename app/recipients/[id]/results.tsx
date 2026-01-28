@@ -11,6 +11,8 @@ import { useGiftStore } from '../../store/giftStore';
 import { giftService } from '../../services/giftService';
 import type { GiftIdea } from '../../types/recipient';
 import { ROUTES } from '../../constants/routes';
+import { analyticsGifts } from '../../utils/analytics';
+import { useAuthStore } from '../../store/authStore';
 
 const CATEGORIES = [
   { label: 'All Categories', value: 'all' },
@@ -38,24 +40,24 @@ interface GiftCardProps {
 
 function GiftCard({ gift, onSave, onMarkPurchased, onShop, colors, isDark }: GiftCardProps) {
   const cardStyles = useMemo(() => createCardStyles(colors, isDark), [colors, isDark]);
-  
+
   return (
-    <View style={cardStyles.giftCard}>
+    <View style={cardStyles.giftCard} accessibilityRole="button" accessibilityLabel={`${gift.name}, ${gift.price}, ${gift.category}`}>
       <View style={cardStyles.giftHeader}>
         <View style={cardStyles.giftCategoryBadge}>
           <Text style={cardStyles.giftCategoryText}>{gift.category}</Text>
         </View>
         <Text style={cardStyles.giftPrice}>{gift.price}</Text>
       </View>
-      
+
       <Text style={cardStyles.giftName}>{gift.name}</Text>
       <Text style={cardStyles.giftDescription}>{gift.description}</Text>
-      
+
       <View style={cardStyles.reasoningContainer}>
         <Text style={cardStyles.reasoningLabel}>Why this works:</Text>
         <Text style={cardStyles.reasoningText}>{gift.reasoning}</Text>
       </View>
-      
+
       {gift.tags.length > 0 && (
         <View style={cardStyles.tagsContainer}>
           {gift.tags.slice(0, 4).map((tag, index) => (
@@ -65,14 +67,16 @@ function GiftCard({ gift, onSave, onMarkPurchased, onShop, colors, isDark }: Gif
           ))}
         </View>
       )}
-      
+
       <View style={cardStyles.giftActions}>
         <TouchableOpacity
           style={[cardStyles.actionButton, cardStyles.actionButtonShop]}
           onPress={onShop}
+          accessibilityRole="button"
+          accessibilityLabel={`Shop for ${gift.name}`}
         >
           <View style={cardStyles.shopButtonContent}>
-            <ExternalLink size={14} color={colors.white} />
+            <ExternalLink size={14} color={colors.white} accessibilityElementsHidden={true} importantForAccessibility="no" />
             <Text style={cardStyles.actionButtonTextShop}>Shop</Text>
           </View>
         </TouchableOpacity>
@@ -80,6 +84,8 @@ function GiftCard({ gift, onSave, onMarkPurchased, onShop, colors, isDark }: Gif
         <TouchableOpacity
           style={[cardStyles.actionButton, gift.isSaved && cardStyles.actionButtonActive]}
           onPress={onSave}
+          accessibilityRole="button"
+          accessibilityLabel={gift.isSaved ? "Unsave gift" : "Save gift"}
         >
           <Text style={[cardStyles.actionButtonText, gift.isSaved && cardStyles.actionButtonTextActive]}>
             {gift.isSaved ? 'Saved' : 'Save'}
@@ -89,6 +95,8 @@ function GiftCard({ gift, onSave, onMarkPurchased, onShop, colors, isDark }: Gif
         <TouchableOpacity
           style={[cardStyles.actionButton, gift.isPurchased && cardStyles.actionButtonPurchased]}
           onPress={onMarkPurchased}
+          accessibilityRole="button"
+          accessibilityLabel={gift.isPurchased ? "Mark as not purchased" : "Mark as purchased"}
         >
           <Text style={[cardStyles.actionButtonText, gift.isPurchased && cardStyles.actionButtonTextPurchased]}>
             {gift.isPurchased ? 'Purchased' : 'Mark Purchased'}
@@ -126,20 +134,43 @@ export default function GiftResultsScreen() {
   }, [currentGifts, categoryFilter, sortBy]);
 
   const handleSave = (giftId: string, isSaved: boolean) => {
+    const gift = currentGifts.find(g => g.id === giftId);
     if (isSaved) {
       unsaveGift(giftId);
     } else {
       saveGift(giftId);
+      // Track gift saved
+      if (gift) {
+        const user = useAuthStore.getState().getOrCreateUser();
+        analyticsGifts.save({
+          category: gift.category,
+          giftName: gift.name,
+        }, user.id);
+      }
     }
   };
 
   const handleMarkPurchased = (giftId: string) => {
+    const gift = currentGifts.find(g => g.id === giftId);
     markAsPurchased(giftId);
+    // Track gift purchased
+    if (gift) {
+      const user = useAuthStore.getState().getOrCreateUser();
+      analyticsGifts.markPurchased({
+        category: gift.category,
+        priceRange: gift.price,
+      }, user.id);
+    }
   };
 
-  const handleShop = (url: string | undefined) => {
+  const handleShop = (url: string | undefined, giftName: string) => {
     if (url) {
       Linking.openURL(url);
+      // Track shop clicked
+      const user = useAuthStore.getState().getOrCreateUser();
+      analyticsGifts.shopClicked({
+        giftName: giftName,
+      }, user.id);
     }
   };
 
@@ -216,7 +247,7 @@ export default function GiftResultsScreen() {
             gift={item}
             onSave={() => handleSave(item.id, item.isSaved)}
             onMarkPurchased={() => handleMarkPurchased(item.id)}
-            onShop={() => handleShop(item.url)}
+            onShop={() => handleShop(item.url, item.name)}
             colors={colors}
             isDark={isDark}
           />

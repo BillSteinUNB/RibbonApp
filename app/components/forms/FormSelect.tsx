@@ -46,6 +46,9 @@ export function FormSelect({
         ]}
         onPress={() => !disabled && setIsOpen(true)}
         activeOpacity={0.7}
+        accessibilityRole="button"
+        accessibilityLabel={`${label || 'Select'}: ${selectedOption?.label || placeholder}`}
+        accessibilityState={{ disabled: disabled || false }}
       >
         <Text style={[
           styles.selectText,
@@ -64,11 +67,13 @@ export function FormSelect({
         animationType="fade"
         onRequestClose={() => setIsOpen(false)}
       >
-        <TouchableOpacity
-          style={styles.modalOverlay}
-          activeOpacity={1}
-          onPress={() => setIsOpen(false)}
-        >
+      <TouchableOpacity
+        style={styles.modalOverlay}
+        activeOpacity={1}
+        onPress={() => setIsOpen(false)}
+        accessibilityRole="button"
+        accessibilityLabel="Close modal"
+      >
           <View style={styles.modalContent}>
             <Text style={styles.modalTitle}>{label || 'Select'}</Text>
             <FlatList

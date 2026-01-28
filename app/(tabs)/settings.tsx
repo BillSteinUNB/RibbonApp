@@ -105,7 +105,7 @@ export default function SettingsTab() {
       <ScrollView>
         <View style={styles.section}>
           <Text style={styles.sectionTitle}>Profile</Text>
-          <TouchableOpacity style={styles.item} onPress={handleEditProfile}>
+          <TouchableOpacity style={styles.item} onPress={handleEditProfile} accessibilityRole="button" accessibilityLabel="Edit Profile">
             <Text style={styles.itemText}>Edit Profile</Text>
             <Text style={styles.itemValue}>{user?.profile?.name || 'Add name'}</Text>
           </TouchableOpacity>
@@ -125,32 +125,39 @@ export default function SettingsTab() {
 
           <View style={styles.preferenceBlock}>
             <Text style={styles.preferenceTitle}>Notifications</Text>
-            <View style={styles.switchRow}>
+          <View style={styles.switchRow}>
               <Text style={styles.itemText}>Push Notifications</Text>
               <Switch
                 value={preferences.notifications.pushNotifications}
                 onValueChange={(value) => updateNotifications({ pushNotifications: value })}
                 thumbColor={preferences.notifications.pushNotifications ? colors.accentPrimary : '#D1D5DB'}
                 trackColor={{ true: colors.accentSoft, false: '#E5E7EB' }}
+                accessibilityRole="switch"
+                accessibilityLabel="Push Notifications"
+                accessibilityState={{ checked: preferences.notifications.pushNotifications }}
               />
             </View>
           </View>
         </View>
         <View style={styles.section}>
           <Text style={styles.sectionTitle}>Support</Text>
-          <TouchableOpacity style={styles.item} onPress={handleContactSupport}>
+          <TouchableOpacity style={styles.item} onPress={handleContactSupport} accessibilityRole="button" accessibilityLabel="Contact Support">
             <Text style={styles.itemText}>Contact Support</Text>
             <Text style={styles.itemValue}>{CONTACT_INFO.supportEmail}</Text>
           </TouchableOpacity>
           <TouchableOpacity
             style={styles.item}
             onPress={() => openUrl(PRIVACY_POLICY_URL, 'Privacy policy link is unavailable.')}
+            accessibilityRole="button"
+            accessibilityLabel="Privacy Policy"
           >
             <Text style={styles.itemText}>Privacy Policy</Text>
           </TouchableOpacity>
           <TouchableOpacity
             style={styles.item}
             onPress={() => openUrl(TERMS_OF_SERVICE_URL, 'Terms of service link is unavailable.')}
+            accessibilityRole="button"
+            accessibilityLabel="Terms of Service"
           >
             <Text style={styles.itemText}>Terms of Service</Text>
           </TouchableOpacity>
