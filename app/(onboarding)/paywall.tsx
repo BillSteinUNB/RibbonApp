@@ -8,7 +8,7 @@
  * HARD PAYWALL: No skip option - user must start trial or restore purchase
  */
 
-import React, { useState, useMemo } from 'react';
+import React, { useState, useMemo, useEffect } from 'react';
 import {
   View,
   Text,
@@ -22,10 +22,13 @@ import {
   Linking,
 } from 'react-native';
 import { useRouter } from 'expo-router';
+import { PurchasesPackage } from 'react-native-purchases';
 import { SPACING, RADIUS } from '../constants';
 import { useTheme } from '../hooks/useTheme';
 import { LEGAL_URLS } from '../constants/legal';
 import { useOnboardingStore } from '../store/onboardingStore';
+import { useAuthStore } from '../store/authStore';
+import { subscriptionService } from '../services/subscriptionService';
 import { logger } from '../utils/logger';
 
 type PlanType = 'weekly' | 'monthly' | 'yearly';
@@ -79,26 +82,118 @@ export default function OnboardingPaywall() {
   const [selectedPlan, setSelectedPlan] = useState<PlanType>('yearly');
   const [isLoading, setIsLoading] = useState(false);
   const [isRestoring, setIsRestoring] = useState(false);
+  const [isLoadingOfferings, setIsLoadingOfferings] = useState(true);
+  const [packages, setPackages] = useState<PurchasesPackage[]>([]);
   
   const { startTrial, completeOnboarding } = useOnboardingStore();
+  const { user, setSubscription, getOrCreateUser } = useAuthStore();
 
   const styles = useMemo(() => createStyles(colors), [colors]);
 
+  // Fetch RevenueCat offerings on mount
+  useEffect(() => {
+    loadOfferings();
+  }, []);
+
+  const loadOfferings = async () => {
+    setIsLoadingOfferings(true);
+    try {
+      await subscriptionService.initialize();
+      const offerings = await subscriptionService.getOfferings();
+      if (offerings?.current?.availablePackages) {
+        setPackages(offerings.current.availablePackages);
+        logger.info('[Paywall] Loaded offerings:', offerings.current.availablePackages.length, 'packages');
+      } else {
+        logger.warn('[Paywall] No offerings available');
+      }
+    } catch (error) {
+      logger.error('[Paywall] Failed to load offerings:', error);
+    } finally {
+      setIsLoadingOfferings(false);
+    }
+  };
+
+  // Get package for selected plan
+  const getSelectedPackage = (): PurchasesPackage | undefined => {
+    return packages.find(pkg => {
+      const id = pkg.identifier.toLowerCase();
+      if (selectedPlan === 'yearly') return id.includes('yearly') || id.includes('annual');
+      if (selectedPlan === 'monthly') return id.includes('monthly');
+      if (selectedPlan === 'weekly') return id.includes('weekly');
+      return false;
+    });
+  };
+
+  // Get real price from RevenueCat or fallback to static price
+  const getPriceForPlan = (planId: PlanType): string => {
+    const pkg = packages.find(p => {
+      const id = p.identifier.toLowerCase();
+      if (planId === 'yearly') return id.includes('yearly') || id.includes('annual');
+      if (planId === 'monthly') return id.includes('monthly');
+      if (planId === 'weekly') return id.includes('weekly');
+      return false;
+    });
+    if (pkg) {
+      return pkg.product.priceString;
+    }
+    // Fallback to static prices if RevenueCat not available
+    const fallback = PLAN_OPTIONS.find(p => p.id === planId);
+    return fallback?.price || '';
+  };
+
   const handleStartTrial = async () => {
+    const pkg = getSelectedPackage();
+    
+    if (!pkg) {
+      // Fallback: if RevenueCat not available, use simulated flow (dev only)
+      if (__DEV__) {
+        logger.warn('[Paywall] No package found, using simulated flow (DEV only)');
+        setIsLoading(true);
+        await new Promise(resolve => setTimeout(resolve, 1500));
+        startTrial(selectedPlan);
+        setIsLoading(false);
+        router.replace('/(onboarding)/quick-start');
+        return;
+      }
+      
+      Alert.alert(
+        'Unable to load subscription',
+        'Please check your internet connection and try again.',
+        [{ text: 'Retry', onPress: loadOfferings }]
+      );
+      return;
+    }
+
     setIsLoading(true);
-    logger.info('[Paywall] Starting trial with plan:', selectedPlan);
+    logger.info('[Paywall] Starting purchase with plan:', selectedPlan, 'package:', pkg.identifier);
 
     try {
-      // TODO: Integrate with RevenueCat for actual purchase
-      // For now, simulate the trial start
-      await new Promise(resolve => setTimeout(resolve, 1500));
+      const result = await subscriptionService.purchasePackage(pkg);
       
-      // Start trial in store
-      startTrial(selectedPlan);
-      
-      // Navigate to Quick Start flow instead of main app
-      router.replace('/(onboarding)/quick-start');
-      
+      if (result.success) {
+        // Update auth store with subscription
+        const activeUser = user ?? getOrCreateUser();
+        const subscription = await subscriptionService.getSubscription(activeUser.id);
+        setSubscription(subscription);
+        
+        // Start trial in onboarding store (for tracking)
+        startTrial(selectedPlan);
+        
+        logger.info('[Paywall] Purchase successful');
+        
+        // Navigate to Quick Start flow
+        router.replace('/(onboarding)/quick-start');
+      } else if (result.error === 'Purchase cancelled') {
+        // User cancelled - do nothing
+        logger.info('[Paywall] Purchase cancelled by user');
+      } else {
+        logger.error('[Paywall] Purchase failed:', result.error);
+        Alert.alert(
+          'Purchase failed',
+          result.error || 'Please try again. If the problem persists, contact support.',
+          [{ text: 'OK' }]
+        );
+      }
     } catch (error) {
       logger.error('[Paywall] Trial start failed:', error);
       Alert.alert(
@@ -116,17 +211,43 @@ export default function OnboardingPaywall() {
     logger.info('[Paywall] Restoring purchase');
 
     try {
-      // TODO: Integrate with RevenueCat for actual restore
-      await new Promise(resolve => setTimeout(resolve, 1500));
+      const result = await subscriptionService.restorePurchases();
       
-      // If restore found a subscription, complete onboarding
-      // For now, show message that no subscription found
-      Alert.alert(
-        'No subscription found',
-        'We couldn\'t find an active subscription for your account. Start a free trial to get access.',
-        [{ text: 'OK' }]
-      );
-      
+      if (result.success && result.isPremium) {
+        // Update auth store with subscription
+        const activeUser = user ?? getOrCreateUser();
+        const subscription = await subscriptionService.getSubscription(activeUser.id);
+        setSubscription(subscription);
+        
+        logger.info('[Paywall] Restore successful - user has premium');
+        
+        Alert.alert(
+          'Subscription restored!',
+          'Welcome back! Your subscription has been restored.',
+          [{ 
+            text: 'Continue', 
+            onPress: () => {
+              completeOnboarding();
+              router.replace('/(tabs)');
+            }
+          }]
+        );
+      } else if (result.success) {
+        // Restore succeeded but no premium found
+        Alert.alert(
+          'No subscription found',
+          'We couldn\'t find an active subscription for your account. Start a free trial to get access.',
+          [{ text: 'OK' }]
+        );
+      } else {
+        // Restore failed
+        logger.error('[Paywall] Restore failed:', result.error);
+        Alert.alert(
+          'Restore failed',
+          result.error || 'Please try again later.',
+          [{ text: 'OK' }]
+        );
+      }
     } catch (error) {
       logger.error('[Paywall] Restore failed:', error);
       Alert.alert(
@@ -202,7 +323,13 @@ export default function OnboardingPaywall() {
 
         {/* Plan selector */}
         <View style={styles.planSelector}>
-          {PLAN_OPTIONS.map((plan) => (
+          {isLoadingOfferings ? (
+            <View style={styles.loadingContainer}>
+              <ActivityIndicator size="large" color={colors.accentPrimary} />
+              <Text style={styles.loadingText}>Loading plans...</Text>
+            </View>
+          ) : (
+            PLAN_OPTIONS.map((plan) => (
             <TouchableOpacity
               key={plan.id}
               style={[
@@ -243,7 +370,7 @@ export default function OnboardingPaywall() {
                   )}
                 </View>
                 <Text style={styles.planPrice}>
-                  {plan.price}
+                  {getPriceForPlan(plan.id)}
                   <Text style={styles.planPeriod}>{plan.period}</Text>
                 </Text>
                 {plan.pricePerWeek && (
@@ -251,7 +378,8 @@ export default function OnboardingPaywall() {
                 )}
               </View>
             </TouchableOpacity>
-          ))}
+          ))
+          )}
         </View>
 
         {/* Features list */}
@@ -296,7 +424,7 @@ export default function OnboardingPaywall() {
         </TouchableOpacity>
         
         <Text style={styles.trialNote}>
-          {getTrialDays()}-day free trial, then {PLAN_OPTIONS.find(p => p.id === selectedPlan)?.price}
+          {getTrialDays()}-day free trial, then {getPriceForPlan(selectedPlan)}
           {PLAN_OPTIONS.find(p => p.id === selectedPlan)?.period}
         </Text>
 
@@ -410,6 +538,16 @@ const createStyles = (colors: ReturnType<typeof import('../hooks/useTheme').useT
   planSelector: {
     gap: SPACING.sm,
     marginBottom: SPACING.xl,
+  },
+  loadingContainer: {
+    padding: SPACING.xl,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  loadingText: {
+    marginTop: SPACING.md,
+    fontSize: 14,
+    color: colors.textSecondary,
   },
   planOption: {
     flexDirection: 'row',
