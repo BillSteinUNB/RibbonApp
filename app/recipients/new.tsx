@@ -325,7 +325,7 @@ export default function NewRecipientScreen() {
               options={OCCASION_TYPES.map(o => ({ label: o.label, value: o.value }))}
               onSelect={(value) => setFormData({
                 ...formData,
-                occasion: { ...formData.occasion, type: value as any }
+                occasion: { ...formData.occasion, type: value as 'birthday' | 'holiday' | 'anniversary' | 'wedding' | 'other' }
               })}
             />
 

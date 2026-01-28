@@ -1,5 +1,5 @@
-import React, { useState, useMemo } from 'react';
-import { View, Text, StyleSheet, TouchableOpacity, FlatList, Linking } from 'react-native';
+import React, { useState, useMemo, useEffect } from 'react';
+import { View, Text, StyleSheet, TouchableOpacity, FlatList, Linking, Alert } from 'react-native';
 import { ExternalLink } from 'lucide-react-native';
 import { useRouter, useLocalSearchParams } from 'expo-router';
 import { SPACING, FONTS, RADIUS } from '../../constants';
@@ -109,6 +109,7 @@ export default function GiftResultsScreen() {
   
   const [categoryFilter, setCategoryFilter] = useState('all');
   const [sortBy, setSortBy] = useState<'low-to-high' | 'high-to-low'>('low-to-high');
+  const [regenerateCount, setRegenerateCount] = useState(0);
 
   const styles = useMemo(() => createStyles(colors), [colors]);
 
@@ -142,8 +143,31 @@ export default function GiftResultsScreen() {
     }
   };
 
+  // Reset regenerate count when gifts are loaded successfully
+  useEffect(() => {
+    if (currentGifts.length > 0) {
+      setRegenerateCount(0);
+    }
+  }, [currentGifts.length]);
+
   const handleRegenerate = () => {
-    router.replace(ROUTES.RECIPIENTS.IDEAS(recipientId));
+    const newCount = regenerateCount + 1;
+    setRegenerateCount(newCount);
+
+    if (newCount >= 3) {
+      Alert.alert(
+        'Generation Issue',
+        'Generation is having trouble. Please check your connection and try again later.',
+        [
+          {
+            text: 'OK',
+            onPress: () => router.replace(ROUTES.TABS.RECIPIENTS),
+          },
+        ]
+      );
+    } else {
+      router.replace(ROUTES.RECIPIENTS.IDEAS(recipientId));
+    }
   };
 
   if (!recipient) {

@@ -31,7 +31,7 @@ export function deepMerge<T extends Record<string, any>>(
         }
         deepMerge(target[key] as Record<string, any>, source[key] as Record<string, any>);
       } else {
-        (target[key] as any) = source[key];
+        (target as Record<string, unknown>)[key] = source[key];
       }
     }
   }

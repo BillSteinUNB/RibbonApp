@@ -18,6 +18,7 @@ import {
 } from 'react-native';
 import { useRouter } from 'expo-router';
 import { COLORS, SPACING, RADIUS } from '../constants';
+import { ROUTES } from '../constants/routes';
 
 export default function QuickStartScreen() {
   const router = useRouter();
@@ -50,7 +51,7 @@ export default function QuickStartScreen() {
   }, []);
 
   const handleGetStarted = () => {
-    router.push('/(onboarding)/quick-recipient');
+    router.push(ROUTES.ONBOARDING.QUICK_RECIPIENT);
   };
 
   return (

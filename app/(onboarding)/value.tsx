@@ -17,12 +17,13 @@ import {
 } from 'react-native';
 import { useRouter } from 'expo-router';
 import { COLORS, SPACING, RADIUS } from '../constants';
+import { ROUTES } from '../constants/routes';
 
 export default function OnboardingValue() {
   const router = useRouter();
 
   const handleContinue = () => {
-    router.push('/(onboarding)/how-it-works');
+    router.push(ROUTES.ONBOARDING.HOW_IT_WORKS);
   };
 
   const handleBack = () => {

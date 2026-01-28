@@ -8,13 +8,14 @@
 
 import { Redirect } from 'expo-router';
 import { useOnboardingStore } from './store/onboardingStore';
+import { ROUTES } from './constants/routes';
 
 export default function Index() {
   const { hasCompletedOnboarding } = useOnboardingStore();
 
   if (!hasCompletedOnboarding) {
-    return <Redirect href="/(onboarding)" />;
+    return <Redirect href={ROUTES.ONBOARDING.ROOT} />;
   }
 
-  return <Redirect href="/(tabs)" />;
+  return <Redirect href={ROUTES.TABS.ROOT} />;
 }

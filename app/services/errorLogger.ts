@@ -135,7 +135,7 @@ function getErrorLoggerInstance(): ErrorLogger {
 export const errorLogger = new Proxy({} as ErrorLogger, {
   get(_, prop) {
     const instance = getErrorLoggerInstance();
-    const value = (instance as any)[prop];
+    const value = (instance as unknown as Record<string, unknown>)[prop as string];
 
     if (typeof value === 'function') {
       return value.bind(instance);

@@ -84,12 +84,16 @@ export default function QuickSuccessScreen() {
 
   const handleViewAll = () => {
     completeQuickStart();
-    router.replace(ROUTES.RECIPIENTS.RESULTS(recipientId));
+    // Navigate to tabs first, then push to results to maintain proper back-stack context
+    router.replace(ROUTES.TABS.ROOT);
+    setTimeout(() => {
+      router.push(ROUTES.RECIPIENTS.RESULTS(recipientId));
+    }, 100);
   };
 
   const handleGoHome = () => {
     completeQuickStart();
-    router.replace('/(tabs)');
+    router.replace(ROUTES.TABS.ROOT);
   };
 
   if (!recipient) {

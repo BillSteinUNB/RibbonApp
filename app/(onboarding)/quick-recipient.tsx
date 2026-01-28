@@ -27,6 +27,7 @@ import { useRecipientStore } from '../store/recipientStore';
 import { useOnboardingStore } from '../store/onboardingStore';
 import { generateId, getTimestamp } from '../utils/helpers';
 import { logger } from '../utils/logger';
+import { ROUTES } from '../constants/routes';
 
 // Quick interests grid - most common categories
 const QUICK_INTERESTS = [
@@ -141,7 +142,7 @@ export default function QuickRecipientScreen() {
       logger.info('[QuickRecipient] Created recipient:', recipientId);
       
       // Navigate to generating screen
-      router.push(`/(onboarding)/quick-generating?id=${recipientId}`);
+      router.push(ROUTES.ONBOARDING.QUICK_GENERATING(recipientId));
       
     } catch (error) {
       logger.error('[QuickRecipient] Failed to create recipient:', error);

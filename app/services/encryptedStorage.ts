@@ -26,7 +26,7 @@ async function getErrorLogger() {
 
 // Synchronous fallback for error logging (won't block on import)
 function logError(error: unknown, context: Record<string, unknown>) {
-  getErrorLogger().then(el => el?.log(error, context)).catch(() => {});
+  getErrorLogger().then(el => el?.log(error, context)).catch((err) => logger.warn('[EncryptedStorage] Non-critical cleanup error:', err));
   if (__DEV__) console.error('[EncryptedStorage]', context, error);
 }
 
@@ -187,7 +187,7 @@ export class EncryptedStorageService {
       const jsonString = JSON.stringify(value);
       const encrypted = await encryptData(jsonString, encryptionKey);
 
-      return JSON.stringify(encrypted) as any;
+      return JSON.stringify(encrypted);
     } catch (error) {
       logError(error, { context: 'encryptValue', key });
       logger.warn('[EncryptedStorage] Encryption failed, returning original data');

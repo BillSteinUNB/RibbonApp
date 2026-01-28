@@ -18,6 +18,7 @@ import {
 } from 'react-native';
 import { useRouter } from 'expo-router';
 import { COLORS, SPACING, RADIUS } from '../constants';
+import { ROUTES } from '../constants/routes';
 
 const { width, height } = Dimensions.get('window');
 
@@ -25,7 +26,7 @@ export default function OnboardingHook() {
   const router = useRouter();
 
   const handleContinue = () => {
-    router.push('/(onboarding)/value');
+    router.push(ROUTES.ONBOARDING.VALUE);
   };
 
   return (

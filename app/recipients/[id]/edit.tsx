@@ -216,10 +216,14 @@ export default function EditRecipientScreen() {
         {
           text: 'Delete',
           style: 'destructive',
-          onPress: async () => {
+          onPress: () => {
             setIsDeleting(true);
             try {
               removeRecipient(recipientId);
+              const stillExists = useRecipientStore.getState().recipients.some(r => r.id === recipientId);
+              if (stillExists) {
+                throw new Error('Failed to remove recipient');
+              }
               router.replace(ROUTES.TABS.RECIPIENTS);
             } catch (error) {
               setIsDeleting(false);
@@ -327,7 +331,7 @@ export default function EditRecipientScreen() {
               options={OCCASION_TYPES.map(o => ({ label: o.label, value: o.value }))}
               onSelect={(value) => setFormData({
                 ...formData,
-                occasion: { ...formData.occasion, type: value as any }
+                occasion: { ...formData.occasion, type: value as 'birthday' | 'holiday' | 'anniversary' | 'wedding' | 'other' }
               })}
             />
 

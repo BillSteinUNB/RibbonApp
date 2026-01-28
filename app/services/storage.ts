@@ -34,7 +34,7 @@ async function getEncryptedStorage() {
 }
 
 function logError(error: unknown, context: Record<string, unknown>) {
-  getErrorLogger().then(el => el?.log(error, context)).catch(() => {});
+  getErrorLogger().then(el => el?.log(error, context)).catch((err) => logger.warn('[Storage] Non-critical cleanup error:', err));
   console.error('[Storage]', context, error);
 }
 

@@ -18,6 +18,7 @@ import {
 } from 'react-native';
 import { useRouter } from 'expo-router';
 import { COLORS, SPACING, RADIUS } from '../constants';
+import { ROUTES } from '../constants/routes';
 
 export default function OnboardingHowItWorks() {
   const router = useRouter();
@@ -49,7 +50,7 @@ export default function OnboardingHowItWorks() {
   }, []);
 
   const handleContinue = () => {
-    router.push('/(onboarding)/social-proof');
+    router.push(ROUTES.ONBOARDING.SOCIAL_PROOF);
   };
 
   const handleBack = () => {

@@ -3,6 +3,7 @@ import { z } from 'zod';
 import { generateId, getTimestamp } from '../utils/helpers';
 import { errorLogger } from './errorLogger';
 import { safeJSONParse } from '../utils/validation';
+import { logger } from '../utils/logger';
 
 /**
  * Raw Gift Idea Schema (from AI response)
@@ -154,8 +155,8 @@ class GiftParser {
       return { valid: true };
     } catch (error) {
       if (error instanceof z.ZodError) {
-        // @ts-ignore
-        const errorMessage = error.errors?.[0]?.message || 'Invalid gift idea format';
+        logger.warn('[GiftParser] Validation error:', error.issues);
+        const errorMessage = error.issues?.[0]?.message || 'Invalid gift idea format';
         return {
           valid: false,
           error: errorMessage,

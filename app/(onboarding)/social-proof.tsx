@@ -19,6 +19,7 @@ import {
 } from 'react-native';
 import { useRouter } from 'expo-router';
 import { COLORS, SPACING, RADIUS } from '../constants';
+import { ROUTES } from '../constants/routes';
 
 const TESTIMONIALS = [
   {
@@ -71,7 +72,7 @@ export default function OnboardingSocialProof() {
   }, []);
 
   const handleContinue = () => {
-    router.push('/(onboarding)/paywall');
+    router.push(ROUTES.ONBOARDING.PAYWALL);
   };
 
   const handleBack = () => {

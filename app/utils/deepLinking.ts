@@ -1,5 +1,6 @@
 import * as Linking from 'expo-linking';
 import { logger } from './logger';
+import { ROUTES } from '../constants/routes';
 
 /**
  * Deep linking configuration for the Ribbon app
@@ -72,19 +73,39 @@ export function getRouteFromDeepLink(url: string): string | null {
 
     // Handle root URL -> home
     if (!path || path === '') {
-      targetRoute = '/(tabs)';
+      targetRoute = ROUTES.TABS.ROOT;
     }
     // Handle /recipients -> recipients tab
     else if (path === 'recipients') {
-      targetRoute = '/(tabs)/recipients';
+      targetRoute = ROUTES.TABS.RECIPIENTS;
     }
     // Handle /settings -> settings tab
     else if (path === 'settings') {
-      targetRoute = '/(tabs)/settings';
+      targetRoute = ROUTES.TABS.SETTINGS;
     }
     // Handle /pricing -> pricing tab
     else if (path === 'pricing') {
-      targetRoute = '/(tabs)/pricing';
+      targetRoute = ROUTES.TABS.PRICING;
+    }
+    // Handle /recipients/:id -> recipient detail
+    else if (path.match(/^recipients\/[^/]+$/)) {
+      const id = path.split('/')[1];
+      targetRoute = ROUTES.RECIPIENTS.DETAIL(id);
+    }
+    // Handle /recipients/:id/edit
+    else if (path.match(/^recipients\/[^/]+\/edit$/)) {
+      const id = path.split('/')[1];
+      targetRoute = ROUTES.RECIPIENTS.EDIT(id);
+    }
+    // Handle /recipients/:id/ideas
+    else if (path.match(/^recipients\/[^/]+\/ideas$/)) {
+      const id = path.split('/')[1];
+      targetRoute = ROUTES.RECIPIENTS.IDEAS(id);
+    }
+    // Handle /recipients/:id/results
+    else if (path.match(/^recipients\/[^/]+\/results$/)) {
+      const id = path.split('/')[1];
+      targetRoute = ROUTES.RECIPIENTS.RESULTS(id);
     }
     // Other paths are handled directly by expo-router file-based routing
 

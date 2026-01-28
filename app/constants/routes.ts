@@ -5,7 +5,19 @@
 
 export const ROUTES = {
   // Root routes
-  ONBOARDING: '/onboarding' as const,
+  ONBOARDING: {
+    ROOT: '/(onboarding)' as const,
+    VALUE: '/(onboarding)/value' as const,
+    HOW_IT_WORKS: '/(onboarding)/how-it-works' as const,
+    SOCIAL_PROOF: '/(onboarding)/social-proof' as const,
+    PAYWALL: '/(onboarding)/paywall' as const,
+    QUICK_START: '/(onboarding)/quick-start' as const,
+    QUICK_RECIPIENT: '/(onboarding)/quick-recipient' as const,
+    QUICK_GENERATING: (id: string) =>
+      `/(onboarding)/quick-generating?id=${id}` as const,
+    QUICK_SUCCESS: (id: string) =>
+      `/(onboarding)/quick-success?id=${id}` as const,
+  },
 
   // Tab routes
   TABS: {

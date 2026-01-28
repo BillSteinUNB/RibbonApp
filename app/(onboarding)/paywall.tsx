@@ -30,6 +30,7 @@ import { useOnboardingStore } from '../store/onboardingStore';
 import { useAuthStore } from '../store/authStore';
 import { subscriptionService } from '../services/subscriptionService';
 import { logger } from '../utils/logger';
+import { ROUTES } from '../constants/routes';
 
 type PlanType = 'weekly' | 'monthly' | 'yearly';
 
@@ -153,7 +154,7 @@ export default function OnboardingPaywall() {
         await new Promise(resolve => setTimeout(resolve, 1500));
         startTrial(selectedPlan);
         setIsLoading(false);
-        router.replace('/(onboarding)/quick-start');
+        router.replace(ROUTES.ONBOARDING.QUICK_START);
         return;
       }
       
@@ -229,7 +230,7 @@ export default function OnboardingPaywall() {
             text: 'Continue', 
             onPress: () => {
               completeOnboarding();
-              router.replace('/(tabs)');
+              router.replace(ROUTES.TABS.ROOT);
             }
           }]
         );
@@ -259,10 +260,6 @@ export default function OnboardingPaywall() {
     } finally {
       setIsRestoring(false);
     }
-  };
-
-  const handleBack = () => {
-    router.back();
   };
 
   const handleOpenTerms = async () => {
@@ -298,12 +295,7 @@ export default function OnboardingPaywall() {
         <View style={[styles.progressDot, styles.progressDotActive]} />
       </View>
 
-      {/* Back button */}
-      <TouchableOpacity style={styles.backButton} onPress={handleBack}>
-        <Text style={styles.backButtonText}>←</Text>
-      </TouchableOpacity>
-
-      <ScrollView 
+      <ScrollView
         style={styles.scrollView}
         contentContainerStyle={styles.content}
         showsVerticalScrollIndicator={false}
@@ -479,22 +471,6 @@ const createStyles = (colors: ReturnType<typeof import('../hooks/useTheme').useT
   progressDotActive: {
     backgroundColor: colors.accentPrimary,
     width: 24,
-  },
-  backButton: {
-    position: 'absolute',
-    top: 60,
-    left: SPACING.lg,
-    width: 40,
-    height: 40,
-    borderRadius: 20,
-    backgroundColor: colors.bgSecondary,
-    justifyContent: 'center',
-    alignItems: 'center',
-    zIndex: 10,
-  },
-  backButtonText: {
-    fontSize: 20,
-    color: colors.textPrimary,
   },
   scrollView: {
     flex: 1,

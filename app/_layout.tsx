@@ -21,6 +21,8 @@ import { useNetworkStatus } from './hooks/useNetworkStatus';
 import { OfflineOverlay } from './components/OfflineOverlay';
 import { getInitialDeepLink, setupDeepLinkListener, handleDeepLink } from './utils/deepLinking';
 import { COLORS } from './constants';
+import { ROUTES } from './constants/routes';
+import { logger } from './utils/logger';
 
 export default function RootLayout() {
   const router = useRouter();
@@ -43,7 +45,7 @@ export default function RootLayout() {
         await subscriptionService.setUserId(user.id);
         
         // Run storage cleanup on app startup (non-blocking)
-        storage.runCleanup().catch(console.error);
+        storage.runCleanup().catch((err) => logger.warn('[App] Storage cleanup error:', err));
       } catch (error) {
         console.error('App initialization error:', error);
       } finally {
@@ -63,10 +65,10 @@ export default function RootLayout() {
     
     if (!hasCompletedOnboarding && !inOnboarding) {
       // User hasn't completed onboarding, redirect to onboarding
-      router.replace('/(onboarding)');
+      router.replace(ROUTES.ONBOARDING.ROOT);
     } else if (hasCompletedOnboarding && inOnboarding) {
       // User has completed onboarding but is in onboarding flow, redirect to main
-      router.replace('/(tabs)');
+      router.replace(ROUTES.TABS.ROOT);
     }
   }, [isReady, hasCompletedOnboarding, segments]);
 
@@ -74,7 +76,7 @@ export default function RootLayout() {
   useEffect(() => {
     if (!isReady) return;
     
-    const navigate = (route: string) => router.push(route as any);
+    const navigate = (route: string) => router.navigate(route);
 
     // Check if app was launched with a deep link
     getInitialDeepLink().then((url) => {

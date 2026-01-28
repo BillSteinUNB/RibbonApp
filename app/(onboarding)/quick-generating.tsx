@@ -24,6 +24,7 @@ import { useOnboardingStore } from '../store/onboardingStore';
 import { giftService } from '../services/giftService';
 import type { GiftIdea } from '../types/recipient';
 import { logger } from '../utils/logger';
+import { ROUTES } from '../constants/routes';
 
 const PROGRESS_MESSAGES = [
   'Analyzing preferences...',
@@ -46,6 +47,7 @@ export default function QuickGeneratingScreen() {
   const [currentMessageIndex, setCurrentMessageIndex] = useState(0);
   const [error, setError] = useState<string | null>(null);
   const [isCancelled, setIsCancelled] = useState(false);
+  const [retryCounter, setRetryCounter] = useState(0);
 
   // Animations
   const spinValue = useRef(new Animated.Value(0)).current;
@@ -159,7 +161,7 @@ export default function QuickGeneratingScreen() {
         logger.info('[QuickGenerating] Generation complete, navigating to success');
         
         // Navigate to success screen
-        router.replace(`/(onboarding)/quick-success?id=${recipientId}`);
+        router.replace(ROUTES.ONBOARDING.QUICK_SUCCESS(recipientId));
         
       } catch (err) {
         if (isCancelled) return;
@@ -172,7 +174,7 @@ export default function QuickGeneratingScreen() {
     };
 
     generateGifts();
-  }, [recipient, isCancelled, recipientId]);
+  }, [recipient, isCancelled, recipientId, retryCounter]);
 
   const handleCancel = () => {
     setIsCancelled(true);
@@ -187,19 +189,20 @@ export default function QuickGeneratingScreen() {
     setCurrentMessageIndex(0);
     setProgressMessage(PROGRESS_MESSAGES[0]);
     progressValue.setValue(0);
+    setRetryCounter(prev => prev + 1);
   };
 
   const handleSkip = () => {
     Alert.alert(
       'Skip Gift Generation?',
-      'Your recipient has been saved. You can generate gift ideas for them later from the Recipients tab.',
+      'Your recipient has been saved. You can find them in your Recipients list.',
       [
         { text: 'Cancel', style: 'cancel' },
         {
           text: 'Skip',
           onPress: () => {
             completeQuickStart();
-            router.replace('/(tabs)');
+            router.replace(ROUTES.TABS.RECIPIENTS);
           },
         },
       ]
