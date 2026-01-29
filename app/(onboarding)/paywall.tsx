@@ -302,6 +302,20 @@ export default function OnboardingPaywall() {
     <SafeAreaView style={styles.container}>
       <StatusBar barStyle="dark-content" />
       
+      {/* Temporary skip button for testing */}
+      {(
+        <TouchableOpacity
+          style={styles.devSkipButton}
+          onPress={() => {
+            completeOnboarding();
+            router.replace(ROUTES.ONBOARDING.QUICK_START);
+          }}
+          accessibilityLabel="Skip paywall (dev)"
+        >
+          <Text style={styles.devSkipText}>✕</Text>
+        </TouchableOpacity>
+      )}
+
       {/* Progress indicator */}
       <View style={styles.progressContainer} accessibilityRole="progressbar" accessibilityLabel="Step 5 of 5">
         <View style={styles.progressDot} accessibilityLabel="Step 1 of 5" />
@@ -481,6 +495,23 @@ const createStyles = (colors: ReturnType<typeof import('../hooks/useTheme').useT
   container: {
     flex: 1,
     backgroundColor: colors.bgPrimary,
+  },
+  devSkipButton: {
+    position: 'absolute',
+    top: 50,
+    right: 16,
+    zIndex: 999,
+    width: 28,
+    height: 28,
+    borderRadius: 14,
+    backgroundColor: 'rgba(0,0,0,0.15)',
+    justifyContent: 'center',
+    alignItems: 'center',
+  },
+  devSkipText: {
+    fontSize: 14,
+    color: colors.textSecondary,
+    fontWeight: '600',
   },
   progressContainer: {
     flexDirection: 'row',
