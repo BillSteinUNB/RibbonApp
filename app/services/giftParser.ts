@@ -10,16 +10,16 @@ import { logger } from '../utils/logger';
  * Made flexible to handle different AI model response formats
  */
 const rawGiftIdeaSchema = z.object({
-  name: z.string().min(1, 'Gift name is required'),
-  description: z.string().min(10, 'Description must be at least 10 characters'),
-  reasoning: z.string().optional().default('A thoughtful gift choice.'),
-  price: z.union([z.string(), z.number()]).transform(val =>
+  name: z.string().min(1, 'Gift name is required').max(200, 'Gift name too long'),
+  description: z.string().min(10, 'Description must be at least 10 characters').max(1000, 'Description too long'),
+  reasoning: z.string().max(500, 'Reasoning too long').optional().default('A thoughtful gift choice.'),
+  price: z.union([z.string().max(50), z.number()]).transform(val =>
     typeof val === 'number' ? `$${val}` : val
   ),
-  category: z.string().min(1, 'Category is required'),
-  url: z.string().url().nullable().optional(),
-  stores: z.array(z.string()).default([]),
-  tags: z.array(z.string()).default(['gift']),
+  category: z.string().min(1, 'Category is required').max(50, 'Category too long'),
+  url: z.string().url().max(500).nullable().optional(),
+  stores: z.array(z.string().max(100)).max(10).default([]),
+  tags: z.array(z.string().max(50)).max(20).default(['gift']),
 });
 
 /**

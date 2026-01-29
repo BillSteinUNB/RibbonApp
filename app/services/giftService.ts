@@ -320,7 +320,7 @@ class GiftService {
     const gender = sanitizeForPrompt(recipient.gender, 30);
     const interestsList = sanitizeArrayForPrompt(recipient.interests, 100).join(', ') || 'Not specified';
     const dislikes = sanitizeForPrompt(recipient.dislikes, 300) || 'None';
-    const sanitizedInstructions = sanitizeForPrompt(userInstructions, 500) || 'Please suggest better alternatives based on my feedback.';
+    const sanitizedInstructions = sanitizeForPrompt(userInstructions, 200) || 'Please suggest better alternatives based on my feedback.';
     const occasionCustomName = sanitizeForPrompt(recipient.occasion.customName, 100);
 
     // Format liked gifts

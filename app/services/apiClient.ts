@@ -19,6 +19,11 @@ class APIClient {
   private config: APIClientConfig;
 
   constructor(config: Partial<APIClientConfig> = {}) {
+    // Enforce HTTPS for all API URLs in production
+    if (config.baseURL && !__DEV__ && !config.baseURL.startsWith('https://')) {
+      throw new Error('API baseURL must use HTTPS');
+    }
+
     this.config = {
       baseURL: config.baseURL || '',
       timeout: config.timeout || 15000,
@@ -249,6 +254,9 @@ class APIClient {
    * Update base configuration
    */
   updateConfig(config: Partial<APIClientConfig>): void {
+    if (config.baseURL && !__DEV__ && !config.baseURL.startsWith('https://')) {
+      throw new Error('API baseURL must use HTTPS');
+    }
     this.config = { ...this.config, ...config };
   }
 

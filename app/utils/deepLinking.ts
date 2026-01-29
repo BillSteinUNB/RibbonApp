@@ -29,6 +29,13 @@ export const LINKING_PREFIXES = [
   'https://*.ribbon.app',
 ];
 
+// Valid ID pattern (UUID v4)
+const VALID_ID_PATTERN = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
+
+function isValidId(id: string): boolean {
+  return VALID_ID_PATTERN.test(id);
+}
+
 /**
  * Create a deep link URL for the app
  */
@@ -90,21 +97,37 @@ export function getRouteFromDeepLink(url: string): string | null {
     // Handle /recipients/:id -> recipient detail
     else if (path.match(/^recipients\/[^/]+$/)) {
       const id = path.split('/')[1];
+      if (!isValidId(id)) {
+        logger.warn('Invalid recipient ID in deep link:', id);
+        return null;
+      }
       targetRoute = ROUTES.RECIPIENTS.DETAIL(id);
     }
     // Handle /recipients/:id/edit
     else if (path.match(/^recipients\/[^/]+\/edit$/)) {
       const id = path.split('/')[1];
+      if (!isValidId(id)) {
+        logger.warn('Invalid recipient ID in deep link:', id);
+        return null;
+      }
       targetRoute = ROUTES.RECIPIENTS.EDIT(id);
     }
     // Handle /recipients/:id/ideas
     else if (path.match(/^recipients\/[^/]+\/ideas$/)) {
       const id = path.split('/')[1];
+      if (!isValidId(id)) {
+        logger.warn('Invalid recipient ID in deep link:', id);
+        return null;
+      }
       targetRoute = ROUTES.RECIPIENTS.IDEAS(id);
     }
     // Handle /recipients/:id/results
     else if (path.match(/^recipients\/[^/]+\/results$/)) {
       const id = path.split('/')[1];
+      if (!isValidId(id)) {
+        logger.warn('Invalid recipient ID in deep link:', id);
+        return null;
+      }
       targetRoute = ROUTES.RECIPIENTS.RESULTS(id);
     }
     // Other paths are handled directly by expo-router file-based routing
@@ -175,6 +198,11 @@ export function canHandleUrl(url: string): boolean {
  */
 export async function openExternalUrl(url: string): Promise<boolean> {
   try {
+    // Only allow HTTPS URLs for external links (and mailto/tel schemes)
+    if (!url.startsWith('https://') && !url.startsWith('mailto:') && !url.startsWith('tel:')) {
+      logger.warn('Blocked non-HTTPS external URL:', url);
+      return false;
+    }
     const canOpen = await Linking.canOpenURL(url);
     if (canOpen) {
       await Linking.openURL(url);

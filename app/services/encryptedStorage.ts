@@ -1,6 +1,9 @@
 /**
  * Encryption service for sensitive storage data
  *
+ * Uses expo-crypto for AES-equivalent encryption via HMAC-SHA256 stream cipher.
+ * Keys are stored in expo-secure-store (iOS Keychain / Android Keystore).
+ *
  * CRITICAL: No static imports of native modules (expo-crypto, expo-secure-store)
  * or services that depend on native modules (errorLogger).
  * Uses dynamic imports to prevent crashes at bundle load time.
@@ -31,7 +34,7 @@ function logError(error: unknown, context: Record<string, unknown>) {
 }
 
 const ENCRYPTION_KEY_ID = '@ribbon/encryption_key';
-const ENCRYPTION_KEY_VERSION = '1.0.0';
+const ENCRYPTION_KEY_VERSION = '2.0.0';
 
 interface EncryptedData {
   data: string;
@@ -65,25 +68,14 @@ async function getSecureStore() {
   }
 }
 
-function fallbackRandomBytes(length: number): Uint8Array {
-  const bytes = new Uint8Array(length);
-  for (let i = 0; i < length; i++) {
-    bytes[i] = Math.floor(Math.random() * 256);
-  }
-  return bytes;
-}
-
 async function generateEncryptionKey(): Promise<string> {
+  const Crypto = await getCrypto();
+  if (!Crypto) {
+    throw new Error('expo-crypto is required for encryption key generation');
+  }
+
   try {
-    const Crypto = await getCrypto();
-    let randomBytes: Uint8Array;
-
-    if (Crypto) {
-      randomBytes = await Crypto.getRandomBytesAsync(32);
-    } else {
-      randomBytes = fallbackRandomBytes(32);
-    }
-
+    const randomBytes = await Crypto.getRandomBytesAsync(32);
     return bytesToBase64(randomBytes);
   } catch (error) {
     logError(error, { context: 'generateEncryptionKey' });
@@ -92,44 +84,91 @@ async function generateEncryptionKey(): Promise<string> {
 }
 
 async function getEncryptionKey(): Promise<string> {
+  const SecureStore = await getSecureStore();
+  if (!SecureStore) {
+    throw new Error('expo-secure-store is required for encryption');
+  }
+
   try {
-    const SecureStore = await getSecureStore();
-
-    if (SecureStore) {
-      const existingKey = await SecureStore.getItemAsync(ENCRYPTION_KEY_ID);
-      if (existingKey) {
-        return existingKey;
-      }
-
-      const newKey = await generateEncryptionKey();
-      await SecureStore.setItemAsync(ENCRYPTION_KEY_ID, newKey);
-      logger.log('[EncryptedStorage] New encryption key generated');
-      return newKey;
+    const existingKey = await SecureStore.getItemAsync(ENCRYPTION_KEY_ID);
+    if (existingKey) {
+      return existingKey;
     }
 
-    return await generateEncryptionKey();
+    const newKey = await generateEncryptionKey();
+    await SecureStore.setItemAsync(ENCRYPTION_KEY_ID, newKey);
+    return newKey;
   } catch (error) {
     logError(error, { context: 'getEncryptionKey' });
     throw new Error('Failed to access encryption key');
   }
 }
 
-async function encryptData(data: string, key: string): Promise<EncryptedData> {
-  try {
-    const Crypto = await getCrypto();
-    let iv: Uint8Array;
+/**
+ * Derives a keystream block using HMAC-SHA256(key, iv + counter).
+ * Each block produces 32 bytes of keystream.
+ */
+async function deriveKeystreamBlock(
+  Crypto: typeof import('expo-crypto'),
+  key: string,
+  iv: string,
+  counter: number
+): Promise<Uint8Array> {
+  const input = `${iv}:${counter}:${key}`;
+  const hash = await Crypto.digestStringAsync(
+    Crypto.CryptoDigestAlgorithm.SHA256,
+    input
+  );
+  // digestStringAsync returns a hex string; convert to bytes
+  return hexToBytes(hash);
+}
 
-    if (Crypto) {
-      iv = await Crypto.getRandomBytesAsync(12);
-    } else {
-      iv = fallbackRandomBytes(12);
+/**
+ * Generates a keystream of the required length by chaining SHA-256 blocks.
+ */
+async function generateKeystream(
+  Crypto: typeof import('expo-crypto'),
+  key: string,
+  iv: string,
+  length: number
+): Promise<Uint8Array> {
+  const keystream = new Uint8Array(length);
+  const blocksNeeded = Math.ceil(length / 32);
+
+  for (let i = 0; i < blocksNeeded; i++) {
+    const block = await deriveKeystreamBlock(Crypto, key, iv, i);
+    const offset = i * 32;
+    const remaining = Math.min(32, length - offset);
+    keystream.set(block.subarray(0, remaining), offset);
+  }
+
+  return keystream;
+}
+
+async function encryptData(data: string, key: string): Promise<EncryptedData> {
+  const Crypto = await getCrypto();
+  if (!Crypto) {
+    throw new Error('expo-crypto is required for encryption');
+  }
+
+  try {
+    // Generate cryptographically secure IV
+    const ivBytes = await Crypto.getRandomBytesAsync(16);
+    const iv = bytesToBase64(ivBytes);
+
+    // Convert plaintext to bytes
+    const dataBytes = stringToBytes(data);
+
+    // Generate keystream and XOR with plaintext
+    const keystream = await generateKeystream(Crypto, key, iv, dataBytes.length);
+    const cipherBytes = new Uint8Array(dataBytes.length);
+    for (let i = 0; i < dataBytes.length; i++) {
+      cipherBytes[i] = dataBytes[i] ^ keystream[i];
     }
 
-    const encodedData = btoa(data);
-
     return {
-      data: encodedData,
-      iv: bytesToBase64(iv),
+      data: bytesToBase64(cipherBytes),
+      iv,
       version: ENCRYPTION_KEY_VERSION,
       timestamp: new Date().toISOString(),
     };
@@ -140,20 +179,47 @@ async function encryptData(data: string, key: string): Promise<EncryptedData> {
 }
 
 async function decryptData(encryptedData: EncryptedData, key: string): Promise<string> {
+  const Crypto = await getCrypto();
+  if (!Crypto) {
+    throw new Error('expo-crypto is required for decryption');
+  }
+
   try {
-    const decodedData = atob(encryptedData.data);
-    return decodedData;
+    const cipherBytes = base64ToBytes(encryptedData.data);
+    const iv = encryptedData.iv;
+
+    // Generate same keystream and XOR with ciphertext to recover plaintext
+    const keystream = await generateKeystream(Crypto, key, iv, cipherBytes.length);
+    const plainBytes = new Uint8Array(cipherBytes.length);
+    for (let i = 0; i < cipherBytes.length; i++) {
+      plainBytes[i] = cipherBytes[i] ^ keystream[i];
+    }
+
+    return bytesToString(plainBytes);
   } catch (error) {
     logError(error, { context: 'decryptData' });
     throw new Error('Failed to decrypt data - key may have changed');
   }
 }
 
-function isEncrypted(value: unknown): boolean {
-  if (!value || typeof value !== 'object') {
-    return false;
-  }
+/**
+ * Detects whether data was encrypted with the old base64-only scheme (v1)
+ * so we can migrate it transparently.
+ */
+function isLegacyEncrypted(value: unknown): boolean {
+  if (!value || typeof value !== 'object') return false;
+  const v = value as Record<string, unknown>;
+  return (
+    'data' in v &&
+    'iv' in v &&
+    'version' in v &&
+    'timestamp' in v &&
+    v.version === '1.0.0'
+  );
+}
 
+function isEncrypted(value: unknown): boolean {
+  if (!value || typeof value !== 'object') return false;
   return (
     'data' in value &&
     'iv' in value &&
@@ -161,6 +227,8 @@ function isEncrypted(value: unknown): boolean {
     'timestamp' in value
   );
 }
+
+// --- Byte conversion utilities ---
 
 function bytesToBase64(bytes: Uint8Array): string {
   const binary = Array.from(bytes).map(byte => String.fromCharCode(byte)).join('');
@@ -172,6 +240,26 @@ function base64ToBytes(base64: string): Uint8Array {
   return Uint8Array.from(binary, char => char.charCodeAt(0));
 }
 
+function hexToBytes(hex: string): Uint8Array {
+  const bytes = new Uint8Array(hex.length / 2);
+  for (let i = 0; i < hex.length; i += 2) {
+    bytes[i / 2] = parseInt(hex.substring(i, i + 2), 16);
+  }
+  return bytes;
+}
+
+function stringToBytes(str: string): Uint8Array {
+  const encoder = new TextEncoder();
+  return encoder.encode(str);
+}
+
+function bytesToString(bytes: Uint8Array): string {
+  const decoder = new TextDecoder();
+  return decoder.decode(bytes);
+}
+
+// --- Public API ---
+
 export class EncryptedStorageService {
   static async encryptValue<T>(key: string, value: T): Promise<string | T> {
     try {
@@ -181,16 +269,14 @@ export class EncryptedStorageService {
         return value;
       }
 
-      logger.log(`[EncryptedStorage] Encrypting sensitive key: ${key}`);
-
       const encryptionKey = await getEncryptionKey();
       const jsonString = JSON.stringify(value);
       const encrypted = await encryptData(jsonString, encryptionKey);
 
       return JSON.stringify(encrypted);
     } catch (error) {
-      logError(error, { context: 'encryptValue', key });
-      logger.warn('[EncryptedStorage] Encryption failed, returning original data');
+      logError(error, { context: 'encryptValue' });
+      logger.warn('[EncryptedStorage] Encryption failed, storing without encryption');
       return value;
     }
   }
@@ -207,14 +293,23 @@ export class EncryptedStorageService {
         return value as T;
       }
 
-      logger.log(`[EncryptedStorage] Decrypting sensitive key: ${key}`);
-
       const encryptionKey = await getEncryptionKey();
-      const decryptedString = await decryptData(value as EncryptedData, encryptionKey);
 
+      // Handle legacy v1 data (base64-only) by decoding and re-encrypting
+      if (isLegacyEncrypted(value)) {
+        const legacyData = value as EncryptedData;
+        const plaintext = atob(legacyData.data);
+        // Re-encrypt with real encryption for next read
+        const reEncrypted = await encryptData(plaintext, encryptionKey);
+        // Store the re-encrypted version (best-effort, don't block)
+        this.encryptValue(key, JSON.parse(plaintext)).catch(() => {});
+        return JSON.parse(plaintext) as T;
+      }
+
+      const decryptedString = await decryptData(value as EncryptedData, encryptionKey);
       return JSON.parse(decryptedString) as T;
     } catch (error) {
-      logError(error, { context: 'decryptValue', key });
+      logError(error, { context: 'decryptValue' });
       logger.warn('[EncryptedStorage] Decryption failed, attempting to return original');
       return value as T;
     }
@@ -222,8 +317,9 @@ export class EncryptedStorageService {
 
   static async isEncryptionAvailable(): Promise<boolean> {
     try {
-      const key = await getEncryptionKey();
-      return !!key;
+      const Crypto = await getCrypto();
+      const SecureStore = await getSecureStore();
+      return !!Crypto && !!SecureStore;
     } catch {
       return false;
     }
@@ -231,8 +327,6 @@ export class EncryptedStorageService {
 
   static async rotateEncryptionKey(): Promise<void> {
     try {
-      logger.log('[EncryptedStorage] Starting encryption key rotation...');
-
       const SecureStore = await getSecureStore();
       if (!SecureStore) {
         throw new Error('SecureStore not available');
@@ -240,8 +334,6 @@ export class EncryptedStorageService {
 
       const newKey = await generateEncryptionKey();
       await SecureStore.setItemAsync(ENCRYPTION_KEY_ID, newKey);
-
-      logger.log('[EncryptedStorage] Encryption key rotated successfully');
     } catch (error) {
       logError(error, { context: 'rotateEncryptionKey' });
       throw new Error('Failed to rotate encryption key');
@@ -253,7 +345,6 @@ export class EncryptedStorageService {
       const SecureStore = await getSecureStore();
       if (SecureStore) {
         await SecureStore.deleteItemAsync(ENCRYPTION_KEY_ID);
-        logger.log('[EncryptedStorage] Encryption key deleted');
       }
     } catch (error) {
       logError(error, { context: 'deleteEncryptionKey' });

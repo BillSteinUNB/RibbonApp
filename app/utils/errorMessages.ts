@@ -182,8 +182,8 @@ export function createErrorLogEntry(error: unknown, context?: Record<string, unk
   return {
     message: formatErrorMessage(error),
     code: getErrorCode(error),
-    stack: error instanceof Error ? error.stack : undefined,
-    context,
+    stack: __DEV__ && error instanceof Error ? error.stack : undefined,
+    context: __DEV__ ? context : undefined,
     timestamp: new Date().toISOString(),
   };
 }

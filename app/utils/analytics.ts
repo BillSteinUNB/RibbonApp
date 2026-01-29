@@ -11,6 +11,20 @@
 import { logger } from './logger';
 import Purchases from 'react-native-purchases';
 
+/**
+ * Hash an identifier to prevent PII from being sent to analytics.
+ * Uses a simple non-reversible hash suitable for analytics grouping.
+ */
+function hashId(id: string): string {
+  let hash = 0;
+  for (let i = 0; i < id.length; i++) {
+    const char = id.charCodeAt(i);
+    hash = ((hash << 5) - hash) + char;
+    hash = hash & hash; // Convert to 32bit integer
+  }
+  return 'h_' + Math.abs(hash).toString(36);
+}
+
 interface AnalyticsConsent {
   enabled: boolean;
   consentGiven: boolean;
@@ -170,11 +184,16 @@ export async function trackEvent(
     return;
   }
 
+  // Strip PII from properties before sending
+  const sanitizedProperties = { ...(properties || {}) };
+  delete sanitizedProperties.recipientId;
+  delete sanitizedProperties.relationship;
+
   const payload: AnalyticsPayload = {
     event_name: eventName,
-    properties: properties || {},
+    properties: sanitizedProperties,
     timestamp: new Date().toISOString(),
-    user_id: userId,
+    user_id: userId ? hashId(userId) : undefined,
     session_id: getSessionId(),
   };
 

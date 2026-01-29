@@ -45,7 +45,7 @@ class ErrorLogger {
       message: appError.message,
       code: appError.code,
       statusCode: appError.statusCode,
-      stack: appError.stack,
+      ...__DEV__ ? { stack: appError.stack } : {},
     });
   }
 
