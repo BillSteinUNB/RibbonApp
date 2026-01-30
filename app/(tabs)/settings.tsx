@@ -86,7 +86,7 @@ export default function SettingsTab() {
 
   const handleContactSupport = () => {
     const email = CONTACT_INFO.supportEmail || 'support@ribbonapp.com';
-    const subject = encodeURIComponent('Ribbon Support');
+    const subject = encodeURIComponent('Ribbon App Support Request');
     const url = `mailto:${email}?subject=${subject}`;
     openUrl(url, `Please email ${email} for support.`);
   };
@@ -112,6 +112,7 @@ export default function SettingsTab() {
                 value={theme}
                 options={THEME_OPTIONS}
                 onSelect={handleThemeChange}
+                style={styles.themeSelect}
               />
             </View>
           </View>
@@ -240,6 +241,11 @@ const createStyles = (colors: ReturnType<typeof import('../hooks/useTheme').useT
   },
   preferenceControl: {
     marginTop: SPACING.sm,
+  },
+  themeSelect: {
+    paddingVertical: SPACING.lg,
+    paddingHorizontal: SPACING.lg,
+    borderRadius: RADIUS.md,
   },
   preferenceBlock: {
     padding: SPACING.lg,

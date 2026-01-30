@@ -122,7 +122,7 @@ export default function OnboardingSocialProof() {
 
         {/* Headline */}
         <Text style={styles.headline}>
-          Join <Text style={styles.headlineAccent}>10,000+</Text>{'\n'}
+          Join <Text style={styles.headlineAccent}>Thousands of</Text>{'\n'}
           Happy Gift Givers
         </Text>
 
@@ -130,7 +130,7 @@ export default function OnboardingSocialProof() {
         <View style={styles.statsRow}>
           <View style={styles.stat}>
             <Text style={styles.statNumber}>50K+</Text>
-            <Text style={styles.statLabel}>Gifts Found</Text>
+            <Text style={styles.statLabel}>AI Trained on Gift Ideas</Text>
           </View>
           <View style={styles.statDivider} />
           <View style={styles.stat}>

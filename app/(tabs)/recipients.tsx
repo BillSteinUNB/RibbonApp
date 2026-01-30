@@ -46,7 +46,7 @@ export default function RecipientsTab() {
       accessibilityRole="button"
       accessibilityLabel={`${item.name}, ${getRelationshipLabel(item.relationship)}`}
     >
-      <Text style={styles.name}>{item.name}</Text>
+      <Text style={styles.name}>{item.name.replace(/\b\w/g, c => c.toUpperCase())}</Text>
       <Text style={styles.relationship}>{getRelationshipLabel(item.relationship)}</Text>
       {item.interests.length > 0 && (
         <View style={styles.interestsContainer}>

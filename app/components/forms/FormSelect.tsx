@@ -15,6 +15,7 @@ interface FormSelectProps {
   placeholder?: string;
   error?: string;
   disabled?: boolean;
+  style?: any;
 }
 
 export function FormSelect({
@@ -25,6 +26,7 @@ export function FormSelect({
   placeholder = 'Select an option',
   error,
   disabled = false,
+  style,
 }: FormSelectProps) {
   const [isOpen, setIsOpen] = useState(false);
   const selectedOption = options.find(opt => opt.value === value);
@@ -43,6 +45,7 @@ export function FormSelect({
           styles.selectButton,
           error && styles.selectError,
           disabled && styles.selectDisabled,
+          style,
         ]}
         onPress={() => !disabled && setIsOpen(true)}
         activeOpacity={0.7}

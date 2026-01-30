@@ -1,6 +1,6 @@
 import React, { useState, useMemo, useEffect } from 'react';
 import { View, Text, StyleSheet, TouchableOpacity, FlatList, Linking, Alert } from 'react-native';
-import { ExternalLink } from 'lucide-react-native';
+import { Search } from 'lucide-react-native';
 import { useRouter, useLocalSearchParams } from 'expo-router';
 import { SPACING, FONTS, RADIUS } from '../../constants';
 import { useTheme } from '../../hooks/useTheme';
@@ -47,7 +47,10 @@ function GiftCard({ gift, onSave, onMarkPurchased, onShop, colors, isDark }: Gif
         <View style={cardStyles.giftCategoryBadge}>
           <Text style={cardStyles.giftCategoryText}>{gift.category}</Text>
         </View>
-        <Text style={cardStyles.giftPrice}>{gift.price}</Text>
+        <View style={cardStyles.priceContainer}>
+          <Text style={cardStyles.giftPrice}>{gift.price}</Text>
+          <Text style={cardStyles.priceDisclaimer}>Prices may vary</Text>
+        </View>
       </View>
 
       <Text style={cardStyles.giftName}>{gift.name}</Text>
@@ -73,11 +76,11 @@ function GiftCard({ gift, onSave, onMarkPurchased, onShop, colors, isDark }: Gif
           style={[cardStyles.actionButton, cardStyles.actionButtonShop]}
           onPress={onShop}
           accessibilityRole="button"
-          accessibilityLabel={`Shop for ${gift.name}`}
+          accessibilityLabel={`Search Online for ${gift.name}`}
         >
           <View style={cardStyles.shopButtonContent}>
-            <ExternalLink size={14} color={colors.white} accessibilityElementsHidden={true} importantForAccessibility="no" />
-            <Text style={cardStyles.actionButtonTextShop}>Shop</Text>
+            <Search size={14} color={colors.white} accessibilityElementsHidden={true} importantForAccessibility="no" />
+            <Text style={cardStyles.actionButtonTextShop}>Search Online</Text>
           </View>
         </TouchableOpacity>
 
@@ -164,14 +167,13 @@ export default function GiftResultsScreen() {
   };
 
   const handleShop = (url: string | undefined, giftName: string) => {
-    if (url) {
-      Linking.openURL(url);
-      // Track shop clicked
-      const user = useAuthStore.getState().getOrCreateUser();
-      analyticsGifts.shopClicked({
-        giftName: giftName,
-      }, user.id);
-    }
+    const searchUrl = url || `https://www.google.com/search?q=${encodeURIComponent(giftName + ' gift buy')}`;
+    Linking.openURL(searchUrl);
+    // Track shop clicked
+    const user = useAuthStore.getState().getOrCreateUser();
+    analyticsGifts.shopClicked({
+      giftName: giftName,
+    }, user.id);
   };
 
   // Reset regenerate count when gifts are loaded successfully
@@ -375,11 +377,21 @@ const createCardStyles = (colors: ReturnType<typeof import('../../hooks/useTheme
     fontFamily: FONTS.body,
     textTransform: 'uppercase',
   },
+  priceContainer: {
+    alignItems: 'flex-end',
+  },
   giftPrice: {
     fontSize: 16,
     fontWeight: '600',
     color: colors.accentPrimary,
     fontFamily: FONTS.body,
+  },
+  priceDisclaimer: {
+    fontSize: 11,
+    color: colors.textMuted,
+    fontFamily: FONTS.body,
+    fontStyle: 'italic',
+    marginTop: 2,
   },
   giftName: {
     fontSize: 18,

@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useRef, useMemo } from 'react';
-import { View, Text, StyleSheet, Animated, Easing, Dimensions } from 'react-native';
+import { View, Text, StyleSheet, Animated, Easing, Dimensions, TouchableOpacity } from 'react-native';
 import { useRouter, useLocalSearchParams } from 'expo-router';
 import ConfettiCannon from 'react-native-confetti-cannon';
 import { SPACING, FONTS, RADIUS } from '../../constants';
@@ -370,12 +370,9 @@ export default function GiftGenerationScreen() {
       </View>
 
       <View style={styles.footer}>
-        <Button
-          title="Cancel"
-          onPress={handleCancel}
-          variant="outline"
-          style={styles.cancelButton}
-        />
+        <TouchableOpacity onPress={handleCancel} activeOpacity={0.7}>
+          <Text style={styles.stopGeneratingText}>Stop generating</Text>
+        </TouchableOpacity>
       </View>
     </View>
   );
@@ -493,8 +490,11 @@ const createStyles = (colors: ReturnType<typeof import('../../hooks/useTheme').u
     borderTopWidth: 1,
     borderTopColor: colors.border,
   },
-  cancelButton: {
-    width: '100%',
+  stopGeneratingText: {
+    fontSize: 14,
+    color: colors.textMuted,
+    fontFamily: FONTS.body,
+    textAlign: 'center',
   },
   // Error State
   errorContainer: {

@@ -52,7 +52,9 @@ export default function HomeScreen() {
 
       <View style={styles.header}>
         <View>
-          <Text style={styles.greeting}>Hello, {user?.profile?.name || 'Friend'}!</Text>
+          <Text style={styles.greeting}>
+          {user?.profile?.name ? `Hello, ${user.profile.name}!` : 'Ready to gift?'}
+        </Text>
           <Text style={styles.subGreeting}>Ready to find the perfect gift?</Text>
         </View>
         <TouchableOpacity 
