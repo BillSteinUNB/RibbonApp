@@ -1,12 +1,46 @@
 import React, { useMemo, useEffect, useState } from 'react';
 import { View, Text, ScrollView, StyleSheet, TouchableOpacity, ActivityIndicator, Alert } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
-import { Check, Crown, Sparkles, RefreshCw } from 'lucide-react-native';
+import { Check, Crown, Sparkles, RefreshCw, AlertCircle } from 'lucide-react-native';
 import { PurchasesPackage } from 'react-native-purchases';
 import { useAuthStore } from '../store/authStore';
 import { subscriptionService } from '../services/subscriptionService';
 import { SPACING, RADIUS, FONTS } from '../constants';
 import { useTheme } from '../hooks/useTheme';
+
+interface FallbackPlan {
+  id: string;
+  name: string;
+  price: string;
+  period: string;
+  description: string;
+  popular?: boolean;
+}
+
+const FALLBACK_PLANS: FallbackPlan[] = [
+  {
+    id: 'yearly',
+    name: 'Yearly',
+    price: '$19.99',
+    period: '/year',
+    description: 'Unlimited gifts, AI features, best value',
+    popular: true,
+  },
+  {
+    id: 'monthly',
+    name: 'Monthly',
+    price: '$4.99',
+    period: '/month',
+    description: 'Unlimited gifts and AI features',
+  },
+  {
+    id: 'weekly',
+    name: 'Weekly',
+    price: '$2.99',
+    period: '/week',
+    description: 'Full access, cancel anytime',
+  },
+];
 
 export default function PricingScreen() {
   const insets = useSafeAreaInsets();
@@ -18,6 +52,7 @@ export default function PricingScreen() {
   const [isLoading, setIsLoading] = useState(true);
   const [isPurchasing, setIsPurchasing] = useState(false);
   const [isRestoring, setIsRestoring] = useState(false);
+  const [hasError, setHasError] = useState(false);
 
   const styles = useMemo(() => createStyles(colors), [colors]);
 
@@ -27,6 +62,7 @@ export default function PricingScreen() {
 
   const loadOfferings = async () => {
     setIsLoading(true);
+    setHasError(false);
     try {
       await subscriptionService.initialize();
       const offerings = await subscriptionService.getOfferings();
@@ -34,6 +70,7 @@ export default function PricingScreen() {
         setPackages(offerings.current.availablePackages);
       }
     } catch (error) {
+      setHasError(true);
       if (__DEV__) console.error('Failed to load offerings:', error);
     } finally {
       setIsLoading(false);
@@ -90,6 +127,18 @@ export default function PricingScreen() {
     if (id.includes('monthly')) return '/month';
     if (id.includes('weekly')) return '/week';
     return '';
+  };
+
+  const getFallbackPlanPrice = (plan: FallbackPlan) => {
+    // Try to match with loaded packages for real pricing
+    const matchingPkg = packages.find(pkg => {
+      const id = pkg.identifier.toLowerCase();
+      if (plan.id === 'yearly') return id.includes('yearly') || id.includes('annual');
+      if (plan.id === 'monthly') return id.includes('monthly');
+      if (plan.id === 'weekly') return id.includes('weekly');
+      return false;
+    });
+    return matchingPkg ? formatPrice(matchingPkg) : plan.price;
   };
 
   if (isPremium) {
@@ -188,13 +237,80 @@ export default function PricingScreen() {
           </View>
         </>
       ) : (
-        <View style={styles.noPackagesCard}>
-          <Crown size={32} color={colors.accentPrimary} />
-          <Text style={styles.noPackagesTitle}>Coming Soon!</Text>
-          <Text style={styles.noPackagesText}>
-            Premium subscriptions will be available soon. In the meantime, enjoy the free features!
-          </Text>
-        </View>
+        /* Fallback pricing when packages fail to load */
+        <>
+          {hasError && (
+            <View style={styles.errorBanner}>
+              <AlertCircle size={20} color={colors.accentWarning} />
+              <Text style={styles.errorBannerText}>
+                Unable to load live pricing. Showing standard prices.
+              </Text>
+            </View>
+          )}
+
+          {FALLBACK_PLANS.map((plan) => (
+            <TouchableOpacity
+              key={plan.id}
+              style={[styles.planCard, plan.popular && styles.planCardPopular]}
+              onPress={() => {
+                Alert.alert(
+                  'Subscription Unavailable',
+                  'Please try again in a moment or restore your purchase if you\'ve previously subscribed.',
+                  [
+                    { text: 'Cancel', style: 'cancel' },
+                    { text: 'Retry', onPress: loadOfferings },
+                  ]
+                );
+              }}
+              disabled={isPurchasing}
+            >
+              {plan.popular && (
+                <View style={styles.popularBadge}>
+                  <Text style={styles.popularText}>BEST VALUE</Text>
+                </View>
+              )}
+              <View style={styles.planHeader}>
+                <Text style={styles.planName}>{plan.name}</Text>
+                <View style={styles.priceContainer}>
+                  <Text style={styles.planPrice}>{getFallbackPlanPrice(plan)}</Text>
+                  <Text style={styles.planPeriod}>{plan.period}</Text>
+                </View>
+              </View>
+              <Text style={styles.planDescription}>{plan.description}</Text>
+            </TouchableOpacity>
+          ))}
+
+          <View style={styles.featuresSection}>
+            <Text style={styles.featuresTitle}>All Pro plans include:</Text>
+            {[
+              'Unlimited gift generations',
+              'Advanced AI persona analysis',
+              'Unlimited recipients',
+              'Gift history & tracking',
+              'Priority support',
+            ].map((feature, index) => (
+              <View key={index} style={styles.featureRow}>
+                <Check size={18} color="#10B981" />
+                <Text style={styles.featureText}>{feature}</Text>
+              </View>
+            ))}
+          </View>
+
+          <TouchableOpacity 
+            style={styles.retryButton} 
+            onPress={loadOfferings}
+            disabled={isLoading}
+          >
+            {isLoading ? (
+              <ActivityIndicator size="small" color={colors.accentPrimary} />
+            ) : (
+              <>
+                <RefreshCw size={16} color={colors.accentPrimary} />
+                <Text style={styles.retryText}>Retry Loading Prices</Text>
+              </>
+            )}
+          </TouchableOpacity>
+        </>
       )}
 
       <TouchableOpacity 
@@ -345,29 +461,39 @@ const createStyles = (colors: ReturnType<typeof import('../hooks/useTheme').useT
     color: colors.textSecondary,
     fontFamily: FONTS.body,
   },
-  noPackagesCard: {
-    backgroundColor: colors.bgSecondary,
-    borderRadius: 16,
-    padding: 24,
-    marginBottom: 24,
+  errorBanner: {
+    flexDirection: 'row',
     alignItems: 'center',
-    borderWidth: 2,
-    borderColor: colors.accentPrimary,
-    borderStyle: 'dashed',
+    backgroundColor: colors.warningBg,
+    borderRadius: 12,
+    padding: 12,
+    marginBottom: 16,
+    gap: 8,
+    borderWidth: 1,
+    borderColor: colors.warningBorder,
   },
-  noPackagesTitle: {
-    fontSize: 20,
-    fontWeight: 'bold',
-    color: colors.textPrimary,
-    marginTop: 12,
-    marginBottom: 8,
-    fontFamily: FONTS.display,
+  errorBannerText: {
+    flex: 1,
+    fontSize: 13,
+    color: colors.warningText,
+    fontFamily: FONTS.body,
   },
-  noPackagesText: {
+  retryButton: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    backgroundColor: colors.bgSecondary,
+    borderRadius: 12,
+    paddingVertical: 12,
+    marginBottom: 16,
+    gap: 8,
+    borderWidth: 1,
+    borderColor: colors.border,
+  },
+  retryText: {
+    color: colors.accentPrimary,
     fontSize: 14,
-    color: colors.textSecondary,
-    textAlign: 'center',
-    lineHeight: 20,
+    fontWeight: '500',
     fontFamily: FONTS.body,
   },
   restoreButton: {

@@ -173,6 +173,7 @@ export default function NewRecipientScreen() {
     switch (step) {
       case 0:
         if (!formData.name.trim()) newErrors.name = 'Name is required';
+        else if (formData.name.trim().length < 2) newErrors.name = 'Name must be at least 2 characters';
         if (!formData.relationship) newErrors.relationship = 'Relationship is required';
         // Interests are now optional with a warning instead of blocking
         if (formData.interests.length === 0) {
@@ -249,6 +250,7 @@ export default function NewRecipientScreen() {
               onChangeText={(text) => setFormData({ ...formData, name: text })}
               placeholder="e.g., Mom, John, Sarah"
               error={errors.name}
+              autoCapitalize="words"
             />
 
             <FormSelect
