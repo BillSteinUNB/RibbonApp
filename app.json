@@ -15,7 +15,7 @@
     },
     "ios": {
       "deploymentTarget": "14.0",
-      "supportsTablet": true,
+      "supportsTablet": false,
       "bundleIdentifier": "com.ribbon.app",
       "privacyPolicyUrl": "https://billsteinunb.github.io/RibbonApp/privacy-policy.html",
       "supportUrl": "https://billsteinunb.github.io/RibbonApp/",

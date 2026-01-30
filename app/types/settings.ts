@@ -1,8 +1,5 @@
 export interface UserPreferences {
   theme: 'light' | 'dark' | 'auto';
-  notifications: {
-    pushNotifications: boolean;
-  };
   analytics: {
     enabled: boolean;
     consentGiven: boolean;
@@ -22,9 +19,6 @@ export interface AppSettings {
 
 export const DEFAULT_PREFERENCES: UserPreferences = {
   theme: 'auto',
-  notifications: {
-    pushNotifications: true,
-  },
   analytics: {
     enabled: false,
     consentGiven: false,

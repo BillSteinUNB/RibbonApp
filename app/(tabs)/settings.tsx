@@ -1,5 +1,5 @@
 import React, { useMemo, useState } from 'react';
-import { View, Text, StyleSheet, ScrollView, TouchableOpacity, Switch, Modal, Alert, Linking } from 'react-native';
+import { View, Text, StyleSheet, ScrollView, TouchableOpacity, Modal, Alert, Linking } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { SPACING, FONTS, RADIUS } from '../constants';
 import { useTheme } from '../hooks/useTheme';
@@ -36,14 +36,7 @@ export default function SettingsTab() {
 
   const styles = useMemo(() => createStyles(colors), [colors]);
 
-  const updateNotifications = (updates: Partial<typeof preferences.notifications>) => {
-    updateUserPreferences({
-      notifications: {
-        ...preferences.notifications,
-        ...updates,
-      },
-    });
-  };
+
 
   const handleThemeChange = (value: string) => {
     if (value !== 'light' && value !== 'dark' && value !== 'auto') return;
@@ -119,22 +112,6 @@ export default function SettingsTab() {
                 value={theme}
                 options={THEME_OPTIONS}
                 onSelect={handleThemeChange}
-              />
-            </View>
-          </View>
-
-          <View style={styles.preferenceBlock}>
-            <Text style={styles.preferenceTitle}>Notifications</Text>
-          <View style={styles.switchRow}>
-              <Text style={styles.itemText}>Push Notifications</Text>
-              <Switch
-                value={preferences.notifications.pushNotifications}
-                onValueChange={(value) => updateNotifications({ pushNotifications: value })}
-                thumbColor={preferences.notifications.pushNotifications ? colors.accentPrimary : '#D1D5DB'}
-                trackColor={{ true: colors.accentSoft, false: '#E5E7EB' }}
-                accessibilityRole="switch"
-                accessibilityLabel="Push Notifications"
-                accessibilityState={{ checked: preferences.notifications.pushNotifications }}
               />
             </View>
           </View>

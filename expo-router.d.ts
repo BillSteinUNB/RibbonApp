@@ -14,8 +14,10 @@ declare module 'expo-router' {
   export function useSegments(): string[];
   export function useNavigation(): any;
 
-  export const Stack: ComponentType<any>;
-  export const Tabs: ComponentType<any>;
+  type ScreenComponent = ComponentType<any> & { Screen: ComponentType<any> };
+
+  export const Stack: ScreenComponent;
+  export const Tabs: ScreenComponent;
   export const Redirect: ComponentType<any>;
   export const useFocusEffect: any;
   export const useNavigationState: any;

@@ -28,7 +28,6 @@ export default function TabLayout() {
         },
       }}
     >
-      {/* @ts-expect-error expo-router Tabs.Screen type issue */}
       <Tabs.Screen
         name="index"
         options={{
@@ -37,7 +36,6 @@ export default function TabLayout() {
           tabBarIcon: ({ color, size }: { color: string; size: number }) => <Home size={size} color={color} />,
         }}
       />
-      {/* @ts-expect-error expo-router Tabs.Screen type issue */}
       <Tabs.Screen
         name="recipients"
         options={{
@@ -46,7 +44,6 @@ export default function TabLayout() {
           tabBarIcon: ({ color, size }: { color: string; size: number }) => <Users size={size} color={color} />,
         }}
       />
-      {/* @ts-expect-error expo-router Tabs.Screen type issue */}
       <Tabs.Screen
         name="pricing"
         options={{
@@ -55,7 +52,6 @@ export default function TabLayout() {
           tabBarIcon: ({ color, size }: { color: string; size: number }) => <Crown size={size} color={color} />,
         }}
       />
-      {/* @ts-expect-error expo-router Tabs.Screen type issue */}
       <Tabs.Screen
         name="settings"
         options={{
