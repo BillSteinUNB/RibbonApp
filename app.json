@@ -17,6 +17,7 @@
       "deploymentTarget": "14.0",
       "supportsTablet": false,
       "bundleIdentifier": "com.ribbon.app",
+      "buildNumber": "1",
       "privacyPolicyUrl": "https://billsteinunb.github.io/RibbonApp/privacy-policy.html",
       "supportUrl": "https://billsteinunb.github.io/RibbonApp/",
       "marketingUrl": "https://billsteinunb.github.io/RibbonApp/",

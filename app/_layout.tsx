@@ -47,7 +47,7 @@ export default function RootLayout() {
         // Run storage cleanup on app startup (non-blocking)
         storage.runCleanup().catch((err) => logger.warn('[App] Storage cleanup error:', err));
       } catch (error) {
-        console.error('App initialization error:', error);
+        if (__DEV__) console.error('App initialization error:', error);
       } finally {
         // Small delay to allow store hydration
         setTimeout(() => setIsReady(true), 100);
